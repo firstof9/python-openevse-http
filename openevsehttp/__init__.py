@@ -4,7 +4,7 @@ import logging
 import requests
 
 from typing import Optional
-from .const import MAX_AMPS, MIN_AMPS, USER_AGENT
+from .const import MAX_AMPS, MIN_AMPS
 
 _LOGGER = logging.getLogger(__name__)
 
