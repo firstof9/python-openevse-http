@@ -41,37 +41,40 @@ class OpenEVSE:
 
     def __init__(self, host: str, user: str = None, pwd: str = None) -> None:
         """Connect to an OpenEVSE charger equipped with a wifi or ethernet."""
-        self._username = user
-        self._password = pwd
+        self._user = user
+        self._pwd = pwd
         self._url = f"http://{host}"
         self._status = self.update(mode="status")
         self._config = self.update(mode="config")
 
-    async def send_command(
-        self, command: str, cmd_type: str
-    ) -> Optional[Dict[Any, Any]] | None:
+    async def send_command(self, command: str) -> tuple | None:
         """Send a command via HTTP to the charger and prases the response."""
-        url = f"{self._url}/{cmd_type}"
+        url = f"{self._url}/r?json=1"
+        data = {"rapi": command}
 
         _LOGGER.debug("Posting data: %s to %s", command, url)
-        if self._username is not None:
-            value = requests.get(url, auth=(self._username, self._password))
+        if self._user is not None:
+            value = requests.get(url, data=data, auth=(self._user, self._pwd))
         else:
-            value = requests.get(url)
+            value = requests.get(url, data=data)
 
         if value.status_code == 400:
             raise ParseJSONError
         if value.status_code == 401:
             raise AuthenticationError
-        return value.json()
+
+        if "ret" not in value.json():
+            return False, ""
+        resp = value.json()
+        return resp[0] == "OK", resp[1:]
 
     def update(self, mode: str) -> Optional[Dict[Any, Any]] | None:
         """Update the values."""
         url = f"{self._url}/{mode}"
 
         _LOGGER.debug("Updating data from %s", url)
-        if self._username is not None:
-            value = requests.get(url, auth=(self._username, self._password))
+        if self._user is not None:
+            value = requests.get(url, auth=(self._user, self._pwd))
         else:
             value = requests.get(url)
 
