@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import datetime
 import logging
-from typing import Optional
+from typing import Optional, Dict, Any
 
 import requests
 
@@ -29,15 +29,11 @@ states = {
 
 
 class AuthenticationError(Exception):
-    """Exception for authentication errors"""
-
-    pass
+    """Exception for authentication errors."""
 
 
 class ParseJSONError(Exception):
-    """Exception for JSON parsing errors"""
-
-    pass
+    """Exception for JSON parsing errors."""
 
 
 class OpenEVSE:
@@ -61,11 +57,12 @@ class OpenEVSE:
 
         if value.status_code == 400:
             raise ParseJSONError
-        elif value.status_code == 401:
+        if value.status_code == 401:
             raise AuthenticationError
         return value.json()
 
     def update(self, mode: str) -> dict | None:
+        """Updates the values."""
         url = f"{self._url}/{mode}"
 
         _LOGGER.debug("Updating data from %s", url)
@@ -79,136 +76,137 @@ class OpenEVSE:
         return value.json()
 
     @property
-    def hostname(self) -> str:
-        """Returns charger hostname"""
+    def hostname(self) -> Optional[Dict[Any, Any]]:
+        """Return charger hostname."""
         return self._config["hostname"]
 
     @property
-    def wifi_ssid(self) -> str:
-        """Returns charger connected SSID"""
+    def wifi_ssid(self) -> Optional[Dict[Any, Any]]:
+        """Return charger connected SSID."""
         return self._config["ssid"]
 
     @property
-    def ammeter_offset(self) -> int:
-        """Returns ammeter's current offset"""
+    def ammeter_offset(self) -> Optional[Dict[Any, Any]]:
+        """Return ammeter's current offset."""
         return self._config["offset"]
 
     @property
-    def ammeter_scale_factor(self) -> int:
-        """Returns ammeter's current scale factor"""
+    def ammeter_scale_factor(self) -> Optional[Dict[Any, Any]]:
+        """Return ammeter's current scale factor."""
         return self._config["scale"]
 
     @property
-    def temp_check_enabled(self) -> bool:
-        """Returns True if enabled, False if disabled"""
+    def temp_check_enabled(self) -> Optional[Dict[Any, Any]]:
+        """Return True if enabled, False if disabled."""
         return bool(self._config["tempt"])
 
     @property
-    def diode_check_enabled(self) -> bool:
-        """Returns True if enabled, False if disabled"""
+    def diode_check_enabled(self) -> Optional[Dict[Any, Any]]:
+        """Return True if enabled, False if disabled."""
         return bool(self._config["diodet"])
 
     @property
-    def vent_required_enabled(self) -> bool:
-        """Returns True if enabled, False if disabled"""
+    def vent_required_enabled(self) -> Optional[Dict[Any, Any]]:
+        """Return True if enabled, False if disabled."""
         return bool(self._config["ventt"])
 
     @property
-    def ground_check_enabled(self) -> bool:
-        """Returns True if enabled, False if disabled"""
+    def ground_check_enabled(self) -> Optional[Dict[Any, Any]]:
+        """Return True if enabled, False if disabled."""
         return bool(self._config["groundt"])
 
     @property
-    def stuck_relay_check_enabled(self) -> bool:
-        """Returns True if enabled, False if disabled"""
+    def stuck_relay_check_enabled(self) -> Optional[Dict[Any, Any]]:
+        """Return True if enabled, False if disabled."""
         return bool(self._config["relayt"])
 
     @property
-    def service_level(self) -> str:
-        """Returns the service level"""
+    def service_level(self) -> Optional[Dict[Any, Any]]:
+        """Return the service level."""
         return self._config["service"]
 
     @property
-    def openevse_firmware(self) -> str:
-        """Returns the firmware version"""
+    def openevse_firmware(self) -> Optional[Dict[Any, Any]]:
+        """Return the firmware version."""
         return self._config["firmware"]
 
     @property
-    def wifi_firmware(self) -> str:
-        """Returns the ESP firmware version"""
+    def wifi_firmware(self) -> Optional[Dict[Any, Any]]:
+        """Return the ESP firmware version."""
         return self._config["version"]
 
     @property
-    def ip_address(self) -> str:
-        """Returns the ip address"""
+    def ip_address(self) -> Optional[Dict[Any, Any]]:
+        """Return the ip address."""
         return self._status["ipaddress"]
 
     @property
-    def charging_voltage(self) -> int:
-        """Returns the charging voltage"""
+    def charging_voltage(self) -> Optional[Dict[Any, Any]]:
+        """Returns the charging voltage."""
         return self._status["voltage"]
 
     @property
-    def mode(self) -> str:
-        """Returns the mode"""
+    def mode(self) -> Optional[Dict[Any, Any]]:
+        """Return the mode."""
         return self._status["mode"]
 
     @property
-    def using_ethernet(self) -> bool:
-        """Returns True if enabled, False if disabled"""
+    def using_ethernet(self) -> Optional[Dict[Any, Any]]:
+        """Return True if enabled, False if disabled."""
         if "eth_connected" in self._status:
             return bool(self._status["eth_connected"])
         return False
 
     @property
-    def stuck_relay_trip_count(self) -> int:
-        """Returns the stuck relay count"""
+    def stuck_relay_trip_count(self) -> Optional[Dict[Any, Any]]:
+        """Return the stuck relay count."""
         return self._status["stuckcount"]
 
     @property
-    def no_gnd_trip_count(self) -> int:
-        """Returns the no ground count"""
+    def no_gnd_trip_count(self) -> Optional[Dict[Any, Any]]:
+        """Return the no ground count"""
         return self._status["nogndcount"]
 
     @property
-    def gfi_trip_count(self) -> int:
-        """Returns the GFCI count"""
+    def gfi_trip_count(self) -> Optional[Dict[Any, Any]]:
+        """Return the GFCI count."""
         return self._status["gfcicount"]
 
     @property
-    def status(self) -> str:
-        """Return charger's state"""
+    def status(self) -> Optional[Dict[Any, Any]]:
+        """Return charger's state."""
         if "status" in self._status:
             return self._status["status"]
         return states[int(self._status["state"])]
 
     @property
-    def charge_time_elapsed(self) -> int:
+    def charge_time_elapsed(self) -> Optional[Dict[Any, Any]]:
+        """Return elapsed charging time."""
         return self._status["elapsed"]
 
     @property
-    def wifi_signal(self) -> str:
-        """Return charger's wifi signal"""
+    def wifi_signal(self) -> Optional[Dict[Any, Any]]:
+        """Return charger's wifi signal."""
         return self._status["srssi"]
 
     @property
-    def charging_current(self) -> float:
-        """Returns the charge time elapsed (in seconds), or 0 if is not currently charging"""
+    def charging_current(self) -> Optional[Dict[Any, Any]]:
+        """Return the charge time elapsed (in seconds), or 0 if is not currently charging."""
         return self._status["amp"]
 
     @property
-    def current_capacity(self) -> int:
-        """Returns the current capacity"""
+    def current_capacity(self) -> Optional[Dict[Any, Any]]:
+        """Return the current capacity."""
         return self._status["pilot"]
 
     @property
-    def usage_total(self) -> float:
-        """Returns the total energy usage in Wh"""
+    def usage_total(self) -> Optional[Dict[Any, Any]]:
+        """Return the total energy usage in Wh."""
         return self._status["watthour"]
 
     @property
-    def ambient_temperature(self) -> float | None:
-        """Returns the temperature of the ambient sensor, in degrees Celcius"""
+    def ambient_temperature(self) -> Optional[Dict[Any, Any]] | None:
+        """Return the temperature of the ambient sensor, in degrees Celcius."""
         temp = None
         if "temp" in self._status and self._status["temp"]:
             temp = self._status["temp"] / 10
@@ -217,24 +215,24 @@ class OpenEVSE:
         return temp
 
     @property
-    def rtc_temperature(self) -> float | None:
-        """Returns the temperature of the real time clock sensor, in degrees Celcius"""
+    def rtc_temperature(self) -> Optional[Dict[Any, Any]] | None:
+        """Return the temperature of the real time clock sensor, in degrees Celcius."""
         temp = self._status["temp2"]
         if temp != "0.0":
             return temp / 10
         return None
 
     @property
-    def ir_temperature(self) -> float | None:
-        """Returns the temperature of the IR remote sensor, in degrees Celcius"""
+    def ir_temperature(self) -> Optional[Dict[Any, Any]] | None:
+        """Return the temperature of the IR remote sensor, in degrees Celcius."""
         temp = self._status["temp3"]
         if temp != 0.0:
             return temp / 10
         return None
 
     @property
-    def esp_temperature(self) -> float | None:
-        """Returns the temperature of the ESP sensor, in degrees Celcius"""
+    def esp_temperature(self) -> Optional[Dict[Any, Any]] | None:
+        """Return the temperature of the ESP sensor, in degrees Celcius."""
         if "temp4" in self._status:
             temp = self._status["temp4"]
             if temp != 0.0:
@@ -243,26 +241,26 @@ class OpenEVSE:
 
     @property
     def time(self) -> Optional[datetime.datetime]:
-        """Get the RTC time"""
+        """Get the RTC time."""
         return self._status["time"]
 
     @property
-    def usage_session(self) -> float:
-        """Get the energy usage for the current charging session.  Returns the energy usage in Wh"""
+    def usage_session(self) -> Optional[Dict[Any, Any]]:
+        """Get the energy usage for the current charging session.  Returns the energy usage in Wh."""
         return float(round(self._status["wattsec"] / 3600, 2))
 
     @property
-    def protocol_version(self) -> str:
-        """Returns the protocol version"""
+    def protocol_version(self) -> Optional[Dict[Any, Any]]:
+        """Return the protocol version."""
         return self._config["protocol"]
 
     # There is currently no min/max amps JSON data available via HTTP API methods
     @property
-    def min_amps(self) -> int:
-        """Returns the minimum amps"""
+    def min_amps(self) -> Optional[Dict[Any, Any]]:
+        """Return the minimum amps."""
         return MIN_AMPS
 
     @property
-    def max_amps(self) -> int:
-        """Returns the maximum amps"""
+    def max_amps(self) -> Optional[Dict[Any, Any]]:
+        """Return the maximum amps."""
         return MAX_AMPS
