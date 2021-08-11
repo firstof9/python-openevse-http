@@ -1,6 +1,17 @@
 import pytest
 
 
+def test_get_status_auth(test_charger_auth):
+    """Test v4 Status reply"""
+    status = test_charger_auth.status
+    assert status == "sleeping"
+
+
+def test_get_status_auth_err(test_charger_auth_err):
+    """Test v4 Status reply"""
+    assert test_charger_auth_err is None
+
+
 @pytest.mark.parametrize(
     "fixture, expected",
     [("test_charger", "sleeping"), ("test_charger_v2", "not connected")],

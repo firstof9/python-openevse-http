@@ -5,6 +5,41 @@ import openevsehttp
 from tests.common import load_fixture
 
 
+@pytest.fixture(name="test_charger_auth")
+def test_charger_auth(status_mock, config_mock):
+    """Load the charger data."""
+    return openevsehttp.OpenEVSE(
+        "openevse.test.tld", user="testuser", pwd="fakepassword"
+    )
+
+
+@pytest.fixture(name="test_charger_auth_err")
+def test_charger_auth_err(status_mock_err, config_mock_err):
+    """Load the charger data."""
+    with pytest.raises(openevsehttp.AuthenticationError):
+        return openevsehttp.OpenEVSE(
+            "openevse.test.tld", user="testuser", pwd="fakepassword"
+        )
+
+
+@pytest.fixture(name="status_mock_err")
+def mock_status_err(requests_mock):
+    """Mock the status reply."""
+    requests_mock.get(
+        "http://openevse.test.tld/status",
+        status_code=401,
+    )
+
+
+@pytest.fixture(name="config_mock_err")
+def mock_config_err(requests_mock):
+    """Mock the config reply."""
+    requests_mock.get(
+        "http://openevse.test.tld/config",
+        status_code=401,
+    )
+
+
 @pytest.fixture(name="test_charger")
 def test_charger(status_mock, config_mock):
     """Load the charger data."""
