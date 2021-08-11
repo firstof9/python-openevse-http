@@ -1,8 +1,7 @@
 from __future__ import annotations
-import asyncio
-import aiohttp
 import datetime
 import logging
+import requests
 
 from typing import Optional
 from .const import MAX_AMPS, MIN_AMPS, USER_AGENT
@@ -40,54 +39,40 @@ class OpenEVSE:
         self._username = username
         self._password = password
         self._url = f"http://{host}"
-        self._status = None
-        self._config = None
-        asyncio.run(self.async_update(mode="status"))
-        asyncio.run(self.async_update(mode="config"))
+        self._status = self.update(mode="status")
+        self._config = self.update(mode="config")
 
     async def send_command(self, command: str, cmd_type: str) -> bool:
         """Sends a command via HTTP to the charger and prases the response."""
         url = f"{self._url}/{cmd_type}"
-        headers = {"User-Agent": USER_AGENT, "Accept": "application/ld+json"}
-        login = None
 
+        _LOGGER.debug("Posting data: %s to %s", command, url)
         if self._username is not None:
-            login = aiohttp.BasicAuth(self._username, self._password)
+            value = requests.get(url, auth=(self._username, self._password))
+        else:
+            value = requests.get(url)
 
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, headers=headers, auth=login) as r:
-                _LOGGER.debug("Posting data: %s to %s", command, url)
-                if r.status == 200:
-                    return True
-                elif r.status == 400:
-                    raise ParseJSONError
-                elif r.status == 401:
-                    raise AuthenticationError
-                return False
+        if value.status_code == 200:
+            return value.text
+        elif value.status_code == 400:
+            raise ParseJSONError
+        elif value.status_code == 401:
+            raise AuthenticationError
+        return False
 
-    async def async_update(self, mode: str) -> None:
+    def update(self, mode: str) -> dict | None:
         url = f"{self._url}/{mode}"
-        headers = {"User-Agent": USER_AGENT, "Accept": "application/ld+json"}
-        login = None
 
+        _LOGGER.debug("Updating data from %s", url)
         if self._username is not None:
-            login = aiohttp.BasicAuth(self._username, self._password)
+            value = requests.get(url, auth=(self._username, self._password))
+        else:
+            value = requests.get(url)
 
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers, auth=login) as r:
-                _LOGGER.debug("Updating data from %s", url)
-                if r.status == 200:
-                    value = await r.json()
-                    self.update_state(mode, value)
-                elif r.status == 401:
-                    raise AuthenticationError
-
-    def update_state(self, mode: str, value: dict) -> None:
-        """Update cached values"""
-        if mode == "status":
-            self._status = value
-        elif mode == "config":
-            self._config = value
+        if value.status_code == 200:
+            return value.json()
+        elif value.status_code == 401:
+            raise AuthenticationError
 
     @property
     def hostname(self) -> str:
@@ -231,7 +216,7 @@ class OpenEVSE:
     def rtc_temperature(self) -> float | None:
         """Returns the temperature of the real time clock sensor, in degrees Celcius"""
         temp = self._status["temp2"]
-        if temp != "false":
+        if temp != "0.0":
             return temp / 10
         return None
 
@@ -239,7 +224,7 @@ class OpenEVSE:
     def ir_temperature(self) -> float | None:
         """Returns the temperature of the IR remote sensor, in degrees Celcius"""
         temp = self._status["temp3"]
-        if temp != "false":
+        if temp != 0.0:
             return temp / 10
         return None
 
@@ -248,7 +233,7 @@ class OpenEVSE:
         """Returns the temperature of the ESP sensor, in degrees Celcius"""
         if "temp4" in self._status:
             temp = self._status["temp4"]
-            if temp != "false":
+            if temp != 0.0:
                 return temp / 10
         return None
 
@@ -260,12 +245,12 @@ class OpenEVSE:
     @property
     def usage_session(self) -> float:
         """Get the energy usage for the current charging session.  Returns the energy usage in Wh"""
-        return float(self._status["wattsec"] / 3600)
+        return float(round(self._status["wattsec"] / 3600, 2))
 
     @property
     def protocol_version(self) -> str:
         """Returns the protocol version"""
-        return self._status["protocol"]
+        return self._config["protocol"]
 
     # There is currently no min/max amps JSON data available via HTTP API methods
     @property
