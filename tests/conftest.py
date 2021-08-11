@@ -1,5 +1,4 @@
 import pytest
-import requests_mock
 
 import openevsehttp
 from tests.common import load_fixture

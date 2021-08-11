@@ -1,3 +1,4 @@
+"""Provide a package for python-openevse-http."""
 from __future__ import annotations
 
 import datetime
@@ -28,10 +29,14 @@ states = {
 
 
 class AuthenticationError(Exception):
+    """Exception for authentication errors"""
+
     pass
 
 
 class ParseJSONError(Exception):
+    """Exception for JSON parsing errors"""
+
     pass
 
 
@@ -44,7 +49,7 @@ class OpenEVSE:
         self._status = self.update(mode="status")
         self._config = self.update(mode="config")
 
-    async def send_command(self, command: str, cmd_type: str) -> bool:
+    async def send_command(self, command: str, cmd_type: str) -> dict | None:
         """Sends a command via HTTP to the charger and prases the response."""
         url = f"{self._url}/{cmd_type}"
 
@@ -54,13 +59,11 @@ class OpenEVSE:
         else:
             value = requests.get(url)
 
-        if value.status_code == 200:
-            return value.text
-        elif value.status_code == 400:
+        if value.status_code == 400:
             raise ParseJSONError
         elif value.status_code == 401:
             raise AuthenticationError
-        return False
+        return value.json()
 
     def update(self, mode: str) -> dict | None:
         url = f"{self._url}/{mode}"
@@ -71,10 +74,9 @@ class OpenEVSE:
         else:
             value = requests.get(url)
 
-        if value.status_code == 200:
-            return value.json()
-        elif value.status_code == 401:
+        if value.status_code == 401:
             raise AuthenticationError
+        return value.json()
 
     @property
     def hostname(self) -> str:
