@@ -1,3 +1,4 @@
+"""Provide common pytest fixtures."""
 import os
 
 
