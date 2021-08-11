@@ -285,7 +285,9 @@ class OpenEVSE:
     def time(self) -> Optional[datetime.datetime]:
         """Get the RTC time."""
         assert self._status is not None
-        return self._status["time"]
+        if "time" in self._status:
+            return self._status["time"]
+        return None
 
     @property
     def usage_session(self) -> float:

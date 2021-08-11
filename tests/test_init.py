@@ -1,179 +1,303 @@
-def test_get_status(test_charger):
+import pytest
+
+
+@pytest.mark.parametrize(
+    "fixture, expected",
+    [("test_charger", "sleeping"), ("test_charger_v2", "not connected")],
+)
+def test_get_status(fixture, expected, request):
     """Test v4 Status reply"""
-    status = test_charger.status
-    assert status == "sleeping"
+    charger = request.getfixturevalue(fixture)
+    status = charger.status
+    assert status == expected
 
 
-def test_get_ssid(test_charger):
+@pytest.mark.parametrize(
+    "fixture, expected",
+    [("test_charger", "Datanode-IoT"), ("test_charger_v2", "nsavanup_IoT")],
+)
+def test_get_ssid(fixture, expected, request):
     """Test v4 Status reply"""
-    status = test_charger.wifi_ssid
-    assert status == "Datanode-IoT"
+    charger = request.getfixturevalue(fixture)
+    status = charger.wifi_ssid
+    assert status == expected
 
 
-def test_get_firmware(test_charger):
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", "7.1.3"), ("test_charger_v2", "5.0.1")]
+)
+def test_get_firmware(fixture, expected, request):
     """Test v4 Status reply"""
-    status = test_charger.openevse_firmware
-    assert status == "7.1.3"
+    charger = request.getfixturevalue(fixture)
+    status = charger.openevse_firmware
+    assert status == expected
 
 
-def test_get_hostname(test_charger):
+@pytest.mark.parametrize(
+    "fixture, expected",
+    [("test_charger", "openevse-7b2c"), ("test_charger_v2", "openevse")],
+)
+def test_get_hostname(fixture, expected, request):
     """Test v4 Status reply"""
-    status = test_charger.hostname
-    assert status == "openevse-7b2c"
+    charger = request.getfixturevalue(fixture)
+    status = charger.hostname
+    assert status == expected
 
 
-def test_get_ammeter_offset(test_charger):
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
+)
+def test_get_ammeter_offset(fixture, expected, request):
     """Test v4 Status reply"""
-    status = test_charger.ammeter_offset
-    assert status == 0
+    charger = request.getfixturevalue(fixture)
+    status = charger.ammeter_offset
+    assert status == expected
 
 
-def test_get_ammeter_scale_factor(test_charger):
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 220), ("test_charger_v2", 220)]
+)
+def test_get_ammeter_scale_factor(fixture, expected, request):
     """Test v4 Status reply"""
-    status = test_charger.ammeter_scale_factor
-    assert status == 220
+    charger = request.getfixturevalue(fixture)
+    status = charger.ammeter_scale_factor
+    assert status == expected
 
 
 # Checks don't seem to be working
-# def test_get_temp_check_enabled(test_charger):
+# def test_get_temp_check_enabled(fixture, expected, request):
 #     """Test v4 Status reply"""
-#     status = test_charger.temp_check_enabled
+#     status = fixture, expected, request.temp_check_enabled
 #     assert status
 
 
-def test_get_service_level(test_charger):
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 2), ("test_charger_v2", 2)]
+)
+def test_get_service_level(fixture, expected, request):
     """Test v4 Status reply"""
-    status = test_charger.service_level
-    assert status == 2
+    charger = request.getfixturevalue(fixture)
+    status = charger.service_level
+    assert status == expected
 
 
-def test_get_wifi_firmware(test_charger):
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", "4.0.0"), ("test_charger_v2", "2.9.1")]
+)
+def test_get_wifi_firmware(fixture, expected, request):
     """Test v4 Status reply"""
-    status = test_charger.wifi_firmware
-    assert status == "4.0.0"
+    charger = request.getfixturevalue(fixture)
+    status = charger.wifi_firmware
+    assert status == expected
 
 
-def test_get_ip_address(test_charger):
+@pytest.mark.parametrize(
+    "fixture, expected",
+    [("test_charger", "192.168.21.10"), ("test_charger_v2", "192.168.1.67")],
+)
+def test_get_ip_address(fixture, expected, request):
     """Test v4 Status reply"""
-    status = test_charger.ip_address
-    assert status == "192.168.21.10"
+    charger = request.getfixturevalue(fixture)
+    status = charger.ip_address
+    assert status == expected
 
 
-def test_get_charging_voltage(test_charger):
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 240), ("test_charger_v2", 240)]
+)
+def test_get_charging_voltage(fixture, expected, request):
     """Test v4 Status reply"""
-    status = test_charger.charging_voltage
-    assert status == 240
+    charger = request.getfixturevalue(fixture)
+    status = charger.charging_voltage
+    assert status == expected
 
 
-def test_get_mode(test_charger):
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", "STA"), ("test_charger_v2", "STA")]
+)
+def test_get_mode(fixture, expected, request):
     """Test v4 Status reply"""
-    status = test_charger.mode
-    assert status == "STA"
+    charger = request.getfixturevalue(fixture)
+    status = charger.mode
+    assert status == expected
 
 
-def test_get_using_ethernet(test_charger):
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", False), ("test_charger_v2", False)]
+)
+def test_get_using_ethernet(fixture, expected, request):
     """Test v4 Status reply"""
-    status = test_charger.using_ethernet
-    assert not status
+    charger = request.getfixturevalue(fixture)
+    status = charger.using_ethernet
+    assert status == expected
 
 
-def test_get_stuck_relay_trip_count(test_charger):
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
+)
+def test_get_stuck_relay_trip_count(fixture, expected, request):
     """Test v4 Status reply"""
-    status = test_charger.stuck_relay_trip_count
-    assert status == 0
+    charger = request.getfixturevalue(fixture)
+    status = charger.stuck_relay_trip_count
+    assert status == expected
 
 
-def test_get_no_gnd_trip_count(test_charger):
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
+)
+def test_get_no_gnd_trip_count(fixture, expected, request):
     """Test v4 Status reply"""
-    status = test_charger.no_gnd_trip_count
-    assert status == 0
+    charger = request.getfixturevalue(fixture)
+    status = charger.no_gnd_trip_count
+    assert status == expected
 
 
-def test_get_gfi_trip_count(test_charger):
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 1), ("test_charger_v2", 0)]
+)
+def test_get_gfi_trip_count(fixture, expected, request):
     """Test v4 Status reply"""
-    status = test_charger.gfi_trip_count
-    assert status == 1
+    charger = request.getfixturevalue(fixture)
+    status = charger.gfi_trip_count
+    assert status == expected
 
 
-def test_get_charge_time_elapsed(test_charger):
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 246), ("test_charger_v2", 8751)]
+)
+def test_get_charge_time_elapsed(fixture, expected, request):
     """Test v4 Status reply"""
-    status = test_charger.charge_time_elapsed
-    assert status == 246
+    charger = request.getfixturevalue(fixture)
+    status = charger.charge_time_elapsed
+    assert status == expected
 
 
-def test_get_wifi_signal(test_charger):
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", -61), ("test_charger_v2", -56)]
+)
+def test_get_wifi_signal(fixture, expected, request):
     """Test v4 Status reply"""
-    status = test_charger.wifi_signal
-    assert status == -61
+    charger = request.getfixturevalue(fixture)
+    status = charger.wifi_signal
+    assert status == expected
 
 
-def test_get_charging_current(test_charger):
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
+)
+def test_get_charging_current(fixture, expected, request):
     """Test v4 Status reply"""
-    status = test_charger.charging_current
-    assert status == 0
+    charger = request.getfixturevalue(fixture)
+    status = charger.charging_current
+    assert status == expected
 
 
-def test_get_current_capacity(test_charger):
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 48), ("test_charger_v2", 25)]
+)
+def test_get_current_capacity(fixture, expected, request):
     """Test v4 Status reply"""
-    status = test_charger.current_capacity
-    assert status == 48
+    charger = request.getfixturevalue(fixture)
+    status = charger.current_capacity
+    assert status == expected
 
 
-def test_get_usage_total(test_charger):
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 64582), ("test_charger_v2", 1585443)]
+)
+def test_get_usage_total(fixture, expected, request):
     """Test v4 Status reply"""
-    status = test_charger.usage_total
-    assert status == 64582
+    charger = request.getfixturevalue(fixture)
+    status = charger.usage_total
+    assert status == expected
 
 
-def test_get_ambient_temperature(test_charger):
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 50.3), ("test_charger_v2", 34.0)]
+)
+def test_get_ambient_temperature(fixture, expected, request):
     """Test v4 Status reply"""
-    status = test_charger.ambient_temperature
-    assert status == 50.3
+    charger = request.getfixturevalue(fixture)
+    status = charger.ambient_temperature
+    assert status == expected
 
 
-def test_get_rtc_temperature(test_charger):
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 50.3), ("test_charger_v2", 0.0)]
+)
+def test_get_rtc_temperature(fixture, expected, request):
     """Test v4 Status reply"""
-    status = test_charger.rtc_temperature
-    assert status == 50.3
+    charger = request.getfixturevalue(fixture)
+    status = charger.rtc_temperature
+    assert status == expected
 
 
-def test_get_ir_temperature(test_charger):
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", None), ("test_charger_v2", None)]
+)
+def test_get_ir_temperature(fixture, expected, request):
     """Test v4 Status reply"""
-    status = test_charger.ir_temperature
+    charger = request.getfixturevalue(fixture)
+    status = charger.ir_temperature
     assert status is None
 
 
-def test_get_esp_temperature(test_charger):
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 56.0), ("test_charger_v2", None)]
+)
+def test_get_esp_temperature(fixture, expected, request):
     """Test v4 Status reply"""
-    status = test_charger.esp_temperature
-    assert status == 56.0
+    charger = request.getfixturevalue(fixture)
+    status = charger.esp_temperature
+    assert status == expected
 
 
-def test_get_time(test_charger):
+@pytest.mark.parametrize(
+    "fixture, expected",
+    [("test_charger", "2021-08-10T23:00:11Z"), ("test_charger_v2", None)],
+)
+def test_get_time(fixture, expected, request):
     """Test v4 Status reply"""
-    status = test_charger.time
-    assert status == "2021-08-10T23:00:11Z"
+    charger = request.getfixturevalue(fixture)
+    status = charger.time
+    assert status == expected
 
 
-def test_get_usage_session(test_charger):
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 275.71), ("test_charger_v2", 7003.41)]
+)
+def test_get_usage_session(fixture, expected, request):
     """Test v4 Status reply"""
-    status = test_charger.usage_session
-    assert status == 275.71
+    charger = request.getfixturevalue(fixture)
+    status = charger.usage_session
+    assert status == expected
 
 
-def test_get_protocol_version(test_charger):
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", "-"), ("test_charger_v2", "4.0.1")]
+)
+def test_get_protocol_version(fixture, expected, request):
     """Test v4 Status reply"""
-    status = test_charger.protocol_version
-    assert status == "-"
+    charger = request.getfixturevalue(fixture)
+    status = charger.protocol_version
+    assert status == expected
 
 
-def test_get_min_amps(test_charger):
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 6), ("test_charger_v2", 6)]
+)
+def test_get_min_amps(fixture, expected, request):
     """Test v4 Status reply"""
-    status = test_charger.min_amps
-    assert status == 6
+    charger = request.getfixturevalue(fixture)
+    status = charger.min_amps
+    assert status == expected
 
 
-def test_get_max_amps(test_charger):
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 48), ("test_charger_v2", 48)]
+)
+def test_get_max_amps(fixture, expected, request):
     """Test v4 Status reply"""
-    status = test_charger.max_amps
-    assert status == 48
+    charger = request.getfixturevalue(fixture)
+    status = charger.max_amps
+    assert status == expected
