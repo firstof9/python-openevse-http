@@ -68,7 +68,7 @@ class OpenEVSE:
         resp = value.json()
         return resp[0] == "OK", resp[1:]
 
-    def update(self, mode: str = "status") -> None:
+    def update(self) -> None:
         """Update the values."""
         urls = [f"{self._url}/status", f"{self._url}/config"]
 
