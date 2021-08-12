@@ -47,16 +47,16 @@ class OpenEVSE:
         self._status = None
         self._config = None
 
-    async def send_command(self, command: str) -> tuple | None:
+    def send_command(self, command: str) -> tuple | None:
         """Send a command via HTTP to the charger and prases the response."""
         url = f"{self._url}/r?json=1"
         data = {"rapi": command}
 
         _LOGGER.debug("Posting data: %s to %s", command, url)
         if self._user is not None:
-            value = requests.get(url, data=data, auth=(self._user, self._pwd))
+            value = requests.post(url, data=data, auth=(self._user, self._pwd))
         else:
-            value = requests.get(url, data=data)
+            value = requests.post(url, data=data)
 
         if value.status_code == 400:
             raise ParseJSONError
@@ -66,7 +66,7 @@ class OpenEVSE:
         if "ret" not in value.json():
             return False, ""
         resp = value.json()
-        return resp[0] == "OK", resp[1:]
+        return resp["cmd"] == "OK", resp["ret"]
 
     def update(self) -> None:
         """Update the values."""

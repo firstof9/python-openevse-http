@@ -16,6 +16,38 @@ def test_get_status_auth_err(test_charger_auth_err):
         assert test_charger_auth_err is None
 
 
+def test_send_command(test_charger, send_command_mock):
+    """Test v4 Status reply"""
+    status = test_charger.send_command("test")
+    assert status == (True, "test")
+
+
+def test_send_command_missing(test_charger, send_command_mock_missing):
+    """Test v4 Status reply"""
+    status = test_charger.send_command("test")
+    assert status == (False, "")
+
+
+def test_send_command_auth(test_charger_auth, send_command_mock):
+    """Test v4 Status reply"""
+    status = test_charger_auth.send_command("test")
+    assert status == (True, "test")
+
+
+def test_send_command_parse_err(test_charger_auth, send_command_parse_err):
+    """Test v4 Status reply"""
+    with pytest.raises(openevsehttp.ParseJSONError):
+        status = test_charger_auth.send_command("test")
+        assert status is None
+
+
+def test_send_command_auth_err(test_charger_auth, send_command_auth_err):
+    """Test v4 Status reply"""
+    with pytest.raises(openevsehttp.AuthenticationError):
+        status = test_charger_auth.send_command("test")
+        assert status is None
+
+
 @pytest.mark.parametrize(
     "fixture, expected",
     [("test_charger", "sleeping"), ("test_charger_v2", "not connected")],

@@ -1,5 +1,6 @@
 """Provide common pytest fixtures."""
 import pytest
+import json
 
 import openevsehttp
 from tests.common import load_fixture
@@ -84,4 +85,42 @@ def mock_config_v2(requests_mock):
     requests_mock.get(
         "http://openevse.test.tld/config",
         text=load_fixture("v2_json/config.json"),
+    )
+
+
+@pytest.fixture(name="send_command_mock")
+def mock_send_command(requests_mock):
+    """Mock the command reply."""
+    value = {"cmd": "OK", "ret": "test"}
+    requests_mock.post(
+        "http://openevse.test.tld/r?json=1",
+        text=json.dumps(value),
+    )
+
+
+@pytest.fixture(name="send_command_parse_err")
+def mock_send_command_parse_err(requests_mock):
+    """Mock the command reply parse err."""
+    requests_mock.post(
+        "http://openevse.test.tld/r?json=1",
+        status_code=400,
+    )
+
+
+@pytest.fixture(name="send_command_auth_err")
+def mock_send_command_auth_err(requests_mock):
+    """Mock the command reply auth err."""
+    requests_mock.post(
+        "http://openevse.test.tld/r?json=1",
+        status_code=401,
+    )
+
+
+@pytest.fixture(name="send_command_mock_missing")
+def mock_send_command_missing(requests_mock):
+    """Mock the command reply."""
+    value = {"cmd": "OK", "what": "test"}
+    requests_mock.post(
+        "http://openevse.test.tld/r?json=1",
+        text=json.dumps(value),
     )
