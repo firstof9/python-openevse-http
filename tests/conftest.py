@@ -16,10 +16,9 @@ def test_charger_auth(status_mock, config_mock):
 @pytest.fixture(name="test_charger_auth_err")
 def test_charger_auth_err(status_mock_err, config_mock_err):
     """Load the charger data."""
-    with pytest.raises(openevsehttp.AuthenticationError):
-        return openevsehttp.OpenEVSE(
-            "openevse.test.tld", user="testuser", pwd="fakepassword"
-        )
+    return openevsehttp.OpenEVSE(
+        "openevse.test.tld", user="testuser", pwd="fakepassword"
+    )
 
 
 @pytest.fixture(name="status_mock_err")

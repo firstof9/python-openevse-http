@@ -44,8 +44,8 @@ class OpenEVSE:
         self._user = user
         self._pwd = pwd
         self._url = f"http://{host}"
-        self._status = self.update(mode="status")
-        self._config = self.update(mode="config")
+        self._status = None
+        self._config = None
 
     async def send_command(self, command: str) -> tuple | None:
         """Send a command via HTTP to the charger and prases the response."""
@@ -68,19 +68,24 @@ class OpenEVSE:
         resp = value.json()
         return resp[0] == "OK", resp[1:]
 
-    def update(self, mode: str) -> Optional[Dict[Any, Any]] | None:
+    def update(self, mode: str = "status") -> None:
         """Update the values."""
-        url = f"{self._url}/{mode}"
+        urls = [f"{self._url}/status", f"{self._url}/config"]
 
-        _LOGGER.debug("Updating data from %s", url)
-        if self._user is not None:
-            value = requests.get(url, auth=(self._user, self._pwd))
-        else:
-            value = requests.get(url)
+        for url in urls:
+            _LOGGER.debug("Updating data from %s", url)
+            if self._user is not None:
+                value = requests.get(url, auth=(self._user, self._pwd))
+            else:
+                value = requests.get(url)
 
-        if value.status_code == 401:
-            raise AuthenticationError
-        return value.json()
+            if value.status_code == 401:
+                raise AuthenticationError
+
+            if "/status" in url:
+                self._status = value.json()
+            else:
+                self._config = value.json()
 
     @property
     def hostname(self) -> str:

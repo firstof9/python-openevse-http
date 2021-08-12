@@ -1,15 +1,19 @@
 import pytest
+import openevsehttp
 
 
 def test_get_status_auth(test_charger_auth):
     """Test v4 Status reply"""
+    test_charger_auth.update()
     status = test_charger_auth.status
     assert status == "sleeping"
 
 
 def test_get_status_auth_err(test_charger_auth_err):
     """Test v4 Status reply"""
-    assert test_charger_auth_err is None
+    with pytest.raises(openevsehttp.AuthenticationError):
+        test_charger_auth_err.update()
+        assert test_charger_auth_err is None
 
 
 @pytest.mark.parametrize(
@@ -19,6 +23,7 @@ def test_get_status_auth_err(test_charger_auth_err):
 def test_get_status(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
+    charger.update()
     status = charger.status
     assert status == expected
 
@@ -30,6 +35,7 @@ def test_get_status(fixture, expected, request):
 def test_get_ssid(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
+    charger.update()
     status = charger.wifi_ssid
     assert status == expected
 
@@ -40,6 +46,7 @@ def test_get_ssid(fixture, expected, request):
 def test_get_firmware(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
+    charger.update()
     status = charger.openevse_firmware
     assert status == expected
 
@@ -51,6 +58,7 @@ def test_get_firmware(fixture, expected, request):
 def test_get_hostname(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
+    charger.update()
     status = charger.hostname
     assert status == expected
 
@@ -61,6 +69,7 @@ def test_get_hostname(fixture, expected, request):
 def test_get_ammeter_offset(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
+    charger.update()
     status = charger.ammeter_offset
     assert status == expected
 
@@ -71,6 +80,7 @@ def test_get_ammeter_offset(fixture, expected, request):
 def test_get_ammeter_scale_factor(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
+    charger.update()
     status = charger.ammeter_scale_factor
     assert status == expected
 
@@ -88,6 +98,7 @@ def test_get_ammeter_scale_factor(fixture, expected, request):
 def test_get_service_level(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
+    charger.update()
     status = charger.service_level
     assert status == expected
 
@@ -98,6 +109,7 @@ def test_get_service_level(fixture, expected, request):
 def test_get_wifi_firmware(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
+    charger.update()
     status = charger.wifi_firmware
     assert status == expected
 
@@ -109,6 +121,7 @@ def test_get_wifi_firmware(fixture, expected, request):
 def test_get_ip_address(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
+    charger.update()
     status = charger.ip_address
     assert status == expected
 
@@ -119,6 +132,7 @@ def test_get_ip_address(fixture, expected, request):
 def test_get_charging_voltage(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
+    charger.update()
     status = charger.charging_voltage
     assert status == expected
 
@@ -129,6 +143,7 @@ def test_get_charging_voltage(fixture, expected, request):
 def test_get_mode(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
+    charger.update()
     status = charger.mode
     assert status == expected
 
@@ -139,6 +154,7 @@ def test_get_mode(fixture, expected, request):
 def test_get_using_ethernet(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
+    charger.update()
     status = charger.using_ethernet
     assert status == expected
 
@@ -149,6 +165,7 @@ def test_get_using_ethernet(fixture, expected, request):
 def test_get_stuck_relay_trip_count(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
+    charger.update()
     status = charger.stuck_relay_trip_count
     assert status == expected
 
@@ -159,6 +176,7 @@ def test_get_stuck_relay_trip_count(fixture, expected, request):
 def test_get_no_gnd_trip_count(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
+    charger.update()
     status = charger.no_gnd_trip_count
     assert status == expected
 
@@ -169,6 +187,7 @@ def test_get_no_gnd_trip_count(fixture, expected, request):
 def test_get_gfi_trip_count(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
+    charger.update()
     status = charger.gfi_trip_count
     assert status == expected
 
@@ -179,6 +198,7 @@ def test_get_gfi_trip_count(fixture, expected, request):
 def test_get_charge_time_elapsed(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
+    charger.update()
     status = charger.charge_time_elapsed
     assert status == expected
 
@@ -189,6 +209,7 @@ def test_get_charge_time_elapsed(fixture, expected, request):
 def test_get_wifi_signal(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
+    charger.update()
     status = charger.wifi_signal
     assert status == expected
 
@@ -199,6 +220,7 @@ def test_get_wifi_signal(fixture, expected, request):
 def test_get_charging_current(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
+    charger.update()
     status = charger.charging_current
     assert status == expected
 
@@ -209,6 +231,7 @@ def test_get_charging_current(fixture, expected, request):
 def test_get_current_capacity(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
+    charger.update()
     status = charger.current_capacity
     assert status == expected
 
@@ -219,6 +242,7 @@ def test_get_current_capacity(fixture, expected, request):
 def test_get_usage_total(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
+    charger.update()
     status = charger.usage_total
     assert status == expected
 
@@ -229,6 +253,7 @@ def test_get_usage_total(fixture, expected, request):
 def test_get_ambient_temperature(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
+    charger.update()
     status = charger.ambient_temperature
     assert status == expected
 
@@ -239,6 +264,7 @@ def test_get_ambient_temperature(fixture, expected, request):
 def test_get_rtc_temperature(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
+    charger.update()
     status = charger.rtc_temperature
     assert status == expected
 
@@ -249,6 +275,7 @@ def test_get_rtc_temperature(fixture, expected, request):
 def test_get_ir_temperature(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
+    charger.update()
     status = charger.ir_temperature
     assert status is None
 
@@ -259,6 +286,7 @@ def test_get_ir_temperature(fixture, expected, request):
 def test_get_esp_temperature(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
+    charger.update()
     status = charger.esp_temperature
     assert status == expected
 
@@ -270,6 +298,7 @@ def test_get_esp_temperature(fixture, expected, request):
 def test_get_time(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
+    charger.update()
     status = charger.time
     assert status == expected
 
@@ -280,6 +309,7 @@ def test_get_time(fixture, expected, request):
 def test_get_usage_session(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
+    charger.update()
     status = charger.usage_session
     assert status == expected
 
@@ -290,6 +320,7 @@ def test_get_usage_session(fixture, expected, request):
 def test_get_protocol_version(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
+    charger.update()
     status = charger.protocol_version
     assert status == expected
 
@@ -300,6 +331,7 @@ def test_get_protocol_version(fixture, expected, request):
 def test_get_min_amps(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
+    charger.update()
     status = charger.min_amps
     assert status == expected
 
@@ -310,5 +342,6 @@ def test_get_min_amps(fixture, expected, request):
 def test_get_max_amps(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
+    charger.update()
     status = charger.max_amps
     assert status == expected
