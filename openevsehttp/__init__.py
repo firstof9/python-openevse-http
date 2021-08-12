@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import datetime
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional
 
 import requests  # type: ignore
 
