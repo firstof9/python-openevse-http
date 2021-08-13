@@ -21,9 +21,7 @@ setup(
     packages=find_packages(exclude=["test.*", "tests"]),
     python_requires=">=3.8",
     install_requires=["requests"],
-    entry_points={
-        "console_scripts": ["zwave-js-server-python = zwave_js_server.__main__:main"]
-    },
+    entry_points={},
     include_package_data=True,
     zip_safe=False,
     classifiers=[
