@@ -225,7 +225,7 @@ class OpenEVSE:
 
     @property
     def charging_current(self) -> float:
-        """Return the charge time elapsed (in seconds).
+        """Return the charge current.
 
         0 if is not currently charging.
         """
@@ -262,8 +262,8 @@ class OpenEVSE:
         In degrees Celcius.
         """
         assert self._status is not None
-        temp = self._status["temp2"]
-        if temp != "0.0":
+        temp = self._status["temp2"] if self._status["temp2"] else None
+        if temp is not None:
             return temp / 10
         return None
 
@@ -274,8 +274,8 @@ class OpenEVSE:
         In degrees Celcius.
         """
         assert self._status is not None
-        temp = self._status["temp3"]
-        if temp != 0.0:
+        temp = self._status["temp3"] if self._status["temp3"] else None
+        if temp is not None:
             return temp / 10
         return None
 
@@ -284,8 +284,8 @@ class OpenEVSE:
         """Return the temperature of the ESP sensor, in degrees Celcius."""
         assert self._status is not None
         if "temp4" in self._status:
-            temp = self._status["temp4"]
-            if temp != 0.0:
+            temp = self._status["temp4"] if self._status["temp4"] else None
+            if temp is not None:
                 return temp / 10
         return None
 

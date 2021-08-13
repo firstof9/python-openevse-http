@@ -291,7 +291,7 @@ def test_get_ambient_temperature(fixture, expected, request):
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 50.3), ("test_charger_v2", 0.0)]
+    "fixture, expected", [("test_charger", 50.3), ("test_charger_v2", None)]
 )
 def test_get_rtc_temperature(fixture, expected, request):
     """Test v4 Status reply"""
