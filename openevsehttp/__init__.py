@@ -59,8 +59,10 @@ class OpenEVSE:
             value = requests.post(url, data=data)
 
         if value.status_code == 400:
+            _LOGGER.debug("JSON error: %s", value.text)
             raise ParseJSONError
         if value.status_code == 401:
+            _LOGGER.debug("Authentication error: %s", value.text)
             raise AuthenticationError
 
         if "ret" not in value.json():
@@ -80,6 +82,7 @@ class OpenEVSE:
                 value = requests.get(url)
 
             if value.status_code == 401:
+                _LOGGER.debug("Authentication error: %s", value.text)
                 raise AuthenticationError
 
             if "/status" in url:
