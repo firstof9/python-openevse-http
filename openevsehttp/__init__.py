@@ -49,8 +49,8 @@ class OpenEVSE:
 
     def send_command(self, command: str) -> tuple | None:
         """Send a command via HTTP to the charger and prases the response."""
-        url = f"{self._url}/r?json=1"
-        data = {"rapi": command}
+        url = f"{self._url}/r"
+        data = {"json": 1, "rapi": command}
 
         _LOGGER.debug("Posting data: %s to %s", command, url)
         if self._user is not None:
