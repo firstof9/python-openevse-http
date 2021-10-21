@@ -93,7 +93,7 @@ def mock_send_command(requests_mock):
     """Mock the command reply."""
     value = {"cmd": "OK", "ret": "test"}
     requests_mock.post(
-        "http://openevse.test.tld/r?json=1",
+        "http://openevse.test.tld/r",
         text=json.dumps(value),
     )
 
@@ -102,7 +102,7 @@ def mock_send_command(requests_mock):
 def mock_send_command_parse_err(requests_mock):
     """Mock the command reply parse err."""
     requests_mock.post(
-        "http://openevse.test.tld/r?json=1",
+        "http://openevse.test.tld/r",
         status_code=400,
     )
 
@@ -111,7 +111,7 @@ def mock_send_command_parse_err(requests_mock):
 def mock_send_command_auth_err(requests_mock):
     """Mock the command reply auth err."""
     requests_mock.post(
-        "http://openevse.test.tld/r?json=1",
+        "http://openevse.test.tld/r",
         status_code=401,
     )
 
@@ -121,6 +121,6 @@ def mock_send_command_missing(requests_mock):
     """Mock the command reply."""
     value = {"cmd": "OK", "what": "test"}
     requests_mock.post(
-        "http://openevse.test.tld/r?json=1",
+        "http://openevse.test.tld/r",
         text=json.dumps(value),
     )
