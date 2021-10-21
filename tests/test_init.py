@@ -19,13 +19,13 @@ def test_get_status_auth_err(test_charger_auth_err):
 def test_send_command(test_charger, send_command_mock):
     """Test v4 Status reply"""
     status = test_charger.send_command("test")
-    assert status == (True, "$OK^20")
+    assert status == ("OK", "$OK^20")
 
 
-def test_send_command(test_charger, send_command_mock_failed):
+def test_send_command_failed(test_charger, send_command_mock_failed):
     """Test v4 Status reply"""
     status = test_charger.send_command("test")
-    assert status == (True, "$NK^21")
+    assert status == ("OK", "$NK^21")
 
 
 def test_send_command_missing(test_charger, send_command_mock_missing):
@@ -37,7 +37,7 @@ def test_send_command_missing(test_charger, send_command_mock_missing):
 def test_send_command_auth(test_charger_auth, send_command_mock):
     """Test v4 Status reply"""
     status = test_charger_auth.send_command("test")
-    assert status == (True, "$OK^20")
+    assert status == ("OK", "$OK^20")
 
 
 def test_send_command_parse_err(test_charger_auth, send_command_parse_err):
