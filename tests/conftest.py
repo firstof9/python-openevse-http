@@ -124,13 +124,3 @@ def mock_send_command_missing(requests_mock):
         "http://openevse.test.tld/r",
         text=json.dumps(value),
     )
-
-
-@pytest.fixture(name="send_command_mock_failed")
-def mock_send_command_failed(requests_mock):
-    """Mock the command reply."""
-    value = {"cmd": "OK", "ret": "$NK^21"}
-    requests_mock.post(
-        "http://openevse.test.tld/r",
-        text=json.dumps(value),
-    )
