@@ -91,7 +91,7 @@ def mock_config_v2(requests_mock):
 @pytest.fixture(name="send_command_mock")
 def mock_send_command(requests_mock):
     """Mock the command reply."""
-    value = {"cmd": "OK", "ret": "test"}
+    value = {"cmd": "OK", "ret": "$OK^20"}
     requests_mock.post(
         "http://openevse.test.tld/r",
         text=json.dumps(value),
@@ -119,7 +119,17 @@ def mock_send_command_auth_err(requests_mock):
 @pytest.fixture(name="send_command_mock_missing")
 def mock_send_command_missing(requests_mock):
     """Mock the command reply."""
-    value = {"cmd": "OK", "what": "test"}
+    value = {"cmd": "OK", "what": "$NK^21"}
+    requests_mock.post(
+        "http://openevse.test.tld/r",
+        text=json.dumps(value),
+    )
+
+
+@pytest.fixture(name="send_command_mock_failed")
+def mock_send_command_failed(requests_mock):
+    """Mock the command reply."""
+    value = {"cmd": "OK", "ret": "$NK^21"}
     requests_mock.post(
         "http://openevse.test.tld/r",
         text=json.dumps(value),
