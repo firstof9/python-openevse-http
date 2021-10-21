@@ -68,7 +68,7 @@ class OpenEVSE:
         if "ret" not in value.json():
             return False, ""
         resp = value.json()
-        return resp["cmd"] == "OK", resp["ret"]
+        return resp["cmd"], resp["ret"]
 
     def update(self) -> None:
         """Update the values."""
