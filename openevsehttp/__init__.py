@@ -54,9 +54,9 @@ class OpenEVSE:
 
         _LOGGER.debug("Posting data: %s to %s", command, url)
         if self._user is not None:
-            value = requests.post(url, data=data, auth=(self._user, self._pwd))
+            value = requests.get(url, data=data, auth=(self._user, self._pwd))
         else:
-            value = requests.post(url, data=data)
+            value = requests.get(url, data=data)
 
         if value.status_code == 400:
             _LOGGER.debug("JSON error: %s", value.text)
