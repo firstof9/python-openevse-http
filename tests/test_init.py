@@ -383,3 +383,90 @@ def test_get_max_amps(fixture, expected, request):
     charger.update()
     status = charger.max_amps
     assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
+)
+def test_get_ota_update(fixture, expected, request):
+    """Test v4 Status reply"""
+    charger = request.getfixturevalue(fixture)
+    charger.update()
+    status = charger.ota_update
+    assert status == expected
+
+
+@pytest.mark.parametrize("fixture, expected", [("test_charger", 1)])
+def test_get_vehicle(fixture, expected, request):
+    """Test v4 Status reply"""
+    charger = request.getfixturevalue(fixture)
+    charger.update()
+    status = charger.vehicle
+    assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected",
+    [("test_charger", "sleeping"), ("test_charger_v2", "not connected")],
+)
+def test_get_state(fixture, expected, request):
+    """Test v4 Status reply"""
+    charger = request.getfixturevalue(fixture)
+    charger.update()
+    status = charger.state
+    assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
+)
+def test_get_tempt(fixture, expected, request):
+    """Test v4 Status reply"""
+    charger = request.getfixturevalue(fixture)
+    charger.update()
+    status = charger.temp_check_enabled
+    assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 1)]
+)
+def test_get_diodet(fixture, expected, request):
+    """Test v4 Status reply"""
+    charger = request.getfixturevalue(fixture)
+    charger.update()
+    status = charger.diode_check_enabled
+    assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
+)
+def test_get_ventt(fixture, expected, request):
+    """Test v4 Status reply"""
+    charger = request.getfixturevalue(fixture)
+    charger.update()
+    status = charger.vent_required_enabled
+    assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
+)
+def test_get_groundt(fixture, expected, request):
+    """Test v4 Status reply"""
+    charger = request.getfixturevalue(fixture)
+    charger.update()
+    status = charger.ground_check_enabled
+    assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
+)
+def test_get_relayt(fixture, expected, request):
+    """Test v4 Status reply"""
+    charger = request.getfixturevalue(fixture)
+    charger.update()
+    status = charger.stuck_relay_check_enabled
+    assert status == expected
