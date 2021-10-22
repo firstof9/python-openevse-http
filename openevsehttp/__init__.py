@@ -8,6 +8,7 @@ from typing import Optional
 import requests  # type: ignore
 
 from .const import MAX_AMPS, MIN_AMPS
+from .exceptions import AuthenticationError, ParseJSONError, HTTPError
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -26,18 +27,6 @@ states = {
     254: "sleeping",
     255: "disabled",
 }
-
-
-class AuthenticationError(Exception):
-    """Exception for authentication errors."""
-
-
-class ParseJSONError(Exception):
-    """Exception for JSON parsing errors."""
-
-
-class HTTPError(Exception):
-    """Exception for HTTP errors."""
 
 
 class OpenEVSE:
