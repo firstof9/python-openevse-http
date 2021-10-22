@@ -36,19 +36,24 @@ class ParseJSONError(Exception):
     """Exception for JSON parsing errors."""
 
 
+class HTTPError(Exception):
+    """Exception for HTTP errors."""
+
+
 class OpenEVSE:
     """Represent an OpenEVSE charger."""
 
     def __init__(self, host: str, user: str = None, pwd: str = None) -> None:
-        """Connect to an OpenEVSE charger equipped with a wifi or ethernet."""
+        """Connect to an OpenEVSE charger equipped with wifi or ethernet."""
         self._user = user
         self._pwd = pwd
         self._url = f"http://{host}"
         self._status = None
         self._config = None
+        self._override = None
 
     def send_command(self, command: str) -> tuple | None:
-        """Send a command via HTTP to the charger and prases the response."""
+        """Send a RAPI command to the charger and parses the response."""
         url = f"{self._url}/r"
         data = {"json": 1, "rapi": command}
 
@@ -89,6 +94,94 @@ class OpenEVSE:
                 self._status = value.json()
             else:
                 self._config = value.json()
+
+    def get_override(self) -> None:
+        """Get the manual override status."""
+        url = f"{self._url}/overrride"
+
+        _LOGGER.debug("Geting data from %s", url)
+        if self._user is not None:
+            value = requests.get(url, auth=(self._user, self._pwd))
+        else:
+            value = requests.get(url)
+
+        if value.status_code == 401:
+            _LOGGER.debug("Authentication error: %s", value)
+            raise AuthenticationError
+
+        self._override = value.json()
+
+    def set_override(
+        self,
+        state: str,
+        charge_current: int,
+        max_current: int,
+        energy_limit: int,
+        time_limit: int,
+        auto_release: bool = True,
+    ) -> str:
+        """Set the manual override status."""
+        url = f"{self._url}/overrride"
+
+        if state not in ["active", "disabled"]:
+            raise ValueError
+
+        data = {
+            "state": state,
+            "charge_current": charge_current,
+            "max_current": max_current,
+            "energy_limit": energy_limit,
+            "time_limit": time_limit,
+            "auto_release": auto_release,
+        }
+
+        _LOGGER.debug("Setting override config on %s", url)
+        if self._user is not None:
+            value = requests.post(url, data=data, auth=(self._user, self._pwd))
+        else:
+            value = requests.post(url, data=data)
+
+        if value.status_code == 401:
+            _LOGGER.debug("Authentication error: %s", value)
+            raise AuthenticationError
+
+        return value["msg"]
+
+    def toggle_override(self) -> None:
+        """Toggle the manual override status."""
+        url = f"{self._url}/overrride"
+
+        _LOGGER.debug("Toggling manual override %s", url)
+        if self._user is not None:
+            value = requests.patch(url, auth=(self._user, self._pwd))
+        else:
+            value = requests.patch(url)
+
+        if value.status_code == 401:
+            _LOGGER.debug("Authentication error: %s", value)
+            raise AuthenticationError
+
+        if value.status_code != 200:
+            _LOGGER.error("Problem handling request: %s", value)
+            raise HTTPError
+
+    def clear_override(self) -> None:
+        """Clear the manual override status."""
+        url = f"{self._url}/overrride"
+
+        _LOGGER.debug("Clearing manual overrride %s", url)
+        if self._user is not None:
+            value = requests.delete(url, auth=(self._user, self._pwd))
+        else:
+            value = requests.delete(url)
+
+        if value.status_code == 401:
+            _LOGGER.debug("Authentication error: %s", value)
+            raise AuthenticationError
+
+        if value.status_code != 200:
+            _LOGGER.error("Problem handling request: %s", value)
+            raise HTTPError
 
     @property
     def hostname(self) -> str:
@@ -215,6 +308,12 @@ class OpenEVSE:
         return states[int(self._status["state"])]
 
     @property
+    def state(self) -> str:
+        """Return charger's state."""
+        assert self._status is not None
+        return states[int(self._status["state"])]
+
+    @property
     def charge_time_elapsed(self) -> int:
         """Return elapsed charging time."""
         assert self._status is not None
@@ -314,6 +413,18 @@ class OpenEVSE:
         """Return the protocol version."""
         assert self._config is not None
         return self._config["protocol"]
+
+    @property
+    def vehicle(self) -> str:
+        """Return if a vehicle is connected dto the EVSE."""
+        assert self._status is not None
+        return self._status["vehicle"]
+
+    @property
+    def ota_update(self) -> str:
+        """Return if an OTA update is active."""
+        assert self._status is not None
+        return self._status["ota_update"]
 
     # There is currently no min/max amps JSON data
     # available via HTTP API methods
