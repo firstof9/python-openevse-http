@@ -56,10 +56,9 @@ class OpenEVSEWebsocket:
         """Initialize a OpenEVSEWebsocket instance."""
         self.session = aiohttp.ClientSession()
         self.uri = self._get_uri(server)
-        self._user = (user,)
-        self._password = (password,)
+        self._user = user
+        self._password = password
         self.callback = callback
-        self.subscriptions = ["message"]
         self._state = None
         self.failed_attempts = 0
         self._error_reason = None
@@ -105,14 +104,8 @@ class OpenEVSEWebsocket:
 
                     if message.type == aiohttp.WSMsgType.TEXT:
                         msg = message.json()
-                        msgtype = msg["type"]
-
-                        if msgtype in self.subscriptions:
-                            self.callback(msgtype, msg, None)
-
-                        else:
-                            _LOGGER.debug("Ignoring: %s", msg)
-                            continue
+                        msgtype = "data"
+                        self.callback(msgtype, msg, None)
 
                     elif message.type == aiohttp.WSMsgType.CLOSED:
                         _LOGGER.warning("Websocket connection closed")
@@ -176,6 +169,7 @@ class OpenEVSE:
         self._status = None
         self._config = None
         self._override = None
+        self._ws_listening = False
 
     def send_command(self, command: str) -> tuple | None:
         """Send a RAPI command to the charger and parses the response."""
@@ -202,9 +196,33 @@ class OpenEVSE:
 
     def update(self) -> None:
         """Update the values."""
-        urls = [f"{self.url}/status", f"{self.url}/config"]
+        if not self._ws_listening:
+            urls = [f"{self.url}/status", f"{self.url}/config"]
 
-        for url in urls:
+            for url in urls:
+                _LOGGER.debug("Updating data from %s", url)
+                if self._user is not None:
+                    value = requests.get(url, auth=(self._user, self._pwd))
+                else:
+                    value = requests.get(url)
+
+                if value.status_code == 401:
+                    _LOGGER.debug("Authentication error: %s", value)
+                    raise AuthenticationError
+
+                if "/status" in url:
+                    self._status = value.json()
+                else:
+                    self._config = value.json()
+
+            # Start Websocket listening
+            websocket = OpenEVSEWebsocket(
+                self.url, self._update_status, self._user, self._pwd
+            )
+            websocket.listen()
+            self._ws_listening = True
+        else:
+            url = f"{self.url}/config"
             _LOGGER.debug("Updating data from %s", url)
             if self._user is not None:
                 value = requests.get(url, auth=(self._user, self._pwd))
@@ -215,10 +233,30 @@ class OpenEVSE:
                 _LOGGER.debug("Authentication error: %s", value)
                 raise AuthenticationError
 
-            if "/status" in url:
-                self._status = value.json()
-            else:
-                self._config = value.json()
+            self._config = value.json()
+
+    def _update_status(self, msgtype, data, error) -> None:
+        """Update data from websocket listener."""
+        if msgtype == SIGNAL_CONNECTION_STATE:
+            if data == STATE_CONNECTED:
+                _LOGGER.debug("Websocket to %s successful", self.url)
+            elif data == STATE_DISCONNECTED:
+                _LOGGER.debug(
+                    "Websocket to %s disconnected, retrying",
+                    self.url,
+                )
+                self._ws_listening = False
+            # Stopped websockets without errors are expected during shutdown and ignored
+            elif data == STATE_STOPPED and error:
+                _LOGGER.error(
+                    "Websocket to %s failed, aborting [Error: %s]",
+                    self.url,
+                    error,
+                )
+                self._ws_listening = False
+
+        elif msgtype == "data":
+            self._status = data.json()
 
     def get_override(self) -> None:
         """Get the manual override status."""
