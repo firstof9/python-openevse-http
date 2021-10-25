@@ -250,10 +250,11 @@ class OpenEVSE:
                 self._ws_listening = False
 
         elif msgtype == "data":
+            _LOGGER.debug("ws_data: %s", data)
             update_data = data
 
-            for key, value in update_data:
-                self._status[key] = value
+            # for key, value in update_data:
+            #     self._status[key] = value
 
     def ws_disconnect(self) -> None:
         """Disconnect the websocket listener."""
