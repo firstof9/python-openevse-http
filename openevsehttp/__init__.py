@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 import datetime
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 import aiohttp  # type: ignore
 import requests  # type: ignore
@@ -165,15 +165,16 @@ class OpenEVSE:
         """Connect to an OpenEVSE charger equipped with wifi or ethernet."""
         self._user = user
         self._pwd = pwd
-        self.url = f"http://{host}"
+        self.url = f"http://{host}/"
         self._status = None
         self._config = None
         self._override = None
         self._ws_listening = False
+        self.websocket: Optional[OpenEVSEWebsocket] = None  # type: ignore
 
     def send_command(self, command: str) -> tuple | None:
         """Send a RAPI command to the charger and parses the response."""
-        url = f"{self.url}/r"
+        url = f"{self.url}r"
         data = {"json": 1, "rapi": command}
 
         _LOGGER.debug("Posting data: %s to %s", command, url)
@@ -194,10 +195,10 @@ class OpenEVSE:
         resp = value.json()
         return resp["cmd"], resp["ret"]
 
-    def update(self) -> None:
+    async def update(self) -> None:
         """Update the values."""
         if not self._ws_listening:
-            urls = [f"{self.url}/status", f"{self.url}/config"]
+            urls = [f"{self.url}status", f"{self.url}config"]
 
             for url in urls:
                 _LOGGER.debug("Updating data from %s", url)
@@ -216,10 +217,10 @@ class OpenEVSE:
                     self._config = value.json()
 
             # Start Websocket listening
-            websocket = OpenEVSEWebsocket(
+            self.websocket = OpenEVSEWebsocket(
                 self.url, self._update_status, self._user, self._pwd
             )
-            websocket.listen()
+            await self.websocket.listen()
             self._ws_listening = True
         else:
             url = f"{self.url}/config"
@@ -235,7 +236,7 @@ class OpenEVSE:
 
             self._config = value.json()
 
-    def _update_status(self, msgtype, data, error) -> None:
+    def _update_status(self, msgtype, data, error):
         """Update data from websocket listener."""
         if msgtype == SIGNAL_CONNECTION_STATE:
             if data == STATE_CONNECTED:
@@ -246,7 +247,8 @@ class OpenEVSE:
                     self.url,
                 )
                 self._ws_listening = False
-            # Stopped websockets without errors are expected during shutdown and ignored
+            # Stopped websockets without errors are expected during shutdown
+            # and ignored
             elif data == STATE_STOPPED and error:
                 _LOGGER.error(
                     "Websocket to %s failed, aborting [Error: %s]",
@@ -256,7 +258,21 @@ class OpenEVSE:
                 self._ws_listening = False
 
         elif msgtype == "data":
-            self._status = data.json()
+            update_data = data.json()
+
+            for key, value in update_data:
+                self._status[key] = value
+
+    def ws_disconnect(self) -> None:
+        """Disconnect the websocket listener."""
+        assert self.websocket
+        self.websocket.close()
+
+    @property
+    def ws_state(self) -> Any:
+        """Disconnect the websocket listener."""
+        assert self.websocket
+        return self.websocket.state
 
     def get_override(self) -> None:
         """Get the manual override status."""

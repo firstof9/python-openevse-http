@@ -20,7 +20,7 @@ setup(
     long_description_content_type="text/markdown",
     packages=find_packages(exclude=["test.*", "tests"]),
     python_requires=">=3.8",
-    install_requires=["requests"],
+    install_requires=["aiohttp", "requests"],
     entry_points={},
     include_package_data=True,
     zip_safe=False,
