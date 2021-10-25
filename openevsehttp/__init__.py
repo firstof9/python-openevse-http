@@ -6,7 +6,7 @@ import datetime
 import logging
 from typing import Optional
 
-import aiohttp
+import aiohttp  # type: ignore
 import requests  # type: ignore
 
 from .const import MAX_AMPS, MIN_AMPS
@@ -53,16 +53,7 @@ class OpenEVSEWebsocket:
         user=None,
         password=None,
     ):
-        """Initialize a OpenEVSEWebsocket instance.
-        Parameters:
-            server (openevse address):
-                A connected instance.
-            callback (Runnable):
-                Called when interesting events occur. Provides arguments:
-                   msgtype (str): Message type or SIGNAL_* constant
-                   data (str): Current STATE_* or websocket payload contents
-                   error (str): Error message if any or None
-        """
+        """Initialize a OpenEVSEWebsocket instance."""
         self.session = aiohttp.ClientSession()
         self.uri = self._get_uri(server)
         self._user = (user,)
@@ -89,74 +80,47 @@ class OpenEVSEWebsocket:
     @staticmethod
     def _get_uri(server):
         """Generate the websocket URI."""
-        return server._url("/:/ws").replace("http", "ws")
+        return server.url("/:/ws").replace("http", "ws")
 
     async def running(self):
         """Open a persistent websocket connection and act on events."""
         self.state = STATE_STARTING
+        auth = None
+
+        if self._user and self._password:
+            auth = aiohttp.BasicAuth(self._user, self._password)
 
         try:
-            if self._user and self._password:
-                async with self.session.ws_connect(
-                    self.uri,
-                    heartbeat=15,
-                    auth=aiohttp.BasicAuth(self._user, self._password),
-                ) as ws_client:
-                    self.state = STATE_CONNECTED
-                    self.failed_attempts = 0
+            async with self.session.ws_connect(
+                self.uri,
+                heartbeat=15,
+                auth=auth,
+            ) as ws_client:
+                self.state = STATE_CONNECTED
+                self.failed_attempts = 0
 
-                    async for message in ws_client:
-                        if self.state == STATE_STOPPED:
-                            break
+                async for message in ws_client:
+                    if self.state == STATE_STOPPED:
+                        break
 
-                        if message.type == aiohttp.WSMsgType.TEXT:
-                            msg = message.json()
-                            msgtype = msg["type"]
+                    if message.type == aiohttp.WSMsgType.TEXT:
+                        msg = message.json()
+                        msgtype = msg["type"]
 
-                            if msgtype not in self.subscriptions:
-                                _LOGGER.debug("Ignoring: %s", msg)
-                                continue
+                        if msgtype in self.subscriptions:
+                            self.callback(msgtype, msg, None)
 
-                            else:
-                                self.callback(msgtype, msg, None)
+                        else:
+                            _LOGGER.debug("Ignoring: %s", msg)
+                            continue
 
-                        elif message.type == aiohttp.WSMsgType.CLOSED:
-                            _LOGGER.warning("AIOHTTP websocket connection closed")
-                            break
+                    elif message.type == aiohttp.WSMsgType.CLOSED:
+                        _LOGGER.warning("Websocket connection closed")
+                        break
 
-                        elif message.type == aiohttp.WSMsgType.ERROR:
-                            _LOGGER.error("AIOHTTP websocket error")
-                            break
-            else:
-                async with self.session.ws_connect(
-                    self.uri,
-                    heartbeat=15,
-                ) as ws_client:
-                    self.state = STATE_CONNECTED
-                    self.failed_attempts = 0
-
-                    async for message in ws_client:
-                        if self.state == STATE_STOPPED:
-                            break
-
-                        if message.type == aiohttp.WSMsgType.TEXT:
-                            msg = message.json()
-                            msgtype = msg["type"]
-
-                            if msgtype not in self.subscriptions:
-                                _LOGGER.debug("Ignoring: %s", msg)
-                                continue
-
-                            else:
-                                self.callback(msgtype, msg, None)
-
-                        elif message.type == aiohttp.WSMsgType.CLOSED:
-                            _LOGGER.warning("AIOHTTP websocket connection closed")
-                            break
-
-                        elif message.type == aiohttp.WSMsgType.ERROR:
-                            _LOGGER.error("AIOHTTP websocket error")
-                            break
+                    elif message.type == aiohttp.WSMsgType.ERROR:
+                        _LOGGER.error("Websocket error")
+                        break
 
         except aiohttp.ClientResponseError as error:
             if error.code == 401:
@@ -208,14 +172,14 @@ class OpenEVSE:
         """Connect to an OpenEVSE charger equipped with wifi or ethernet."""
         self._user = user
         self._pwd = pwd
-        self._url = f"http://{host}"
+        self.url = f"http://{host}"
         self._status = None
         self._config = None
         self._override = None
 
     def send_command(self, command: str) -> tuple | None:
         """Send a RAPI command to the charger and parses the response."""
-        url = f"{self._url}/r"
+        url = f"{self.url}/r"
         data = {"json": 1, "rapi": command}
 
         _LOGGER.debug("Posting data: %s to %s", command, url)
@@ -238,7 +202,7 @@ class OpenEVSE:
 
     def update(self) -> None:
         """Update the values."""
-        urls = [f"{self._url}/status", f"{self._url}/config"]
+        urls = [f"{self.url}/status", f"{self.url}/config"]
 
         for url in urls:
             _LOGGER.debug("Updating data from %s", url)
@@ -258,7 +222,7 @@ class OpenEVSE:
 
     def get_override(self) -> None:
         """Get the manual override status."""
-        url = f"{self._url}/overrride"
+        url = f"{self.url}/overrride"
 
         _LOGGER.debug("Geting data from %s", url)
         if self._user is not None:
@@ -282,7 +246,7 @@ class OpenEVSE:
         auto_release: bool = True,
     ) -> str:
         """Set the manual override status."""
-        url = f"{self._url}/overrride"
+        url = f"{self.url}/overrride"
 
         if state not in ["active", "disabled"]:
             raise ValueError
@@ -310,7 +274,7 @@ class OpenEVSE:
 
     def toggle_override(self) -> None:
         """Toggle the manual override status."""
-        url = f"{self._url}/overrride"
+        url = f"{self.url}/overrride"
 
         _LOGGER.debug("Toggling manual override %s", url)
         if self._user is not None:
@@ -328,7 +292,7 @@ class OpenEVSE:
 
     def clear_override(self) -> None:
         """Clear the manual override status."""
-        url = f"{self._url}/overrride"
+        url = f"{self.url}/overrride"
 
         _LOGGER.debug("Clearing manual overrride %s", url)
         if self._user is not None:
