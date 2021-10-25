@@ -250,7 +250,7 @@ class OpenEVSE:
                 self._ws_listening = False
 
         elif msgtype == "data":
-            update_data = data.json()
+            update_data = data
 
             for key, value in update_data:
                 self._status[key] = value
