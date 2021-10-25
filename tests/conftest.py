@@ -26,21 +26,27 @@ def test_charger_auth_err(status_mock_err, config_mock_err):
 
 
 @pytest.fixture(name="status_mock_err")
-def mock_status_err(requests_mock):
+def mock_status_err():
     """Mock the status reply."""
-    requests_mock.get(
-        TEST_URL_STATUS,
-        status_code=401,
-    )
+    with aioresponses() as client_mock:
+        client_mock.get(
+            TEST_URL_STATUS,
+            status=401,
+        )
+
+        yield client_mock
 
 
 @pytest.fixture(name="config_mock_err")
-def mock_config_err(requests_mock):
+def mock_config_err():
     """Mock the config reply."""
-    requests_mock.get(
-        TEST_URL_CONFIG,
-        status_code=401,
-    )
+    with aioresponses() as client_mock:
+        client_mock.get(
+            TEST_URL_CONFIG,
+            status=401,
+        )
+
+        yield client_mock
 
 
 @pytest.fixture(name="test_charger")
@@ -56,87 +62,114 @@ def test_charger_v2(status_mock_v2, config_mock_v2):
 
 
 @pytest.fixture(name="status_mock")
-def mock_status(requests_mock):
+def mock_status():
     """Mock the status reply."""
-    requests_mock.get(
-        TEST_URL_STATUS,
-        text=load_fixture("v4_json/status.json"),
-    )
+    with aioresponses() as client_mock:
+        client_mock.get(
+            TEST_URL_STATUS,
+            status=200,
+            body=load_fixture("v4_json/status.json"),
+        )
+
+        yield client_mock
 
 
 @pytest.fixture(name="config_mock")
-def mock_config(requests_mock):
+def mock_config():
     """Mock the config reply."""
-    requests_mock.get(
-        TEST_URL_CONFIG,
-        text=load_fixture("v4_json/config.json"),
-    )
+    with aioresponses() as client_mock:
+        client_mock.get(
+            TEST_URL_CONFIG,
+            status=200,
+            body=load_fixture("v4_json/config.json"),
+        )
+
+        yield client_mock
 
 
 @pytest.fixture(name="status_mock_v2")
-def mock_status_v2(requests_mock):
+def mock_status_v2():
     """Mock the status reply."""
-    requests_mock.get(
-        TEST_URL_STATUS,
-        text=load_fixture("v2_json/status.json"),
-    )
+    with aioresponses() as client_mock:
+        client_mock.get(
+            TEST_URL_STATUS,
+            status=200,
+            body=load_fixture("v2_json/status.json"),
+        )
+        yield client_mock
 
 
 @pytest.fixture(name="config_mock_v2")
-def mock_config_v2(requests_mock):
+def mock_config_v2():
     """Mock the config reply."""
-    requests_mock.get(
-        TEST_URL_CONFIG,
-        text=load_fixture("v2_json/config.json"),
-    )
+    with aioresponses() as client_mock:
+        client_mock.get(
+            TEST_URL_CONFIG,
+            status=200,
+            body=load_fixture("v2_json/config.json"),
+        )
+        yield client_mock
 
 
 @pytest.fixture(name="send_command_mock")
-def mock_send_command(requests_mock):
+def mock_send_command():
     """Mock the command reply."""
-    value = {"cmd": "OK", "ret": "$OK^20"}
-    requests_mock.post(
-        TEST_URL_RAPI,
-        text=json.dumps(value),
-    )
+    with aioresponses() as client_mock:
+        value = {"cmd": "OK", "ret": "$OK^20"}
+        client_mock.post(
+            TEST_URL_RAPI,
+            status=200,
+            body=json.dumps(value),
+        )
+        yield client_mock
 
 
 @pytest.fixture(name="send_command_parse_err")
-def mock_send_command_parse_err(requests_mock):
+def mock_send_command_parse_err():
     """Mock the command reply parse err."""
-    requests_mock.post(
-        TEST_URL_RAPI,
-        status_code=400,
-    )
+    with aioresponses() as client_mock:
+        client_mock.post(
+            TEST_URL_RAPI,
+            status=400,
+        )
+        yield client_mock
 
 
 @pytest.fixture(name="send_command_auth_err")
-def mock_send_command_auth_err(requests_mock):
+def mock_send_command_auth_err():
     """Mock the command reply auth err."""
-    requests_mock.post(
-        TEST_URL_RAPI,
-        status_code=401,
-    )
+    with aioresponses() as client_mock:
+        client_mock.post(
+            TEST_URL_RAPI,
+            status=401,
+        )
+        yield client_mock
 
 
 @pytest.fixture(name="send_command_mock_missing")
-def mock_send_command_missing(requests_mock):
+def mock_send_command_missing():
     """Mock the command reply."""
-    value = {"cmd": "OK", "what": "$NK^21"}
-    requests_mock.post(
-        TEST_URL_RAPI,
-        text=json.dumps(value),
-    )
+    with aioresponses() as client_mock:
+        value = {"cmd": "OK", "what": "$NK^21"}
+        client_mock.post(
+            TEST_URL_RAPI,
+            status=200,
+            body=json.dumps(value),
+        )
+        yield client_mock
 
 
 @pytest.fixture(name="send_command_mock_failed")
-def mock_send_command_failed(requests_mock):
+def mock_send_command_failed():
     """Mock the command reply."""
-    value = {"cmd": "OK", "ret": "$NK^21"}
-    requests_mock.post(
-        TEST_URL_RAPI,
-        text=json.dumps(value),
-    )
+    with aioresponses() as client_mock:
+        value = {"cmd": "OK", "ret": "$NK^21"}
+        client_mock.post(
+            TEST_URL_RAPI,
+            status=200,
+            body=json.dumps(value),
+        )
+        yield client_mock
 
 
 @pytest.fixture

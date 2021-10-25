@@ -170,7 +170,7 @@ class OpenEVSE:
         self._config = None
         self._override = None
         self._ws_listening = False
-        self.websocket: Optional[OpenEVSEWebsocket] = None  # type: ignore
+        self.websocket: Optional[OpenEVSEWebsocket] = None
 
     async def send_command(self, command: str) -> tuple | None:
         """Send a RAPI command to the charger and parses the response."""
@@ -178,8 +178,8 @@ class OpenEVSE:
         url = f"{self.url}r"
         data = {"json": 1, "rapi": command}
 
-        if self._user and self._password:
-            auth = aiohttp.BasicAuth(self._user, self._password)
+        if self._user and self._pwd:
+            auth = aiohttp.BasicAuth(self._user, self._pwd)
 
         _LOGGER.debug("Posting data: %s to %s", command, url)
         async with aiohttp.ClientSession() as session:
@@ -202,8 +202,8 @@ class OpenEVSE:
         auth = None
         urls = [f"{self.url}config"]
 
-        if self._user and self._password:
-            auth = aiohttp.BasicAuth(self._user, self._password)
+        if self._user and self._pwd:
+            auth = aiohttp.BasicAuth(self._user, self._pwd)
 
         if not self._ws_listening:
             urls = [f"{self.url}status", f"{self.url}config"]

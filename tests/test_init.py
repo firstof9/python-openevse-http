@@ -21,39 +21,39 @@ async def test_get_status_auth_err(test_charger_auth_err, aioclient_mock):
 
 async def test_send_command(test_charger, send_command_mock):
     """Test v4 Status reply"""
-    status = test_charger.send_command("test")
+    status = await test_charger.send_command("test")
     assert status == ("OK", "$OK^20")
 
 
 async def test_send_command_failed(test_charger, send_command_mock_failed):
     """Test v4 Status reply"""
-    status = test_charger.send_command("test")
+    status = await test_charger.send_command("test")
     assert status == ("OK", "$NK^21")
 
 
 async def test_send_command_missing(test_charger, send_command_mock_missing):
     """Test v4 Status reply"""
-    status = test_charger.send_command("test")
+    status = await test_charger.send_command("test")
     assert status == (False, "")
 
 
 async def test_send_command_auth(test_charger_auth, send_command_mock):
     """Test v4 Status reply"""
-    status = test_charger_auth.send_command("test")
+    status = await test_charger_auth.send_command("test")
     assert status == ("OK", "$OK^20")
 
 
 async def test_send_command_parse_err(test_charger_auth, send_command_parse_err):
     """Test v4 Status reply"""
     with pytest.raises(openevsehttp.ParseJSONError):
-        status = test_charger_auth.send_command("test")
+        status = await test_charger_auth.send_command("test")
         assert status is None
 
 
 async def test_send_command_auth_err(test_charger_auth, send_command_auth_err):
     """Test v4 Status reply"""
     with pytest.raises(openevsehttp.AuthenticationError):
-        status = test_charger_auth.send_command("test")
+        status = await test_charger_auth.send_command("test")
         assert status is None
 
 
