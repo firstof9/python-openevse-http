@@ -50,6 +50,8 @@ class OpenEVSEWebsocket:
         self,
         server,
         callback,
+        user=None,
+        password=None,
     ):
         """Initialize a OpenEVSEWebsocket instance.
         Parameters:
@@ -61,7 +63,10 @@ class OpenEVSEWebsocket:
                    data (str): Current STATE_* or websocket payload contents
                    error (str): Error message if any or None
         """
+        self.session = aiohttp.ClientSession()
         self.uri = self._get_uri(server)
+        self._user = (user,)
+        self._password = (password,)
         self.callback = callback
         self.subscriptions = ["message"]
         self._state = None
@@ -91,32 +96,67 @@ class OpenEVSEWebsocket:
         self.state = STATE_STARTING
 
         try:
-            async with self.session.ws_connect(self.uri, heartbeat=15) as ws_client:
-                self.state = STATE_CONNECTED
-                self.failed_attempts = 0
+            if self._user and self._password:
+                async with self.session.ws_connect(
+                    self.uri,
+                    heartbeat=15,
+                    auth=aiohttp.BasicAuth(self._user, self._password),
+                ) as ws_client:
+                    self.state = STATE_CONNECTED
+                    self.failed_attempts = 0
 
-                async for message in ws_client:
-                    if self.state == STATE_STOPPED:
-                        break
+                    async for message in ws_client:
+                        if self.state == STATE_STOPPED:
+                            break
 
-                    if message.type == aiohttp.WSMsgType.TEXT:
-                        msg = message.json()
-                        msgtype = msg["type"]
+                        if message.type == aiohttp.WSMsgType.TEXT:
+                            msg = message.json()
+                            msgtype = msg["type"]
 
-                        if msgtype not in self.subscriptions:
-                            _LOGGER.debug("Ignoring: %s", msg)
-                            continue
+                            if msgtype not in self.subscriptions:
+                                _LOGGER.debug("Ignoring: %s", msg)
+                                continue
 
-                        else:
-                            self.callback(msgtype, msg, None)
+                            else:
+                                self.callback(msgtype, msg, None)
 
-                    elif message.type == aiohttp.WSMsgType.CLOSED:
-                        _LOGGER.warning("AIOHTTP websocket connection closed")
-                        break
+                        elif message.type == aiohttp.WSMsgType.CLOSED:
+                            _LOGGER.warning("AIOHTTP websocket connection closed")
+                            break
 
-                    elif message.type == aiohttp.WSMsgType.ERROR:
-                        _LOGGER.error("AIOHTTP websocket error")
-                        break
+                        elif message.type == aiohttp.WSMsgType.ERROR:
+                            _LOGGER.error("AIOHTTP websocket error")
+                            break
+            else:
+                async with self.session.ws_connect(
+                    self.uri,
+                    heartbeat=15,
+                ) as ws_client:
+                    self.state = STATE_CONNECTED
+                    self.failed_attempts = 0
+
+                    async for message in ws_client:
+                        if self.state == STATE_STOPPED:
+                            break
+
+                        if message.type == aiohttp.WSMsgType.TEXT:
+                            msg = message.json()
+                            msgtype = msg["type"]
+
+                            if msgtype not in self.subscriptions:
+                                _LOGGER.debug("Ignoring: %s", msg)
+                                continue
+
+                            else:
+                                self.callback(msgtype, msg, None)
+
+                        elif message.type == aiohttp.WSMsgType.CLOSED:
+                            _LOGGER.warning("AIOHTTP websocket connection closed")
+                            break
+
+                        elif message.type == aiohttp.WSMsgType.ERROR:
+                            _LOGGER.error("AIOHTTP websocket error")
+                            break
 
         except aiohttp.ClientResponseError as error:
             if error.code == 401:
@@ -148,9 +188,6 @@ class OpenEVSEWebsocket:
         else:
             if self.state != STATE_STOPPED:
                 self.state = STATE_DISCONNECTED
-
-                # Session IDs reset if Plex server has restarted, be safe
-                self.players.clear()
                 await asyncio.sleep(5)
 
     async def listen(self):
