@@ -80,7 +80,7 @@ class OpenEVSEWebsocket:
     @staticmethod
     def _get_uri(server):
         """Generate the websocket URI."""
-        return server.url("/:/ws").replace("http", "ws")
+        return server[: server.rfind("/")].replace("http", "ws") + "/ws"
 
     async def running(self):
         """Open a persistent websocket connection and act on events."""
