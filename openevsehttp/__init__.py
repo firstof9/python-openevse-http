@@ -172,49 +172,54 @@ class OpenEVSE:
         self._ws_listening = False
         self.websocket: Optional[OpenEVSEWebsocket] = None  # type: ignore
 
-    def send_command(self, command: str) -> tuple | None:
+    async def send_command(self, command: str) -> tuple | None:
         """Send a RAPI command to the charger and parses the response."""
+        auth = None
         url = f"{self.url}r"
         data = {"json": 1, "rapi": command}
 
+        if self._user and self._password:
+            auth = aiohttp.BasicAuth(self._user, self._password)
+
         _LOGGER.debug("Posting data: %s to %s", command, url)
-        if self._user is not None:
-            value = requests.post(url, data=data, auth=(self._user, self._pwd))
-        else:
-            value = requests.post(url, data=data)
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, data=data, auth=auth) as resp:
+                if resp.status == 400:
+                    _LOGGER.debug("JSON error: %s", await resp.text())
+                    raise ParseJSONError
+                if resp.status == 401:
+                    _LOGGER.debug("Authentication error: %s", await resp)
+                    raise AuthenticationError
 
-        if value.status_code == 400:
-            _LOGGER.debug("JSON error: %s", value.text)
-            raise ParseJSONError
-        if value.status_code == 401:
-            _LOGGER.debug("Authentication error: %s", value)
-            raise AuthenticationError
+                value = await resp.json()
 
-        if "ret" not in value.json():
-            return False, ""
-        resp = value.json()
-        return resp["cmd"], resp["ret"]
+                if "ret" not in value:
+                    return False, ""
+                return value["cmd"], value["ret"]
 
     async def update(self) -> None:
         """Update the values."""
+        auth = None
+        urls = [f"{self.url}config"]
+
+        if self._user and self._password:
+            auth = aiohttp.BasicAuth(self._user, self._password)
+
         if not self._ws_listening:
             urls = [f"{self.url}status", f"{self.url}config"]
 
+        async with aiohttp.ClientSession() as session:
             for url in urls:
                 _LOGGER.debug("Updating data from %s", url)
-                if self._user is not None:
-                    value = requests.get(url, auth=(self._user, self._pwd))
-                else:
-                    value = requests.get(url)
+                async with session.get(url, auth=auth) as resp:
+                    if resp.status == 401:
+                        _LOGGER.debug("Authentication error: %s", resp)
+                        raise AuthenticationError
 
-                if value.status_code == 401:
-                    _LOGGER.debug("Authentication error: %s", value)
-                    raise AuthenticationError
-
-                if "/status" in url:
-                    self._status = value.json()
-                else:
-                    self._config = value.json()
+                    if "/status" in url:
+                        self._status = await resp.json()
+                    else:
+                        self._config = await resp.json()
 
             # Start Websocket listening
             self.websocket = OpenEVSEWebsocket(
@@ -222,19 +227,6 @@ class OpenEVSE:
             )
             await self.websocket.listen()
             self._ws_listening = True
-        else:
-            url = f"{self.url}/config"
-            _LOGGER.debug("Updating data from %s", url)
-            if self._user is not None:
-                value = requests.get(url, auth=(self._user, self._pwd))
-            else:
-                value = requests.get(url)
-
-            if value.status_code == 401:
-                _LOGGER.debug("Authentication error: %s", value)
-                raise AuthenticationError
-
-            self._config = value.json()
 
     def _update_status(self, msgtype, data, error):
         """Update data from websocket listener."""
