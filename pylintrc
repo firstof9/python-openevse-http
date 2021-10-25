@@ -26,7 +26,8 @@ disable=
   too-many-public-methods,
   too-many-instance-attributes,
   too-many-branches,
-  no-self-use
+  no-self-use,
+  too-many-statements
 
 [REPORTS]
 score=no
