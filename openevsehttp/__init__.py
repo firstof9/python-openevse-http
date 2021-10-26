@@ -171,6 +171,7 @@ class OpenEVSE:
         self._override = None
         self._ws_listening = False
         self.websocket: Optional[OpenEVSEWebsocket] = None
+        self._loop = asyncio.get_event_loop()
 
     async def send_command(self, command: str) -> tuple | None:
         """Send a RAPI command to the charger and parses the response."""
@@ -225,7 +226,7 @@ class OpenEVSE:
         self.websocket = OpenEVSEWebsocket(
             self.url, self._update_status, self._user, self._pwd
         )
-        await asyncio.gather(self.websocket.listen())
+        self._loop.run_until_complete(self.websocket.listen())
         self._ws_listening = True
 
     def _update_status(self, msgtype, data, error):
