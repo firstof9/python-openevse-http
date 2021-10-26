@@ -148,7 +148,7 @@ class OpenEVSEWebsocket:
                 await asyncio.sleep(5)
 
     async def listen(self):
-        """Close the listening websocket."""
+        """Start the listening websocket."""
         self.failed_attempts = 0
         while self.state != STATE_STOPPED:
             await self.running()
@@ -226,6 +226,10 @@ class OpenEVSE:
         self.websocket = OpenEVSEWebsocket(
             self.url, self._update_status, self._user, self._pwd
         )
+        self._start_listening()
+
+    def _start_listening(self):
+        """Start the websocket listener."""
         self._loop.run_until_complete(self.websocket.listen())
         self._ws_listening = True
 
