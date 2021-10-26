@@ -225,7 +225,7 @@ class OpenEVSE:
             self.websocket = OpenEVSEWebsocket(
                 self.url, self._update_status, self._user, self._pwd
             )
-            await self.websocket.listen()
+            await asyncio.gather(self.websocket.listen())
             self._ws_listening = True
 
     def _update_status(self, msgtype, data, error):
