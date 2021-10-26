@@ -231,10 +231,11 @@ class OpenEVSE:
 
     def _start_listening(self):
         """Start the websocket listener."""
-        self._loop.create_task(self.websocket.listen())
-        pending = asyncio.all_tasks()
-        self._loop.run_until_complete(asyncio.gather(*pending))
-        self._ws_listening = True
+        if not self._loop.is_running():
+            self._loop.create_task(self.websocket.listen())
+            pending = asyncio.all_tasks()
+            self._loop.run_until_complete(asyncio.gather(*pending))
+            self._ws_listening = True
 
     def _update_status(self, msgtype, data, error):
         """Update data from websocket listener."""
