@@ -221,12 +221,12 @@ class OpenEVSE:
                     else:
                         self._config = await resp.json()
 
-            # Start Websocket listening
-            self.websocket = OpenEVSEWebsocket(
-                self.url, self._update_status, self._user, self._pwd
-            )
-            await asyncio.gather(self.websocket.listen())
-            self._ws_listening = True
+        # Start Websocket listening
+        self.websocket = OpenEVSEWebsocket(
+            self.url, self._update_status, self._user, self._pwd
+        )
+        await asyncio.gather(self.websocket.listen())
+        self._ws_listening = True
 
     def _update_status(self, msgtype, data, error):
         """Update data from websocket listener."""
