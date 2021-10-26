@@ -222,11 +222,12 @@ class OpenEVSE:
                     else:
                         self._config = await resp.json()
 
-        # Start Websocket listening
-        self.websocket = OpenEVSEWebsocket(
-            self.url, self._update_status, self._user, self._pwd
-        )
-        self._start_listening()
+        if not self._ws_listening:
+            # Start Websocket listening
+            self.websocket = OpenEVSEWebsocket(
+                self.url, self._update_status, self._user, self._pwd
+            )
+            self._start_listening()
 
     def _start_listening(self):
         """Start the websocket listener."""
@@ -267,10 +268,11 @@ class OpenEVSE:
         """Disconnect the websocket listener."""
         assert self.websocket
         self.websocket.close()
+        self._ws_listening = False
 
     @property
     def ws_state(self) -> Any:
-        """Disconnect the websocket listener."""
+        """Return the status of the websocket listener."""
         assert self.websocket
         return self.websocket.state
 
