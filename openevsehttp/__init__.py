@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import datetime
 import logging
+import json
 from typing import Any, Optional
 
 import aiohttp  # type: ignore
@@ -166,8 +167,8 @@ class OpenEVSE:
         self._user = user
         self._pwd = pwd
         self.url = f"http://{host}/"
-        self._status = None
-        self._config = None
+        self._status: dict = {}
+        self._config: dict = {}
         self._override = None
         self._ws_listening = False
         self.websocket: Optional[OpenEVSEWebsocket] = None
@@ -271,10 +272,7 @@ class OpenEVSE:
 
         elif msgtype == "data":
             _LOGGER.debug("ws_data: %s", data)
-            update_data = data
-
-            for key, value in update_data:
-                self._status[key] = value
+            self._status.update(json.loads(data))
 
     def ws_disconnect(self) -> None:
         """Disconnect the websocket listener."""
