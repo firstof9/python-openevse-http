@@ -229,9 +229,8 @@ class OpenEVSE:
             self.websocket = OpenEVSEWebsocket(
                 self.url, self._update_status, self._user, self._pwd
             )
-            if not self._loop:
+            if not self._ws_listening:
                 self._start_listening()
-                await asyncio.sleep(5)
 
     def _start_listening(self):
         """Start the websocket listener."""
@@ -244,9 +243,8 @@ class OpenEVSE:
 
         if not self._ws_listening:
             self._loop.create_task(self.websocket.listen())
-            pending = asyncio.all_tasks()
             self._ws_listening = True
-            self._loop.run_until_complete(asyncio.gather(*pending))
+            self._loop.run_until_complete()
 
     def _update_status(self, msgtype, data, error):
         """Update data from websocket listener."""
@@ -271,11 +269,11 @@ class OpenEVSE:
                 self._ws_listening = False
 
         elif msgtype == "data":
-            _LOGGER.debug("ws_data: %s", data)
-            update_data = data
+            _LOGGER.debug("ws_data: %s", data.json())
+            update_data = data.json()
 
-            # for key, value in update_data:
-            #     self._status[key] = value
+            for key, value in update_data:
+                self._status[key] = value
 
     def ws_disconnect(self) -> None:
         """Disconnect the websocket listener."""
