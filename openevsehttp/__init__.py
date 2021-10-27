@@ -229,8 +229,9 @@ class OpenEVSE:
             self.websocket = OpenEVSEWebsocket(
                 self.url, self._update_status, self._user, self._pwd
             )
-            if self.websocket.state not in [STATE_CONNECTED, STATE_STARTING]:
+            if not self._loop:
                 self._start_listening()
+                await asyncio.sleep(5)
 
     def _start_listening(self):
         """Start the websocket listener."""
