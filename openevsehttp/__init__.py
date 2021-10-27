@@ -219,15 +219,17 @@ class OpenEVSE:
 
                     if "/status" in url:
                         self._status = await resp.json()
+                        _LOGGER.debug("Status update: %s", self._status)
                     else:
                         self._config = await resp.json()
+                        _LOGGER.debug("Config update: %s", self._config)
 
         if not self.websocket:
             # Start Websocket listening
             self.websocket = OpenEVSEWebsocket(
                 self.url, self._update_status, self._user, self._pwd
             )
-            if self.websocket.state != STATE_CONNECTED:
+            if self.websocket.state not in [STATE_CONNECTED, STATE_STARTING]:
                 self._start_listening()
 
     def _start_listening(self):
@@ -250,6 +252,7 @@ class OpenEVSE:
         if msgtype == SIGNAL_CONNECTION_STATE:
             if data == STATE_CONNECTED:
                 _LOGGER.debug("Websocket to %s successful", self.url)
+                self._ws_listening = True
             elif data == STATE_DISCONNECTED:
                 _LOGGER.debug(
                     "Websocket to %s disconnected, retrying",
