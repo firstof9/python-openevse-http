@@ -171,13 +171,7 @@ class OpenEVSE:
         self._override = None
         self._ws_listening = False
         self.websocket: Optional[OpenEVSEWebsocket] = None
-
-        try:
-            _LOGGER.debug("Attempting to find running loop...")
-            self._loop = asyncio.get_running_loop()
-        except RuntimeError:
-            self._loop = asyncio.get_event_loop()
-            _LOGGER.debug("Using new event loop...")
+        self._loop = None
 
     async def send_command(self, command: str) -> tuple | None:
         """Send a RAPI command to the charger and parses the response."""
@@ -228,15 +222,23 @@ class OpenEVSE:
                     else:
                         self._config = await resp.json()
 
-        if not self._ws_listening:
+        if not self.websocket:
             # Start Websocket listening
             self.websocket = OpenEVSEWebsocket(
                 self.url, self._update_status, self._user, self._pwd
             )
-            self._start_listening()
+            if self.websocket.state != STATE_CONNECTED:
+                self._start_listening()
 
     def _start_listening(self):
         """Start the websocket listener."""
+        try:
+            _LOGGER.debug("Attempting to find running loop...")
+            self._loop = asyncio.get_running_loop()
+        except RuntimeError:
+            self._loop = asyncio.get_event_loop()
+            _LOGGER.debug("Using new event loop...")
+
         if not self._ws_listening:
             self._loop.create_task(self.websocket.listen())
             pending = asyncio.all_tasks()
