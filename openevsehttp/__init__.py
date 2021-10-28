@@ -69,11 +69,11 @@ class OpenEVSEWebsocket:
         return self._state
 
     @state.setter
-    def state(self, value):
+    async def state(self, value):
         """Set the state."""
         self._state = value
         _LOGGER.debug("Websocket %s", value)
-        self.callback(SIGNAL_CONNECTION_STATE, value, self._error_reason)
+        await self.callback(SIGNAL_CONNECTION_STATE, value, self._error_reason)
         self._error_reason = None
 
     @staticmethod
@@ -249,7 +249,7 @@ class OpenEVSE:
             self._ws_listening = True
             self._loop.run_until_complete(asyncio.gather(*pending))
 
-    def _update_status(self, msgtype, data, error):
+    async def _update_status(self, msgtype, data, error):
         """Update data from websocket listener."""
         if msgtype == SIGNAL_CONNECTION_STATE:
             if data == STATE_CONNECTED:
@@ -276,7 +276,7 @@ class OpenEVSE:
             self._status.update(data)
 
             if self.callback is not None:
-                self.callback(self)
+                await self.callback(self)
 
     def ws_disconnect(self) -> None:
         """Disconnect the websocket listener."""
