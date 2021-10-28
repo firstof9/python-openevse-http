@@ -392,19 +392,19 @@ async def test_get_max_amps(fixture, expected, request, aioclient_mock):
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
 )
-def test_get_ota_update(fixture, expected, request):
+async def test_get_ota_update(fixture, expected, request, aioclient_mock):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
-    charger.update()
+    await charger.update()
     status = charger.ota_update
     assert status == expected
 
 
 @pytest.mark.parametrize("fixture, expected", [("test_charger", 1)])
-def test_get_vehicle(fixture, expected, request):
+async def test_get_vehicle(fixture, expected, request, aioclient_mock):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
-    charger.update()
+    await charger.update()
     status = charger.vehicle
     assert status == expected
 
@@ -413,10 +413,10 @@ def test_get_vehicle(fixture, expected, request):
     "fixture, expected",
     [("test_charger", "sleeping"), ("test_charger_v2", "not connected")],
 )
-def test_get_state(fixture, expected, request):
+async def test_get_state(fixture, expected, request, aioclient_mock):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
-    charger.update()
+    await charger.update()
     status = charger.state
     assert status == expected
 
@@ -424,10 +424,10 @@ def test_get_state(fixture, expected, request):
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
 )
-def test_get_tempt(fixture, expected, request):
+async def test_get_tempt(fixture, expected, request, aioclient_mock):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
-    charger.update()
+    await charger.update()
     status = charger.temp_check_enabled
     assert status == expected
 
@@ -435,10 +435,10 @@ def test_get_tempt(fixture, expected, request):
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", 0), ("test_charger_v2", 1)]
 )
-def test_get_diodet(fixture, expected, request):
+async def test_get_diodet(fixture, expected, request, aioclient_mock):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
-    charger.update()
+    await charger.update()
     status = charger.diode_check_enabled
     assert status == expected
 
@@ -446,10 +446,10 @@ def test_get_diodet(fixture, expected, request):
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
 )
-def test_get_ventt(fixture, expected, request):
+async def test_get_ventt(fixture, expected, request, aioclient_mock):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
-    charger.update()
+    await charger.update()
     status = charger.vent_required_enabled
     assert status == expected
 
@@ -457,10 +457,10 @@ def test_get_ventt(fixture, expected, request):
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
 )
-def test_get_groundt(fixture, expected, request):
+async def test_get_groundt(fixture, expected, request, aioclient_mock):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
-    charger.update()
+    await charger.update()
     status = charger.ground_check_enabled
     assert status == expected
 
@@ -468,9 +468,9 @@ def test_get_groundt(fixture, expected, request):
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
 )
-def test_get_relayt(fixture, expected, request):
+async def test_get_relayt(fixture, expected, request, aioclient_mock):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
-    charger.update()
+    await charger.update()
     status = charger.stuck_relay_check_enabled
     assert status == expected
