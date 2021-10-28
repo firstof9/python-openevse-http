@@ -172,6 +172,7 @@ class OpenEVSE:
         self._ws_listening = False
         self.websocket: Optional[OpenEVSEWebsocket] = None
         self.callback: Callable = None
+        self.coordinator = None
         self._loop = None
 
     async def send_command(self, command: str) -> tuple | None:
