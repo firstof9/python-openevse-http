@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 import datetime
 import logging
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 import aiohttp  # type: ignore
 import requests  # type: ignore
@@ -171,6 +171,7 @@ class OpenEVSE:
         self._override = None
         self._ws_listening = False
         self.websocket: Optional[OpenEVSEWebsocket] = None
+        self.callback: Callable = None
         self._loop = None
 
     async def send_command(self, command: str) -> tuple | None:
@@ -272,6 +273,9 @@ class OpenEVSE:
         elif msgtype == "data":
             _LOGGER.debug("ws_data: %s", data)
             self._status.update(data)
+
+            if self.callback is not None:
+                self.callback(self)
 
     def ws_disconnect(self) -> None:
         """Disconnect the websocket listener."""
