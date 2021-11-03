@@ -7,7 +7,3 @@ class AuthenticationError(Exception):
 
 class ParseJSONError(Exception):
     """Exception for JSON parsing errors."""
-
-
-class HTTPError(Exception):
-    """Exception for HTTP errors."""

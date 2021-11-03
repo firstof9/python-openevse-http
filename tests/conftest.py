@@ -64,27 +64,27 @@ def test_charger_v2(status_mock_v2, config_mock_v2):
 @pytest.fixture(name="status_mock")
 def mock_status():
     """Mock the status reply."""
-    with aioresponses() as client_mock:
-        client_mock.get(
+    with aioresponses() as mock_status:
+        mock_status.get(
             TEST_URL_STATUS,
             status=200,
             body=load_fixture("v4_json/status.json"),
         )
 
-        yield client_mock
+        yield mock_status
 
 
 @pytest.fixture(name="config_mock")
 def mock_config():
     """Mock the config reply."""
-    with aioresponses() as client_mock:
-        client_mock.get(
+    with aioresponses() as mock_config:
+        mock_config.get(
             TEST_URL_CONFIG,
             status=200,
             body=load_fixture("v4_json/config.json"),
         )
 
-        yield client_mock
+        yield mock_config
 
 
 @pytest.fixture(name="status_mock_v2")

@@ -7,10 +7,9 @@ import logging
 from typing import Any, Callable, Optional
 
 import aiohttp  # type: ignore
-import requests  # type: ignore
 
 from .const import MAX_AMPS, MIN_AMPS
-from .exceptions import AuthenticationError, ParseJSONError, HTTPError
+from .exceptions import AuthenticationError, ParseJSONError
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -33,6 +32,7 @@ states = {
 ERROR_AUTH_FAILURE = "Authorization failure"
 ERROR_TOO_MANY_RETRIES = "Too many retries"
 ERROR_UNKNOWN = "Unknown"
+ERROR_TIMEOUT = "Timeout while updating "
 
 MAX_FAILED_ATTEMPTS = 5
 
@@ -190,7 +190,7 @@ class OpenEVSE:
                     _LOGGER.debug("JSON error: %s", await resp.text())
                     raise ParseJSONError
                 if resp.status == 401:
-                    _LOGGER.debug("Authentication error: %s", await resp)
+                    _LOGGER.debug("Authentication error: %s", await resp.text())
                     raise AuthenticationError
 
                 value = await resp.json()
@@ -215,15 +215,21 @@ class OpenEVSE:
                 _LOGGER.debug("Updating data from %s", url)
                 async with session.get(url, auth=auth) as resp:
                     if resp.status == 401:
-                        _LOGGER.debug("Authentication error: %s", resp)
+                        _LOGGER.debug("Authentication error: %s", resp.text())
                         raise AuthenticationError
 
                     if "/status" in url:
-                        self._status = await resp.json()
-                        _LOGGER.debug("Status update: %s", self._status)
+                        try:
+                            self._status = await resp.json()
+                            _LOGGER.debug("Status update: %s", self._status)
+                        except TimeoutError:
+                            _LOGGER.error("%s status.", ERROR_TIMEOUT)
                     else:
-                        self._config = await resp.json()
-                        _LOGGER.debug("Config update: %s", self._config)
+                        try:
+                            self._config = await resp.json()
+                            _LOGGER.debug("Config update: %s", self._config)
+                        except TimeoutError:
+                            _LOGGER.error("%s config.", ERROR_TIMEOUT)
 
         if not self.websocket:
             # Start Websocket listening
@@ -272,6 +278,8 @@ class OpenEVSE:
 
         elif msgtype == "data":
             _LOGGER.debug("ws_data: %s", data)
+            if "wh" in data.keys():
+                data["watthour"] = data.pop("wh")
             self._status.update(data)
 
             if self.callback is not None:
@@ -289,23 +297,30 @@ class OpenEVSE:
         assert self.websocket
         return self.websocket.state
 
-    def get_override(self) -> None:
+    async def get_override(self) -> None:
         """Get the manual override status."""
-        url = f"{self.url}/overrride"
+        url = f"{self.url}override"
+
+        if self._user and self._pwd:
+            auth = aiohttp.BasicAuth(self._user, self._pwd)
 
         _LOGGER.debug("Geting data from %s", url)
-        if self._user is not None:
-            value = requests.get(url, auth=(self._user, self._pwd))
-        else:
-            value = requests.get(url)
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, auth=auth) as resp:
+                if resp.status == 400:
+                    _LOGGER.debug("JSON error: %s", await resp.text())
+                    raise ParseJSONError
+                if resp.status == 401:
+                    _LOGGER.debug("Authentication error: %s", await resp.text())
+                    raise AuthenticationError
+                if resp.status == 404:
+                    error = await resp.json()
+                    _LOGGER.error("Error getting override status: %s", error["msg"])
 
-        if value.status_code == 401:
-            _LOGGER.debug("Authentication error: %s", value)
-            raise AuthenticationError
+                value = await resp.json()
+                return value
 
-        self._override = value.json()
-
-    def set_override(
+    async def set_override(
         self,
         state: str,
         charge_current: int,
@@ -315,7 +330,10 @@ class OpenEVSE:
         auto_release: bool = True,
     ) -> str:
         """Set the manual override status."""
-        url = f"{self.url}/overrride"
+        url = f"{self.url}override"
+
+        if self._user and self._pwd:
+            auth = aiohttp.BasicAuth(self._user, self._pwd)
 
         if state not in ["active", "disabled"]:
             raise ValueError
@@ -330,52 +348,56 @@ class OpenEVSE:
         }
 
         _LOGGER.debug("Setting override config on %s", url)
-        if self._user is not None:
-            value = requests.post(url, data=data, auth=(self._user, self._pwd))
-        else:
-            value = requests.post(url, data=data)
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, data=data, auth=auth) as resp:
+                if resp.status == 400:
+                    _LOGGER.debug("JSON error: %s", await resp.text())
+                    raise ParseJSONError
+                if resp.status == 401:
+                    _LOGGER.debug("Authentication error: %s", await resp.text())
+                    raise AuthenticationError
 
-        if value.status_code == 401:
-            _LOGGER.debug("Authentication error: %s", value)
-            raise AuthenticationError
+                value = await resp.json()
+                _LOGGER.debug("Override set response: %s", value["msg"])
+                return value
 
-        return value["msg"]
-
-    def toggle_override(self) -> None:
+    async def toggle_override(self) -> None:
         """Toggle the manual override status."""
-        url = f"{self.url}/overrride"
+        url = f"{self.url}override"
+
+        if self._user and self._pwd:
+            auth = aiohttp.BasicAuth(self._user, self._pwd)
 
         _LOGGER.debug("Toggling manual override %s", url)
-        if self._user is not None:
-            value = requests.patch(url, auth=(self._user, self._pwd))
-        else:
-            value = requests.patch(url)
+        async with aiohttp.ClientSession() as session:
+            async with session.patch(url, auth=auth) as resp:
+                if resp.status == 400:
+                    _LOGGER.debug("JSON error: %s", await resp.text())
+                    raise ParseJSONError
+                if resp.status == 401:
+                    _LOGGER.debug("Authentication error: %s", await resp.text())
+                    raise AuthenticationError
 
-        if value.status_code == 401:
-            _LOGGER.debug("Authentication error: %s", value)
-            raise AuthenticationError
+                _LOGGER.debug("Toggle response: %s", resp.status)
 
-        if value.status_code != 200:
-            _LOGGER.error("Problem handling request: %s", value)
-            raise HTTPError
-
-    def clear_override(self) -> None:
+    async def clear_override(self) -> None:
         """Clear the manual override status."""
-        url = f"{self.url}/overrride"
+        url = f"{self.url}overrride"
+
+        if self._user and self._pwd:
+            auth = aiohttp.BasicAuth(self._user, self._pwd)
 
         _LOGGER.debug("Clearing manual overrride %s", url)
-        if self._user is not None:
-            value = requests.delete(url, auth=(self._user, self._pwd))
-        else:
-            value = requests.delete(url)
+        async with aiohttp.ClientSession() as session:
+            async with session.delete(url, auth=auth) as resp:
+                if resp.status == 400:
+                    _LOGGER.debug("JSON error: %s", await resp.text())
+                    raise ParseJSONError
+                if resp.status == 401:
+                    _LOGGER.debug("Authentication error: %s", await resp.text())
+                    raise AuthenticationError
 
-        if value.status_code == 401:
-            _LOGGER.debug("Authentication error: %s", value)
-            raise AuthenticationError
-
-        if value.status_code != 200:
-            _LOGGER.error("Problem handling request: %s", value)
-            raise HTTPError
+                _LOGGER.debug("Toggle response: %s", resp.status)
 
     @property
     def hostname(self) -> str:
