@@ -5,14 +5,14 @@ import openevsehttp
 pytestmark = pytest.mark.asyncio
 
 
-async def test_get_status_auth(test_charger_auth, aioclient_mock):
+async def test_get_status_auth(test_charger_auth):
     """Test v4 Status reply"""
     await test_charger_auth.update()
     status = test_charger_auth.status
     assert status == "sleeping"
 
 
-async def test_get_status_auth_err(test_charger_auth_err, aioclient_mock):
+async def test_get_status_auth_err(test_charger_auth_err):
     """Test v4 Status reply"""
     with pytest.raises(openevsehttp.AuthenticationError):
         await test_charger_auth_err.update()
