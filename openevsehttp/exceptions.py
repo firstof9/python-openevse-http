@@ -11,3 +11,11 @@ class ParseJSONError(Exception):
 
 class UnknownError(Exception):
     """Exception for Unknown errors."""
+
+
+class MissingMethod(Exception):
+    """Exception for missing method variable."""
+
+
+class AlreadyListening(Exception):
+    """Exception for already listening websocket."""
