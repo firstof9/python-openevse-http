@@ -7,3 +7,7 @@ class AuthenticationError(Exception):
 
 class ParseJSONError(Exception):
     """Exception for JSON parsing errors."""
+
+
+class UnknownError(Exception):
+    """Exception for Unknown errors."""

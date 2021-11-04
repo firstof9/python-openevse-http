@@ -9,7 +9,7 @@ from typing import Any, Callable, Optional
 import aiohttp  # type: ignore
 
 from .const import MAX_AMPS, MIN_AMPS
-from .exceptions import AuthenticationError, ParseJSONError
+from .exceptions import AuthenticationError, ParseJSONError, UnknownError
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -296,6 +296,34 @@ class OpenEVSE:
         """Return the status of the websocket listener."""
         assert self.websocket
         return self.websocket.state
+
+    async def set_charge_mode(self, mode: str = "fast") -> None:
+        """Set the charge mode."""
+        url = f"{self.url}config"
+
+        if mode != "fast" or mode != "eco":
+            _LOGGER.error("Invalid value for charge_mode: %s", mode)
+            raise ValueError
+
+        if self._user and self._pwd:
+            auth = aiohttp.BasicAuth(self._user, self._pwd)
+
+        _LOGGER.debug("Setting charge mode to %s", mode)
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, auth=auth) as resp:
+                message = await resp.json()
+                if resp.status == 400:
+                    _LOGGER.debug("JSON error: %s", message["msg"])
+                    raise ParseJSONError
+                elif resp.status == 401:
+                    _LOGGER.debug("Authentication error: %s", message["msg"])
+                    raise AuthenticationError
+                elif resp.status == 404:
+                    _LOGGER.error("Error getting override status: %s", message["msg"])
+
+                if message["msg"] != "done":
+                    _LOGGER.error("Problem issuing command: %s", message["msg"])
+                    raise UnknownError
 
     async def get_override(self) -> None:
         """Get the manual override status."""
