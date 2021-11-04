@@ -1,8 +1,11 @@
 import asyncio
+import json
 import pytest
 import openevsehttp
 
 pytestmark = pytest.mark.asyncio
+
+TEST_URL_RAPI = "http://openevse.test.tld/r"
 
 
 async def test_get_status_auth(test_charger_auth):
@@ -19,39 +22,70 @@ async def test_get_status_auth_err(test_charger_auth_err):
         assert test_charger_auth_err is None
 
 
-async def test_send_command(test_charger, send_command_mock):
+async def test_send_command(test_charger, mock_aioclient):
     """Test v4 Status reply"""
+    value = {"cmd": "OK", "ret": "$OK^20"}
+    mock_aioclient.post(
+        TEST_URL_RAPI,
+        status=200,
+        body=json.dumps(value),
+    )
     status = await test_charger.send_command("test")
     assert status == ("OK", "$OK^20")
 
 
-async def test_send_command_failed(test_charger, send_command_mock_failed):
+async def test_send_command_failed(test_charger, mock_aioclient):
     """Test v4 Status reply"""
+    value = {"cmd": "OK", "ret": "$NK^21"}
+    mock_aioclient.post(
+        TEST_URL_RAPI,
+        status=200,
+        body=json.dumps(value),
+    )
     status = await test_charger.send_command("test")
     assert status == ("OK", "$NK^21")
 
 
-async def test_send_command_missing(test_charger, send_command_mock_missing):
+async def test_send_command_missing(test_charger, mock_aioclient):
     """Test v4 Status reply"""
+    value = {"cmd": "OK", "what": "$NK^21"}
+    mock_aioclient.post(
+        TEST_URL_RAPI,
+        status=200,
+        body=json.dumps(value),
+    )
     status = await test_charger.send_command("test")
     assert status == (False, "")
 
 
-async def test_send_command_auth(test_charger_auth, send_command_mock):
+async def test_send_command_auth(test_charger_auth, mock_aioclient):
     """Test v4 Status reply"""
+    value = {"cmd": "OK", "ret": "$OK^20"}
+    mock_aioclient.post(
+        TEST_URL_RAPI,
+        status=200,
+        body=json.dumps(value),
+    )
     status = await test_charger_auth.send_command("test")
     assert status == ("OK", "$OK^20")
 
 
-async def test_send_command_parse_err(test_charger_auth, send_command_parse_err):
+async def test_send_command_parse_err(test_charger_auth, mock_aioclient):
     """Test v4 Status reply"""
+    mock_aioclient.post(
+        TEST_URL_RAPI, status=400, body='{"msg": "Could not parse JSON"}'
+    )
     with pytest.raises(openevsehttp.ParseJSONError):
         status = await test_charger_auth.send_command("test")
         assert status is None
 
 
-async def test_send_command_auth_err(test_charger_auth, send_command_auth_err):
+async def test_send_command_auth_err(test_charger_auth, mock_aioclient):
     """Test v4 Status reply"""
+    mock_aioclient.post(
+        TEST_URL_RAPI,
+        status=401,
+    )
     with pytest.raises(openevsehttp.AuthenticationError):
         status = await test_charger_auth.send_command("test")
         assert status is None
@@ -61,7 +95,7 @@ async def test_send_command_auth_err(test_charger_auth, send_command_auth_err):
     "fixture, expected",
     [("test_charger", "sleeping"), ("test_charger_v2", "not connected")],
 )
-async def test_get_status(fixture, expected, request, aioclient_mock):
+async def test_get_status(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -73,7 +107,7 @@ async def test_get_status(fixture, expected, request, aioclient_mock):
     "fixture, expected",
     [("test_charger", "Datanode-IoT"), ("test_charger_v2", "nsavanup_IoT")],
 )
-async def test_get_ssid(fixture, expected, request, aioclient_mock):
+async def test_get_ssid(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -84,7 +118,7 @@ async def test_get_ssid(fixture, expected, request, aioclient_mock):
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", "7.1.3"), ("test_charger_v2", "5.0.1")]
 )
-async def test_get_firmware(fixture, expected, request, aioclient_mock):
+async def test_get_firmware(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -96,7 +130,7 @@ async def test_get_firmware(fixture, expected, request, aioclient_mock):
     "fixture, expected",
     [("test_charger", "openevse-7b2c"), ("test_charger_v2", "openevse")],
 )
-async def test_get_hostname(fixture, expected, request, aioclient_mock):
+async def test_get_hostname(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -107,7 +141,7 @@ async def test_get_hostname(fixture, expected, request, aioclient_mock):
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
 )
-async def test_get_ammeter_offset(fixture, expected, request, aioclient_mock):
+async def test_get_ammeter_offset(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -119,7 +153,7 @@ async def test_get_ammeter_offset(fixture, expected, request, aioclient_mock):
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", 220), ("test_charger_v2", 220)]
 )
-async def test_get_ammeter_scale_factor(fixture, expected, request, aioclient_mock):
+async def test_get_ammeter_scale_factor(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -137,7 +171,7 @@ async def test_get_ammeter_scale_factor(fixture, expected, request, aioclient_mo
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", 2), ("test_charger_v2", 2)]
 )
-async def test_get_service_level(fixture, expected, request, aioclient_mock):
+async def test_get_service_level(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -148,7 +182,7 @@ async def test_get_service_level(fixture, expected, request, aioclient_mock):
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", "4.0.0"), ("test_charger_v2", "2.9.1")]
 )
-async def test_get_wifi_firmware(fixture, expected, request, aioclient_mock):
+async def test_get_wifi_firmware(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -160,7 +194,7 @@ async def test_get_wifi_firmware(fixture, expected, request, aioclient_mock):
     "fixture, expected",
     [("test_charger", "192.168.21.10"), ("test_charger_v2", "192.168.1.67")],
 )
-async def test_get_ip_address(fixture, expected, request, aioclient_mock):
+async def test_get_ip_address(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -171,7 +205,7 @@ async def test_get_ip_address(fixture, expected, request, aioclient_mock):
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", 240), ("test_charger_v2", 240)]
 )
-async def test_get_charging_voltage(fixture, expected, request, aioclient_mock):
+async def test_get_charging_voltage(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -182,7 +216,7 @@ async def test_get_charging_voltage(fixture, expected, request, aioclient_mock):
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", "STA"), ("test_charger_v2", "STA")]
 )
-async def test_get_mode(fixture, expected, request, aioclient_mock):
+async def test_get_mode(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -193,7 +227,7 @@ async def test_get_mode(fixture, expected, request, aioclient_mock):
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", False), ("test_charger_v2", False)]
 )
-async def test_get_using_ethernet(fixture, expected, request, aioclient_mock):
+async def test_get_using_ethernet(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -204,7 +238,7 @@ async def test_get_using_ethernet(fixture, expected, request, aioclient_mock):
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
 )
-async def test_get_stuck_relay_trip_count(fixture, expected, request, aioclient_mock):
+async def test_get_stuck_relay_trip_count(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -215,7 +249,7 @@ async def test_get_stuck_relay_trip_count(fixture, expected, request, aioclient_
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
 )
-async def test_get_no_gnd_trip_count(fixture, expected, request, aioclient_mock):
+async def test_get_no_gnd_trip_count(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -226,7 +260,7 @@ async def test_get_no_gnd_trip_count(fixture, expected, request, aioclient_mock)
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", 1), ("test_charger_v2", 0)]
 )
-async def test_get_gfi_trip_count(fixture, expected, request, aioclient_mock):
+async def test_get_gfi_trip_count(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -237,7 +271,7 @@ async def test_get_gfi_trip_count(fixture, expected, request, aioclient_mock):
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", 246), ("test_charger_v2", 8751)]
 )
-async def test_get_charge_time_elapsed(fixture, expected, request, aioclient_mock):
+async def test_get_charge_time_elapsed(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -248,7 +282,7 @@ async def test_get_charge_time_elapsed(fixture, expected, request, aioclient_moc
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", -61), ("test_charger_v2", -56)]
 )
-async def test_get_wifi_signal(fixture, expected, request, aioclient_mock):
+async def test_get_wifi_signal(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -259,7 +293,7 @@ async def test_get_wifi_signal(fixture, expected, request, aioclient_mock):
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
 )
-async def test_get_charging_current(fixture, expected, request, aioclient_mock):
+async def test_get_charging_current(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -270,7 +304,7 @@ async def test_get_charging_current(fixture, expected, request, aioclient_mock):
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", 48), ("test_charger_v2", 25)]
 )
-async def test_get_current_capacity(fixture, expected, request, aioclient_mock):
+async def test_get_current_capacity(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -281,7 +315,7 @@ async def test_get_current_capacity(fixture, expected, request, aioclient_mock):
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", 64582), ("test_charger_v2", 1585443)]
 )
-async def test_get_usage_total(fixture, expected, request, aioclient_mock):
+async def test_get_usage_total(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -292,7 +326,7 @@ async def test_get_usage_total(fixture, expected, request, aioclient_mock):
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", 50.3), ("test_charger_v2", 34.0)]
 )
-async def test_get_ambient_temperature(fixture, expected, request, aioclient_mock):
+async def test_get_ambient_temperature(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -303,7 +337,7 @@ async def test_get_ambient_temperature(fixture, expected, request, aioclient_moc
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", 50.3), ("test_charger_v2", None)]
 )
-async def test_get_rtc_temperature(fixture, expected, request, aioclient_mock):
+async def test_get_rtc_temperature(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -314,7 +348,7 @@ async def test_get_rtc_temperature(fixture, expected, request, aioclient_mock):
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", None), ("test_charger_v2", None)]
 )
-async def test_get_ir_temperature(fixture, expected, request, aioclient_mock):
+async def test_get_ir_temperature(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -325,7 +359,7 @@ async def test_get_ir_temperature(fixture, expected, request, aioclient_mock):
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", 56.0), ("test_charger_v2", None)]
 )
-async def test_get_esp_temperature(fixture, expected, request, aioclient_mock):
+async def test_get_esp_temperature(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -337,7 +371,7 @@ async def test_get_esp_temperature(fixture, expected, request, aioclient_mock):
     "fixture, expected",
     [("test_charger", "2021-08-10T23:00:11Z"), ("test_charger_v2", None)],
 )
-async def test_get_time(fixture, expected, request, aioclient_mock):
+async def test_get_time(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -348,7 +382,7 @@ async def test_get_time(fixture, expected, request, aioclient_mock):
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", 275.71), ("test_charger_v2", 7003.41)]
 )
-async def test_get_usage_session(fixture, expected, request, aioclient_mock):
+async def test_get_usage_session(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -359,7 +393,7 @@ async def test_get_usage_session(fixture, expected, request, aioclient_mock):
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", "-"), ("test_charger_v2", "4.0.1")]
 )
-async def test_get_protocol_version(fixture, expected, request, aioclient_mock):
+async def test_get_protocol_version(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -370,7 +404,7 @@ async def test_get_protocol_version(fixture, expected, request, aioclient_mock):
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", 6), ("test_charger_v2", 6)]
 )
-async def test_get_min_amps(fixture, expected, request, aioclient_mock):
+async def test_get_min_amps(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -381,7 +415,7 @@ async def test_get_min_amps(fixture, expected, request, aioclient_mock):
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", 48), ("test_charger_v2", 48)]
 )
-async def test_get_max_amps(fixture, expected, request, aioclient_mock):
+async def test_get_max_amps(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -392,7 +426,7 @@ async def test_get_max_amps(fixture, expected, request, aioclient_mock):
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
 )
-async def test_get_ota_update(fixture, expected, request, aioclient_mock):
+async def test_get_ota_update(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -401,7 +435,7 @@ async def test_get_ota_update(fixture, expected, request, aioclient_mock):
 
 
 @pytest.mark.parametrize("fixture, expected", [("test_charger", 1)])
-async def test_get_vehicle(fixture, expected, request, aioclient_mock):
+async def test_get_vehicle(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -413,7 +447,7 @@ async def test_get_vehicle(fixture, expected, request, aioclient_mock):
     "fixture, expected",
     [("test_charger", "sleeping"), ("test_charger_v2", "not connected")],
 )
-async def test_get_state(fixture, expected, request, aioclient_mock):
+async def test_get_state(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -424,7 +458,7 @@ async def test_get_state(fixture, expected, request, aioclient_mock):
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
 )
-async def test_get_tempt(fixture, expected, request, aioclient_mock):
+async def test_get_tempt(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -435,7 +469,7 @@ async def test_get_tempt(fixture, expected, request, aioclient_mock):
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", 0), ("test_charger_v2", 1)]
 )
-async def test_get_diodet(fixture, expected, request, aioclient_mock):
+async def test_get_diodet(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -446,7 +480,7 @@ async def test_get_diodet(fixture, expected, request, aioclient_mock):
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
 )
-async def test_get_ventt(fixture, expected, request, aioclient_mock):
+async def test_get_ventt(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -457,7 +491,7 @@ async def test_get_ventt(fixture, expected, request, aioclient_mock):
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
 )
-async def test_get_groundt(fixture, expected, request, aioclient_mock):
+async def test_get_groundt(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -468,7 +502,7 @@ async def test_get_groundt(fixture, expected, request, aioclient_mock):
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
 )
-async def test_get_relayt(fixture, expected, request, aioclient_mock):
+async def test_get_relayt(fixture, expected, request):
     """Test v4 Status reply"""
     charger = request.getfixturevalue(fixture)
     await charger.update()

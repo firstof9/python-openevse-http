@@ -122,7 +122,7 @@ class OpenEVSEWebsocket:
                         break
 
         except aiohttp.ClientResponseError as error:
-            if error.code == 401:
+            if error.status == 401:
                 _LOGGER.error("Credentials rejected: %s", error)
                 self._error_reason = ERROR_AUTH_FAILURE
             else:
@@ -202,13 +202,14 @@ class OpenEVSE:
                 if resp.status == 400:
                     _LOGGER.error("%s", message["msg"])
                     raise ParseJSONError
-                elif resp.status == 401:
-                    _LOGGER.error("Authentication error: %s", resp.text())
+                if resp.status == 401:
+                    error = await resp.text()
+                    _LOGGER.error("Authentication error: %s", error)
                     raise AuthenticationError
-                elif resp.status == 404:
+                if resp.status == 404:
                     _LOGGER.error("%s", message["msg"])
                     raise UnknownError
-                elif resp.status == 405:
+                if resp.status == 405:
                     _LOGGER.error("%s", message["msg"])
                 elif resp.status == 500:
                     _LOGGER.error("%s", message["msg"])
@@ -249,10 +250,9 @@ class OpenEVSE:
             self.websocket = OpenEVSEWebsocket(
                 self.url, self._update_status, self._user, self._pwd
             )
-            self.ws_start()
 
     def ws_start(self):
-        """Method to start the websocket listener."""
+        """Start the websocket listener."""
         if self._ws_listening:
             raise AlreadyListening
         self._start_listening()
@@ -301,7 +301,7 @@ class OpenEVSE:
             self._status.update(data)
 
             if self.callback is not None:
-                self.callback()
+                self.callback()  # pylint: disable=not-callable
 
     def ws_disconnect(self) -> None:
         """Disconnect the websocket listener."""
@@ -334,7 +334,9 @@ class OpenEVSE:
         data = {"charge_mode": mode}
 
         _LOGGER.debug("Setting charge mode to %s", mode)
-        response = self.process_request(url=url, method="post", data=data)
+        response = await self.process_request(
+            url=url, method="post", data=data
+        )  # noqa: E501
         if response["msg"] != "done":
             _LOGGER.error("Problem issuing command: %s", response["msg"])
             raise UnknownError
@@ -372,7 +374,9 @@ class OpenEVSE:
         }
 
         _LOGGER.debug("Setting override config on %s", url)
-        response = await self.process_request(url=url, method="post", data=data)
+        response = await self.process_request(
+            url=url, method="post", data=data
+        )  # noqa: E501
         return response
 
     async def toggle_override(self) -> None:
