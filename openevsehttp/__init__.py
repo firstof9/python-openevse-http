@@ -9,13 +9,7 @@ from typing import Any, Callable, Optional
 import aiohttp  # type: ignore
 
 from .const import MAX_AMPS, MIN_AMPS
-from .exceptions import (
-    AlreadyListening,
-    AuthenticationError,
-    MissingMethod,
-    ParseJSONError,
-    UnknownError,
-)
+from .exceptions import AuthenticationError, ParseJSONError, UnknownError
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -320,14 +314,6 @@ class OpenEVSE:
         assert self.websocket
         return self.websocket.state
 
-    async def get_schedule(self) -> list:
-        """Return the current schedule."""
-        url = f"{self.url}schedule"
-
-        _LOGGER.debug("Getting current schedule from %s", url)
-        response = await self.process_request(url=url, method="post")
-        return response
-
     async def set_charge_mode(self, mode: str = "fast") -> None:
         """Set the charge mode."""
         url = f"{self.url}config"
@@ -336,15 +322,25 @@ class OpenEVSE:
             _LOGGER.error("Invalid value for charge_mode: %s", mode)
             raise ValueError
 
-        data = {"charge_mode": mode}
+        if self._user and self._pwd:
+            auth = aiohttp.BasicAuth(self._user, self._pwd)
 
         _LOGGER.debug("Setting charge mode to %s", mode)
-        response = await self.process_request(
-            url=url, method="post", data=data
-        )  # noqa: E501
-        if response["msg"] != "done":
-            _LOGGER.error("Problem issuing command: %s", response["msg"])
-            raise UnknownError
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, auth=auth) as resp:
+                message = await resp.json()
+                if resp.status == 400:
+                    _LOGGER.debug("JSON error: %s", message["msg"])
+                    raise ParseJSONError
+                elif resp.status == 401:
+                    _LOGGER.debug("Authentication error: %s", message["msg"])
+                    raise AuthenticationError
+                elif resp.status == 404:
+                    _LOGGER.error("Error getting override status: %s", message["msg"])
+
+                if message["msg"] != "done":
+                    _LOGGER.error("Problem issuing command: %s", message["msg"])
+                    raise UnknownError
 
     async def get_override(self) -> None:
         """Get the manual override status."""
