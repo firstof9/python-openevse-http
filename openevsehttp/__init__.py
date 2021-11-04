@@ -9,7 +9,13 @@ from typing import Any, Callable, Optional
 import aiohttp  # type: ignore
 
 from .const import MAX_AMPS, MIN_AMPS
-from .exceptions import AuthenticationError, ParseJSONError, UnknownError
+from .exceptions import (
+    AlreadyListening,
+    AuthenticationError,
+    MissingMethod,
+    ParseJSONError,
+    UnknownError,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -198,14 +204,13 @@ class OpenEVSE:
                 if resp.status == 400:
                     _LOGGER.error("%s", message["msg"])
                     raise ParseJSONError
-                if resp.status == 401:
-                    error = await resp.text()
-                    _LOGGER.error("Authentication error: %s", error)
+                elif resp.status == 401:
+                    _LOGGER.error("Authentication error: %s", resp.text())
                     raise AuthenticationError
-                if resp.status == 404:
+                elif resp.status == 404:
                     _LOGGER.error("%s", message["msg"])
                     raise UnknownError
-                if resp.status == 405:
+                elif resp.status == 405:
                     _LOGGER.error("%s", message["msg"])
                 elif resp.status == 500:
                     _LOGGER.error("%s", message["msg"])
@@ -246,9 +251,10 @@ class OpenEVSE:
             self.websocket = OpenEVSEWebsocket(
                 self.url, self._update_status, self._user, self._pwd
             )
+            self.ws_start()
 
     def ws_start(self):
-        """Start the websocket listener."""
+        """Method to start the websocket listener."""
         if self._ws_listening:
             raise AlreadyListening
         self._start_listening()
@@ -314,6 +320,14 @@ class OpenEVSE:
         assert self.websocket
         return self.websocket.state
 
+    async def get_schedule(self) -> list:
+        """Return the current schedule."""
+        url = f"{self.url}schedule"
+
+        _LOGGER.debug("Getting current schedule from %s", url)
+        response = await self.process_request(url=url, method="post")
+        return response
+
     async def set_charge_mode(self, mode: str = "fast") -> None:
         """Set the charge mode."""
         url = f"{self.url}config"
@@ -322,25 +336,13 @@ class OpenEVSE:
             _LOGGER.error("Invalid value for charge_mode: %s", mode)
             raise ValueError
 
-        if self._user and self._pwd:
-            auth = aiohttp.BasicAuth(self._user, self._pwd)
+        data = {"charge_mode": mode}
 
         _LOGGER.debug("Setting charge mode to %s", mode)
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, auth=auth) as resp:
-                message = await resp.json()
-                if resp.status == 400:
-                    _LOGGER.debug("JSON error: %s", message["msg"])
-                    raise ParseJSONError
-                elif resp.status == 401:
-                    _LOGGER.debug("Authentication error: %s", message["msg"])
-                    raise AuthenticationError
-                elif resp.status == 404:
-                    _LOGGER.error("Error getting override status: %s", message["msg"])
-
-                if message["msg"] != "done":
-                    _LOGGER.error("Problem issuing command: %s", message["msg"])
-                    raise UnknownError
+        response = self.process_request(url=url, method="post", data=data)
+        if response["msg"] != "done":
+            _LOGGER.error("Problem issuing command: %s", response["msg"])
+            raise UnknownError
 
     async def get_override(self) -> None:
         """Get the manual override status."""
@@ -375,9 +377,7 @@ class OpenEVSE:
         }
 
         _LOGGER.debug("Setting override config on %s", url)
-        response = await self.process_request(
-            url=url, method="post", data=data
-        )  # noqa: E501
+        response = await self.process_request(url=url, method="post", data=data)
         return response
 
     async def toggle_override(self) -> None:
