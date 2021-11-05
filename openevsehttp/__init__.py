@@ -270,7 +270,10 @@ class OpenEVSE:
             self._loop.create_task(self.websocket.listen())
             pending = asyncio.all_tasks()
             self._ws_listening = True
-            self._loop.run_until_complete(asyncio.gather(*pending))
+            try:
+                self._loop.run_until_complete(asyncio.gather(*pending))
+            except RuntimeError:
+                _LOGGER.info("Event loop already running, not creating new one.")
 
     def _update_status(self, msgtype, data, error):
         """Update data from websocket listener."""
