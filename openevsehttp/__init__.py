@@ -275,7 +275,7 @@ class OpenEVSE:
             try:
                 self._loop.run_until_complete(asyncio.gather(*pending))
             except RuntimeError:
-                _LOGGER.info("Event loop already running, not creating new one.")
+                _LOGGER.info(LOOP_INFO)
 
     def _update_status(self, msgtype, data, error):
         """Update data from websocket listener."""
