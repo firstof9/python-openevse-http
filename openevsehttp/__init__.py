@@ -40,7 +40,7 @@ ERROR_TOO_MANY_RETRIES = "Too many retries"
 ERROR_UNKNOWN = "Unknown"
 ERROR_TIMEOUT = "Timeout while updating "
 
-LOOP_INFO = "Event loop already running, not creating new one."
+INFO_LOOP_RUNNING = "Event loop already running, not creating new one."
 
 MAX_FAILED_ATTEMPTS = 5
 
@@ -275,7 +275,7 @@ class OpenEVSE:
             try:
                 self._loop.run_until_complete(asyncio.gather(*pending))
             except RuntimeError:
-                _LOGGER.info(LOOP_INFO)
+                _LOGGER.info(INFO_LOOP_RUNNING)
 
     def _update_status(self, msgtype, data, error):
         """Update data from websocket listener."""
