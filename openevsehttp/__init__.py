@@ -281,12 +281,12 @@ class OpenEVSE:
         """Update data from websocket listener."""
         if msgtype == SIGNAL_CONNECTION_STATE:
             if data == STATE_CONNECTED:
-                _LOGGER.debug("Websocket to %s successful", self.url)
+                _LOGGER.debug("Websocket to %s successful", self.websocket.uri)
                 self._ws_listening = True
             elif data == STATE_DISCONNECTED:
                 _LOGGER.debug(
                     "Websocket to %s disconnected, retrying",
-                    self.url,
+                    self.websocket.uri,
                 )
                 self._ws_listening = False
             # Stopped websockets without errors are expected during shutdown
@@ -294,7 +294,7 @@ class OpenEVSE:
             elif data == STATE_STOPPED and error:
                 _LOGGER.error(
                     "Websocket to %s failed, aborting [Error: %s]",
-                    self.url,
+                    self.websocket.uri,
                     error,
                 )
                 self._ws_listening = False
