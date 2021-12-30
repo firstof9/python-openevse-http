@@ -40,7 +40,7 @@ ERROR_TOO_MANY_RETRIES = "Too many retries"
 ERROR_UNKNOWN = "Unknown"
 ERROR_TIMEOUT = "Timeout while updating "
 
-LOOP_INFO = "Event loop already running, not creating new one."
+INFO_LOOP_RUNNING = "Event loop already running, not creating new one."
 
 MAX_FAILED_ATTEMPTS = 5
 
@@ -275,18 +275,18 @@ class OpenEVSE:
             try:
                 self._loop.run_until_complete(asyncio.gather(*pending))
             except RuntimeError:
-                _LOGGER.info(LOOP_INFO)
+                _LOGGER.info(INFO_LOOP_RUNNING)
 
     def _update_status(self, msgtype, data, error):
         """Update data from websocket listener."""
         if msgtype == SIGNAL_CONNECTION_STATE:
             if data == STATE_CONNECTED:
-                _LOGGER.debug("Websocket to %s successful", self.url)
+                _LOGGER.debug("Websocket to %s successful", self.websocket.uri)
                 self._ws_listening = True
             elif data == STATE_DISCONNECTED:
                 _LOGGER.debug(
                     "Websocket to %s disconnected, retrying",
-                    self.url,
+                    self.websocket.uri,
                 )
                 self._ws_listening = False
             # Stopped websockets without errors are expected during shutdown
@@ -294,7 +294,7 @@ class OpenEVSE:
             elif data == STATE_STOPPED and error:
                 _LOGGER.error(
                     "Websocket to %s failed, aborting [Error: %s]",
-                    self.url,
+                    self.websocket.uri,
                     error,
                 )
                 self._ws_listening = False
@@ -642,6 +642,45 @@ class OpenEVSE:
         """Return if an OTA update is active."""
         assert self._status is not None
         return self._status["ota_update"]
+
+    @property
+    def manual_override(self) -> str:
+        """Return if Manual Override is set."""
+        assert self._status is not None
+        return self._status["manual_override"]
+
+    @property
+    def divertmode(self) -> str:
+        """Return the divert mode."""
+        assert self._status is not None
+        mode = self._status["divertmode"]
+        if mode == 1:
+            return "normal"
+        return "eco"
+
+    @property
+    def available_current(self) -> float:
+        """Return the computed available current for divert."""
+        assert self._status is not None
+        return self._status["available_current"]
+
+    @property
+    def smoothed_available_current(self) -> float:
+        """Return the computed smoothed available current for divert."""
+        assert self._status is not None
+        return self._status["smoothed_available_current"]
+
+    @property
+    def charge_rate(self) -> float:
+        """Return the divert charge rate."""
+        assert self._status is not None
+        return self._status["charge_rate"]
+
+    @property
+    def divert_active(self) -> bool:
+        """Return if divert is active."""
+        assert self._status is not None
+        return self._status["divert_active"]
 
     # There is currently no min/max amps JSON data
     # available via HTTP API methods
