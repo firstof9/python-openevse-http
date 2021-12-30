@@ -643,6 +643,22 @@ class OpenEVSE:
         assert self._status is not None
         return self._status["ota_update"]
 
+    @property
+    def manual_override(self) -> str:
+        """Return if Manual Override is set."""
+        assert self._status is not None
+        return self._status["manual_override"]
+
+    @property
+    def divertmode(self) -> str:
+        """Return the divert mode."""
+        assert self._status is not None
+        mode = self._status["divertmode"]
+        if mode == 1:
+            return "normal"
+        else:
+            return "eco"
+
     # There is currently no min/max amps JSON data
     # available via HTTP API methods
     @property
