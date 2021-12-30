@@ -666,6 +666,12 @@ class OpenEVSE:
         return self._status["available_current"]
 
     @property
+    def smoothed_available_current(self) -> float:
+        """Return the computed smoothed available current for divert."""
+        assert self._status is not None
+        return self._status["smoothed_available_current"]
+        
+    @property
     def charge_rate(self) -> float:
         """Return the divert charge rate."""
         assert self._status is not None
