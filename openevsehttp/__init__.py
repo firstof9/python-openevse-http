@@ -659,6 +659,25 @@ class OpenEVSE:
         else:
             return "eco"
 
+    @property
+    def available_current(self) -> float:
+        """Return the computed available current for divert."""
+        assert self._status is not None
+        return self._status["available_current"]
+
+    @property
+    def charge_rate(self) -> float:
+        """Return the divert charge rate."""
+        assert self._status is not None
+        return self._status["charge_rate"]
+
+    @property
+    def divert_active(self) -> bool:
+        """Return if divert is active"""
+        assert self._status is not None
+        return self._status["divert_active"]
+    
+
     # There is currently no min/max amps JSON data
     # available via HTTP API methods
     @property
