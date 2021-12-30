@@ -656,8 +656,7 @@ class OpenEVSE:
         mode = self._status["divertmode"]
         if mode == 1:
             return "normal"
-        else:
-            return "eco"
+        return "eco"
 
     @property
     def available_current(self) -> float:
@@ -679,7 +678,7 @@ class OpenEVSE:
 
     @property
     def divert_active(self) -> bool:
-        """Return if divert is active"""
+        """Return if divert is active."""
         assert self._status is not None
         return self._status["divert_active"]
 
