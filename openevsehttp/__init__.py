@@ -338,6 +338,14 @@ class OpenEVSE:
 
         data = {"charge_mode": mode}
 
+        _LOGGER.debug("Setting charge mode to %s", mode)
+        response = await self.process_request(
+            url=url, method="post", data=data
+        )  # noqa: E501
+        if response["msg"] != "done":
+            _LOGGER.error("Problem issuing command: %s", response["msg"])
+            raise UnknownError
+
     async def divert_mode(self, mode: str = "Normal") -> None:
         """Set the divert mode to either Normal or Eco modes."""
         url = f"{self.url}divertmode"
@@ -345,13 +353,13 @@ class OpenEVSE:
         if mode != "Normal" or mode != "Eco":
             _LOGGER.error("Invalid value for divertmode: %s", mode)
             raise ValueError
-        
+
         if mode == "Normal":
             value = 1
         else:
             value = 2
 
-        data = {"divertmode": value}        
+        data = {"divertmode": value}
 
         _LOGGER.debug("Setting charge mode to %s", mode)
         response = await self.process_request(
