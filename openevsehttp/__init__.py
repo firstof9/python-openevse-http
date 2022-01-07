@@ -386,6 +386,10 @@ class OpenEVSE:
 
     async def toggle_override(self) -> None:
         """Toggle the manual override status."""
+        # TODO: Add version check
+        #   3.x: use RAPI commands $FE (enable) and $FS (sleep)
+        #   4.x: use HTTP API call
+
         url = f"{self.url}override"
 
         _LOGGER.debug("Toggling manual override %s", url)
