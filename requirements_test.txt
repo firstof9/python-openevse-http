@@ -1,6 +1,6 @@
 pytest==6.2.5
 pytest-cov==3.0.0
-pytest-timeout==1.4.2
+pytest-timeout==2.0.2
 pytest-asyncio
 requests_mock
 aiohttp
