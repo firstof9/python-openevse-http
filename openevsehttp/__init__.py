@@ -1,6 +1,8 @@
 """Provide a package for python-openevse-http."""
 from __future__ import annotations
 
+from awesomeversion import AwesomeVersion
+
 import asyncio
 import datetime
 import logging
@@ -409,15 +411,25 @@ class OpenEVSE:
 
     async def toggle_override(self) -> None:
         """Toggle the manual override status."""
-        # TODO: Add version check
+        # TODO: Add version check (self._config["version"])
         #   3.x: use RAPI commands $FE (enable) and $FS (sleep)
         #   4.x: use HTTP API call
 
-        url = f"{self.url}override"
+        cutoff = AwesomeVersion("4.0.0")
+        current = AwesomeVersion(self._config["version"])
 
-        _LOGGER.debug("Toggling manual override %s", url)
-        response = await self.process_request(url=url, method="patch")
-        _LOGGER.debug("Toggle response: %s", response["msg"])
+        if cutoff < current:
+            url = f"{self.url}override"
+
+            _LOGGER.debug("Toggling manual override %s", url)
+            response = await self.process_request(url=url, method="patch")
+            _LOGGER.debug("Toggle response: %s", response["msg"])
+        else:
+            # Older firmware use RAPI commands
+            _LOGGER.debug("Toggling manual override via RAPI")
+            command = "$FE" if self._config["state"] == "sleeping" else "$FS"
+            response = await self.send_command(command)
+            _LOGGER.debug("Toggle response: %s", response[1])
 
     async def clear_override(self) -> None:
         """Clear the manual override status."""
