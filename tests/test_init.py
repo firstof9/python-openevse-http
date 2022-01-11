@@ -513,7 +513,7 @@ async def test_get_relayt(fixture, expected, request):
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", "normal"), ("test_charger_v2", "normal")]
+    "fixture, expected", [("test_charger", "eco"), ("test_charger_v2", "normal")]
 )
 async def test_get_divertmode(fixture, expected, request):
     """Test v4 Status reply"""
@@ -567,4 +567,16 @@ async def test_get_divert_active(fixture, expected, request):
     await charger.update()
     with pytest.raises(KeyError):
         status = charger.divert_active
+        # assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
+)
+async def test_get_manual_override(fixture, expected, request):
+    """Test v4 Status reply"""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    with pytest.raises(KeyError):
+        status = charger.manual_override
         # assert status == expected
