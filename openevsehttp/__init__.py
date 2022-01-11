@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import datetime
 import logging
+from json.decoder import JSONDecodeError
 from typing import Any, Callable, Optional
 
 import aiohttp  # type: ignore
@@ -201,6 +202,8 @@ class OpenEVSE:
                     message = await resp.json()
                 except TimeoutError:
                     _LOGGER.error("%s: %s", ERROR_TIMEOUT, url)
+                except JSONDecodeError:
+                    message = {"msg": resp}
 
                 if resp.status == 400:
                     _LOGGER.error("%s", message["msg"])
@@ -416,16 +419,18 @@ class OpenEVSE:
         cutoff = AwesomeVersion("4.0.0")
         current = AwesomeVersion(self._config["version"])
 
-        if cutoff < current:
+        _LOGGER.debug("Detected firmware: %s", current)
+
+        if cutoff <= current:
             url = f"{self.url}override"
 
             _LOGGER.debug("Toggling manual override %s", url)
             response = await self.process_request(url=url, method="patch")
-            _LOGGER.debug("Toggle response: %s", response["msg"])
+            _LOGGER.debug("Toggle response: %s", response)
         else:
             # Older firmware use RAPI commands
             _LOGGER.debug("Toggling manual override via RAPI")
-            command = "$FE" if self._config["state"] == "sleeping" else "$FS"
+            command = "$FE" if self._status["state"] == "sleeping" else "$FS"
             response = await self.send_command(command)
             _LOGGER.debug("Toggle response: %s", response[1])
 
