@@ -510,3 +510,61 @@ async def test_get_relayt(fixture, expected, request):
     await charger.update()
     status = charger.stuck_relay_check_enabled
     assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", "normal"), ("test_charger_v2", "normal")]
+)
+async def test_get_divertmode(fixture, expected, request):
+    """Test v4 Status reply"""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    status = charger.divertmode
+    assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
+)
+async def test_get_charge_rate(fixture, expected, request):
+    """Test v4 Status reply"""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    status = charger.charge_rate
+    assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
+)
+async def test_get_available_current(fixture, expected, request):
+    """Test v4 Status reply"""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    with pytest.raises(KeyError):
+        status = charger.available_current
+        # assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
+)
+async def test_get_smoothed_available_current(fixture, expected, request):
+    """Test v4 Status reply"""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    with pytest.raises(KeyError):
+        status = charger.smoothed_available_current
+        # assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
+)
+async def test_get_divert_active(fixture, expected, request):
+    """Test v4 Status reply"""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    with pytest.raises(KeyError):
+        status = charger.divert_active
+        # assert status == expected
