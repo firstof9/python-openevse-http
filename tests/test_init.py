@@ -580,3 +580,15 @@ async def test_get_manual_override(fixture, expected, request):
     with pytest.raises(KeyError):
         status = charger.manual_override
         # assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
+)
+async def test_toggle_override(fixture, expected, request, caplog):
+    """Test v4 Status reply"""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    status = charger.toggle_override
+    # assert "Toggling manual override" in caplog.text
+    # assert status == expected
