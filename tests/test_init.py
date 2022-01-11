@@ -590,9 +590,10 @@ async def test_toggle_override(test_charger, mock_aioclient, caplog):
         TEST_URL_OVERRIDE,
         status=200,
         body="OK",
-    )    
+    )
     await test_charger.toggle_override()
     assert "Toggling manual override http" in caplog.text
+
 
 async def test_toggle_override_v2(test_charger_v2, mock_aioclient, caplog):
     """Test v4 Status reply"""
@@ -602,6 +603,6 @@ async def test_toggle_override_v2(test_charger_v2, mock_aioclient, caplog):
         TEST_URL_RAPI,
         status=200,
         body=json.dumps(value),
-    )    
+    )
     await test_charger_v2.toggle_override()
     assert "Toggling manual override via RAPI" in caplog.text
