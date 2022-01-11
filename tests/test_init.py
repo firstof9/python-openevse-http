@@ -1,6 +1,8 @@
 import asyncio
 import json
+
 import pytest
+
 import openevsehttp
 
 pytestmark = pytest.mark.asyncio

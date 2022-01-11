@@ -1,14 +1,13 @@
 """Provide a package for python-openevse-http."""
 from __future__ import annotations
 
-from awesomeversion import AwesomeVersion
-
 import asyncio
 import datetime
 import logging
 from typing import Any, Callable, Optional
 
 import aiohttp  # type: ignore
+from awesomeversion import AwesomeVersion
 
 from .const import MAX_AMPS, MIN_AMPS
 from .exceptions import (
