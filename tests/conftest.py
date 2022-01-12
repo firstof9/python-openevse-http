@@ -1,11 +1,11 @@
 """Provide common pytest fixtures."""
-import pytest
 import json
+
+import pytest
+from aioresponses import aioresponses
 
 import openevsehttp
 from tests.common import load_fixture
-
-from aioresponses import aioresponses
 
 TEST_URL_STATUS = "http://openevse.test.tld/status"
 TEST_URL_CONFIG = "http://openevse.test.tld/config"

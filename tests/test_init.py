@@ -1,11 +1,16 @@
 import asyncio
 import json
+
+import logging
+
 import pytest
+
 import openevsehttp
 
 pytestmark = pytest.mark.asyncio
 
 TEST_URL_RAPI = "http://openevse.test.tld/r"
+TEST_URL_OVERRIDE = "http://openevse.test.tld/override"
 
 
 async def test_get_status_auth(test_charger_auth):
@@ -508,3 +513,100 @@ async def test_get_relayt(fixture, expected, request):
     await charger.update()
     status = charger.stuck_relay_check_enabled
     assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", "eco"), ("test_charger_v2", "normal")]
+)
+async def test_get_divertmode(fixture, expected, request):
+    """Test v4 Status reply"""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    status = charger.divertmode
+    assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
+)
+async def test_get_charge_rate(fixture, expected, request):
+    """Test v4 Status reply"""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    status = charger.charge_rate
+    assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
+)
+async def test_get_available_current(fixture, expected, request):
+    """Test v4 Status reply"""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    with pytest.raises(KeyError):
+        status = charger.available_current
+        # assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
+)
+async def test_get_smoothed_available_current(fixture, expected, request):
+    """Test v4 Status reply"""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    with pytest.raises(KeyError):
+        status = charger.smoothed_available_current
+        # assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
+)
+async def test_get_divert_active(fixture, expected, request):
+    """Test v4 Status reply"""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    with pytest.raises(KeyError):
+        status = charger.divert_active
+        # assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
+)
+async def test_get_manual_override(fixture, expected, request):
+    """Test v4 Status reply"""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    with pytest.raises(KeyError):
+        status = charger.manual_override
+        # assert status == expected
+
+
+async def test_toggle_override(test_charger, mock_aioclient, caplog):
+    """Test v4 Status reply"""
+    await test_charger.update()
+    mock_aioclient.patch(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body="OK",
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.toggle_override()
+    assert "Toggling manual override http" in caplog.text
+
+
+async def test_toggle_override_v2(test_charger_v2, mock_aioclient, caplog):
+    """Test v4 Status reply"""
+    await test_charger_v2.update()
+    value = {"cmd": "OK", "ret": "$OK^20"}
+    mock_aioclient.post(
+        TEST_URL_RAPI,
+        status=200,
+        body=json.dumps(value),
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_v2.toggle_override()
+    assert "Toggling manual override via RAPI" in caplog.text

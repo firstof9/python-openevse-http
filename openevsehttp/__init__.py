@@ -4,9 +4,11 @@ from __future__ import annotations
 import asyncio
 import datetime
 import logging
+from json.decoder import JSONDecodeError
 from typing import Any, Callable, Optional
 
 import aiohttp  # type: ignore
+from awesomeversion import AwesomeVersion
 
 from .const import MAX_AMPS, MIN_AMPS
 from .exceptions import (
@@ -200,6 +202,8 @@ class OpenEVSE:
                     message = await resp.json()
                 except TimeoutError:
                     _LOGGER.error("%s: %s", ERROR_TIMEOUT, url)
+                except JSONDecodeError:
+                    message = {"msg": resp}
 
                 if resp.status == 400:
                     _LOGGER.error("%s", message["msg"])
@@ -346,6 +350,29 @@ class OpenEVSE:
             _LOGGER.error("Problem issuing command: %s", response["msg"])
             raise UnknownError
 
+    async def divert_mode(self, mode: str = "Normal") -> None:
+        """Set the divert mode to either Normal or Eco modes."""
+        url = f"{self.url}divertmode"
+
+        if mode != "Normal" or mode != "Eco":
+            _LOGGER.error("Invalid value for divertmode: %s", mode)
+            raise ValueError
+
+        if mode == "Normal":
+            value = 1
+        else:
+            value = 2
+
+        data = {"divertmode": value}
+
+        _LOGGER.debug("Setting charge mode to %s", mode)
+        response = await self.process_request(
+            url=url, method="post", data=data
+        )  # noqa: E501
+        if response["msg"] != "done":
+            _LOGGER.error("Problem issuing command: %s", response["msg"])
+            raise UnknownError
+
     async def get_override(self) -> None:
         """Get the manual override status."""
         url = f"{self.url}override"
@@ -386,11 +413,26 @@ class OpenEVSE:
 
     async def toggle_override(self) -> None:
         """Toggle the manual override status."""
-        url = f"{self.url}override"
+        #   3.x: use RAPI commands $FE (enable) and $FS (sleep)
+        #   4.x: use HTTP API call
 
-        _LOGGER.debug("Toggling manual override %s", url)
-        response = await self.process_request(url=url, method="patch")
-        _LOGGER.debug("Toggle response: %s", response["msg"])
+        cutoff = AwesomeVersion("4.0.0")
+        current = AwesomeVersion(self._config["version"])
+
+        _LOGGER.debug("Detected firmware: %s", current)
+
+        if cutoff <= current:
+            url = f"{self.url}override"
+
+            _LOGGER.debug("Toggling manual override %s", url)
+            response = await self.process_request(url=url, method="patch")
+            _LOGGER.debug("Toggle response: %s", response)
+        else:
+            # Older firmware use RAPI commands
+            _LOGGER.debug("Toggling manual override via RAPI")
+            command = "$FE" if self._status["state"] == "sleeping" else "$FS"
+            response = await self.send_command(command)
+            _LOGGER.debug("Toggle response: %s", response[1])
 
     async def clear_override(self) -> None:
         """Clear the manual override status."""
