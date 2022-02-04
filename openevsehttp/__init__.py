@@ -430,7 +430,7 @@ class OpenEVSE:
         else:
             # Older firmware use RAPI commands
             _LOGGER.debug("Toggling manual override via RAPI")
-            command = "$FE" if self._status["state"] == "sleeping" else "$FS"
+            command = "$FE" if self._status["state"] == 254 else "$FS"
             response = await self.send_command(command)
             _LOGGER.debug("Toggle response: %s", response[1])
 
