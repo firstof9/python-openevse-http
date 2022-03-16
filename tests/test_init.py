@@ -612,6 +612,7 @@ async def test_toggle_override_v2(test_charger_v2, mock_aioclient, caplog):
         await test_charger_v2.toggle_override()
     assert "Toggling manual override via RAPI" in caplog.text
 
+
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", "1234567890AB"), ("test_charger_v2", None)]
 )
@@ -621,6 +622,7 @@ async def test_wifi_serial(fixture, expected, request):
     await charger.update()
     status = charger.wifi_serial
     assert status == expected
+
 
 async def test_set_current(test_charger, mock_aioclient, caplog):
     """Test v4 Status reply"""
@@ -633,7 +635,8 @@ async def test_set_current(test_charger, mock_aioclient, caplog):
     )
     with caplog.at_level(logging.DEBUG):
         await test_charger.set_current(12)
-    assert "Setting max_current_soft to 12" in caplog.text    
+    assert "Setting max_current_soft to 12" in caplog.text
+
 
 async def test_set_current_error(test_charger, mock_aioclient, caplog):
     """Test v4 Status reply"""
@@ -646,4 +649,4 @@ async def test_set_current_error(test_charger, mock_aioclient, caplog):
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(ValueError):
             await test_charger.set_current(60)
-    assert "Invalid value for max_current_soft: 60" in caplog.text        
+    assert "Invalid value for max_current_soft: 60" in caplog.text

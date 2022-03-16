@@ -446,7 +446,10 @@ class OpenEVSE:
         """Set the soft current limit."""
         url = f"{self.url}config"
 
-        if amps < self._config["min_current_hard"] or amps > self._config["max_current_hard"]:
+        if (
+            amps < self._config["min_current_hard"]
+            or amps > self._config["max_current_hard"]
+        ):
             _LOGGER.error("Invalid value for max_current_soft: %s", amps)
             raise ValueError
 
@@ -458,8 +461,7 @@ class OpenEVSE:
         )  # noqa: E501
         if response["msg"] != "done":
             _LOGGER.error("Problem issuing command: %s", response["msg"])
-            raise UnknownError        
-
+            raise UnknownError
 
     @property
     def hostname(self) -> str:
@@ -746,7 +748,7 @@ class OpenEVSE:
         return self._status["divert_active"]
 
     @property
-    def wifi_serial(self) -> str:
+    def wifi_serial(self) -> str | None:
         """Return wifi serial."""
         if self._config is not None and "wifi_serial" in self._config:
             return self._config["wifi_serial"]
