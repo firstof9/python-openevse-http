@@ -446,7 +446,7 @@ class OpenEVSE:
         """Set the soft current limit."""
         #   3.x - 4.1.0: use RAPI commands $SC <amps>
         #   4.1.2: use HTTP API call
-
+        amps = int(amps)
         cutoff = AwesomeVersion("4.1.2")
         current = AwesomeVersion(self._config["version"])
 
