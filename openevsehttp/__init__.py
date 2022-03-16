@@ -197,7 +197,13 @@ class OpenEVSE:
 
         async with aiohttp.ClientSession() as session:
             http_method = getattr(session, method)
-            async with http_method(url, data=data, auth=auth) as resp:
+            _LOGGER.debug(
+                "Connecting to %s with data payload of %s using method %s",
+                url,
+                data,
+                method,
+            )
+            async with http_method(url, json=data, auth=auth) as resp:
                 try:
                     message = await resp.json()
                 except TimeoutError:
@@ -206,7 +212,7 @@ class OpenEVSE:
                     message = {"msg": resp}
 
                 if resp.status == 400:
-                    _LOGGER.error("%s", message["msg"])
+                    _LOGGER.error("Error 400: %s", message["msg"])
                     raise ParseJSONError
                 if resp.status == 401:
                     error = await resp.text()
@@ -459,6 +465,7 @@ class OpenEVSE:
             ):
                 _LOGGER.error("Invalid value for max_current_soft: %s", amps)
                 raise ValueError
+
             data = {"max_current_soft": amps}
 
             _LOGGER.debug("Setting max_current_soft to %s", amps)
