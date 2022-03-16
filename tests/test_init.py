@@ -308,7 +308,7 @@ async def test_get_charging_current(fixture, expected, request):
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 6), ("test_charger_v2", 25)]
+    "fixture, expected", [("test_charger", 48), ("test_charger_v2", 25)]
 )
 async def test_get_current_capacity(fixture, expected, request):
     """Test v4 Status reply"""
