@@ -442,6 +442,25 @@ class OpenEVSE:
         response = await self.process_request(url=url, method="delete")
         _LOGGER.debug("Toggle response: %s", response["msg"])
 
+    async def set_current(self, amps: int = 6) -> None:
+        """Set the soft current limit."""
+        url = f"{self.url}config"
+
+        if amps < self._config["min_current_hard"] or amps > self._config["max_current_hard"]:
+            _LOGGER.error("Invalid value for max_current_soft: %s", amps)
+            raise ValueError
+
+        data = {"max_current_soft": amps}
+
+        _LOGGER.debug("Setting max_current_soft to %s", amps)
+        response = await self.process_request(
+            url=url, method="post", data=data
+        )  # noqa: E501
+        if response["msg"] != "done":
+            _LOGGER.error("Problem issuing command: %s", response["msg"])
+            raise UnknownError        
+
+
     @property
     def hostname(self) -> str:
         """Return charger hostname."""
@@ -597,6 +616,8 @@ class OpenEVSE:
     def current_capacity(self) -> int:
         """Return the current capacity."""
         assert self._status is not None
+        if self._config is not None and "max_current_soft" in self._config:
+            return self._config["max_current_soft"]
         return self._status["pilot"]
 
     @property
@@ -724,14 +745,25 @@ class OpenEVSE:
         assert self._status is not None
         return self._status["divert_active"]
 
+    @property
+    def wifi_serial(self) -> str:
+        """Return wifi serial."""
+        if self._config is not None and "wifi_serial" in self._config:
+            return self._config["wifi_serial"]
+        return None
+
     # There is currently no min/max amps JSON data
     # available via HTTP API methods
     @property
     def min_amps(self) -> int:
         """Return the minimum amps."""
+        if self._config is not None and "min_current_hard" in self._config:
+            return self._config["min_current_hard"]
         return MIN_AMPS
 
     @property
     def max_amps(self) -> int:
         """Return the maximum amps."""
+        if self._config is not None and "max_current_hard" in self._config:
+            return self._config["max_current_hard"]
         return MAX_AMPS

@@ -11,6 +11,7 @@ pytestmark = pytest.mark.asyncio
 
 TEST_URL_RAPI = "http://openevse.test.tld/r"
 TEST_URL_OVERRIDE = "http://openevse.test.tld/override"
+TEST_URL_CONFIG = "http://openevse.test.tld/config"
 
 
 async def test_get_status_auth(test_charger_auth):
@@ -307,7 +308,7 @@ async def test_get_charging_current(fixture, expected, request):
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 48), ("test_charger_v2", 25)]
+    "fixture, expected", [("test_charger", 6), ("test_charger_v2", 25)]
 )
 async def test_get_current_capacity(fixture, expected, request):
     """Test v4 Status reply"""
@@ -610,3 +611,39 @@ async def test_toggle_override_v2(test_charger_v2, mock_aioclient, caplog):
     with caplog.at_level(logging.DEBUG):
         await test_charger_v2.toggle_override()
     assert "Toggling manual override via RAPI" in caplog.text
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", "1234567890AB"), ("test_charger_v2", None)]
+)
+async def test_wifi_serial(fixture, expected, request):
+    """Test wifi_serial reply"""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    status = charger.wifi_serial
+    assert status == expected
+
+async def test_set_current(test_charger, mock_aioclient, caplog):
+    """Test v4 Status reply"""
+    await test_charger.update()
+    value = {"msg": "done"}
+    mock_aioclient.post(
+        TEST_URL_CONFIG,
+        status=200,
+        body=json.dumps(value),
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.set_current(12)
+    assert "Setting max_current_soft to 12" in caplog.text    
+
+async def test_set_current_error(test_charger, mock_aioclient, caplog):
+    """Test v4 Status reply"""
+    await test_charger.update()
+    mock_aioclient.post(
+        TEST_URL_CONFIG,
+        status=200,
+        body="OK",
+    )
+    with caplog.at_level(logging.DEBUG):
+        with pytest.raises(ValueError):
+            await test_charger.set_current(60)
+    assert "Invalid value for max_current_soft: 60" in caplog.text        
