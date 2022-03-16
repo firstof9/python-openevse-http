@@ -444,24 +444,36 @@ class OpenEVSE:
 
     async def set_current(self, amps: int = 6) -> None:
         """Set the soft current limit."""
-        url = f"{self.url}config"
+        #   3.x - 4.1.0: use RAPI commands $SC <amps>
+        #   4.1.2: use HTTP API call
 
-        if (
-            amps < self._config["min_current_hard"]
-            or amps > self._config["max_current_hard"]
-        ):
-            _LOGGER.error("Invalid value for max_current_soft: %s", amps)
-            raise ValueError
+        cutoff = AwesomeVersion("4.1.2")
+        current = AwesomeVersion(self._config["version"])
 
-        data = {"max_current_soft": amps}
+        if cutoff <= current:
+            url = f"{self.url}config"
 
-        _LOGGER.debug("Setting max_current_soft to %s", amps)
-        response = await self.process_request(
-            url=url, method="post", data=data
-        )  # noqa: E501
-        if response["msg"] != "done":
-            _LOGGER.error("Problem issuing command: %s", response["msg"])
-            raise UnknownError
+            if (
+                amps < self._config["min_current_hard"]
+                or amps > self._config["max_current_hard"]
+            ):
+                _LOGGER.error("Invalid value for max_current_soft: %s", amps)
+                raise ValueError
+            data = {"max_current_soft": amps}
+
+            _LOGGER.debug("Setting max_current_soft to %s", amps)
+            response = await self.process_request(
+                url=url, method="post", data=data
+            )  # noqa: E501
+            if response["msg"] != "done":
+                _LOGGER.error("Problem issuing command: %s", response["msg"])
+                raise UnknownError
+        else:
+            # RAPI commands
+            _LOGGER.debug("Setting current via RAPI")
+            command = f"$SC {amps}"
+            response = await self.send_command(command)
+            _LOGGER.debug("Set current response: %s", response[1])
 
     @property
     def hostname(self) -> str:
