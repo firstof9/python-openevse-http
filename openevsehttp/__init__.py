@@ -197,7 +197,12 @@ class OpenEVSE:
 
         async with aiohttp.ClientSession() as session:
             http_method = getattr(session, method)
-            _LOGGER.debug("Connecting to %s with data payload of %s using method %s", url, data, method)
+            _LOGGER.debug(
+                "Connecting to %s with data payload of %s using method %s",
+                url,
+                data,
+                method,
+            )
             async with http_method(url, json=data, auth=auth) as resp:
                 try:
                     message = await resp.json()
