@@ -650,3 +650,17 @@ async def test_set_current_error(test_charger, mock_aioclient, caplog):
         with pytest.raises(ValueError):
             await test_charger.set_current(60)
     assert "Invalid value for max_current_soft: 60" in caplog.text
+
+
+async def test_set_current_v2(test_charger_v2, mock_aioclient, caplog):
+    """Test v4 Status reply"""
+    await test_charger_v2.update()
+    value = {"cmd": "OK", "ret": "$OK^20"}
+    mock_aioclient.post(
+        TEST_URL_RAPI,
+        status=200,
+        body=json.dumps(value),
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_v2.set_current(12)
+    assert "Setting current via RAPI" in caplog.text
