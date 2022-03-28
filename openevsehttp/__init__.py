@@ -472,9 +472,7 @@ class OpenEVSE:
             response = await self.process_request(
                 url=url, method="post", data=data
             )  # noqa: E501
-            if response["msg"] != "done":
-                _LOGGER.error("Problem issuing command: %s", response["msg"])
-                raise UnknownError
+
         else:
             # RAPI commands
             _LOGGER.debug("Setting current via RAPI")
