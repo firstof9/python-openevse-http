@@ -456,7 +456,7 @@ class OpenEVSE:
         cutoff = AwesomeVersion("4.1.2")
         current = AwesomeVersion(self._config["version"])
 
-        if cutoff <= current:
+        if current >= cutoff:
             url = f"{self.url}config"
 
             if (
