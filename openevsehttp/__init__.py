@@ -427,7 +427,7 @@ class OpenEVSE:
 
         _LOGGER.debug("Detected firmware: %s", current)
 
-        if cutoff <= current:
+        if current >= cutoff:
             url = f"{self.url}override"
 
             _LOGGER.debug("Toggling manual override %s", url)
