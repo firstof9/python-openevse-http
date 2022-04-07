@@ -297,7 +297,7 @@ async def test_get_wifi_signal(fixture, expected, request):
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
+    "fixture, expected", [("test_charger", 32.2), ("test_charger_v2", 0)]
 )
 async def test_get_charging_current(fixture, expected, request):
     """Test v4 Status reply"""
@@ -664,3 +664,14 @@ async def test_set_current_v2(test_charger_v2, mock_aioclient, caplog):
     with caplog.at_level(logging.DEBUG):
         await test_charger_v2.set_current(12)
     assert "Setting current via RAPI" in caplog.text
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 7728), ("test_charger_v2", 0)]
+)
+async def test_get_charging_power(fixture, expected, request):
+    """Test v4 Status reply"""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    status = charger.charging_power
+    assert status == expected

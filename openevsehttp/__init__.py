@@ -776,9 +776,8 @@ class OpenEVSE:
         Calculate Watts base on V*I
         """
         assert self._status is not None
-        value = round(self._status["voltage"] * (self._status["amp"] / 1000),2)
+        value = round(self._status["voltage"] * self._status["amp"], 2)
         return value
-
 
     # There is currently no min/max amps JSON data
     # available via HTTP API methods
