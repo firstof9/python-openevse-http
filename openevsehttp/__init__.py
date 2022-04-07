@@ -769,6 +769,16 @@ class OpenEVSE:
             return self._config["wifi_serial"]
         return None
 
+    @property
+    def charging_power(self) -> float:
+        """Return the charge power.
+
+        Calculate Watts base on V*I
+        """
+        assert self._status is not None
+        value = round(self._status["voltage"] * self._status["amp"], 2)
+        return value
+
     # There is currently no min/max amps JSON data
     # available via HTTP API methods
     @property
