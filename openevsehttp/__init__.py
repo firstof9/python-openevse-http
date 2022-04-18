@@ -211,9 +211,6 @@ class OpenEVSE:
                     except JSONDecodeError:
                         _LOGGER.error("Problem decoding JSON: %s", resp)
                         message = {"msg": resp}
-                    except Exception:
-                        _LOGGER.error("Error: %s", resp)
-                        message = {"msg": resp}
 
                     if resp.status == 400:
                         _LOGGER.error("Error 400: %s", message["msg"])
