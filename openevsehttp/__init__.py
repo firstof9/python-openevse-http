@@ -186,7 +186,11 @@ class OpenEVSE:
         self._loop = None
 
     async def process_request(
-        self, url: str, method: str = None, data: Any = None
+        self,
+        url: str,
+        method: str = None,
+        data: Any = None,
+        rapi: Any = None,
     ) -> Any:
         """Return result of processed HTTP request."""
         auth = None
@@ -205,7 +209,12 @@ class OpenEVSE:
                 method,
             )
             try:
-                async with http_method(url, json=data, auth=auth) as resp:
+                async with http_method(
+                    url,
+                    data=rapi,
+                    json=data,
+                    auth=auth,
+                ) as resp:
                     try:
                         message = await resp.json()
                     except JSONDecodeError:
@@ -247,7 +256,7 @@ class OpenEVSE:
         data = {"json": 1, "rapi": command}
 
         _LOGGER.debug("Posting data: %s to %s", command, url)
-        value = await self.process_request(url=url, method="post", data=data)
+        value = await self.process_request(url=url, method="post", rapi=data)
         if "ret" not in value:
             if "msg" in value:
                 return False, value["msg"]
