@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import asyncio
 import datetime
-import json
 import logging
 from json.decoder import JSONDecodeError
 from typing import Any, Callable, Optional
