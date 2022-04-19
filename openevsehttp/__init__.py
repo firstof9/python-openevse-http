@@ -8,6 +8,7 @@ from json.decoder import JSONDecodeError
 from typing import Any, Callable, Optional
 
 import aiohttp  # type: ignore
+from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
 from awesomeversion import AwesomeVersion
 
 from .const import MAX_AMPS, MIN_AMPS
@@ -40,7 +41,7 @@ states = {
 ERROR_AUTH_FAILURE = "Authorization failure"
 ERROR_TOO_MANY_RETRIES = "Too many retries"
 ERROR_UNKNOWN = "Unknown"
-ERROR_TIMEOUT = "Timeout while updating "
+ERROR_TIMEOUT = "Timeout while updating"
 
 INFO_LOOP_RUNNING = "Event loop already running, not creating new one."
 
@@ -185,7 +186,11 @@ class OpenEVSE:
         self._loop = None
 
     async def process_request(
-        self, url: str, method: str = None, data: Any = None
+        self,
+        url: str,
+        method: str = None,
+        data: Any = None,
+        rapi: Any = None,
     ) -> Any:
         """Return result of processed HTTP request."""
         auth = None
@@ -203,30 +208,47 @@ class OpenEVSE:
                 data,
                 method,
             )
-            async with http_method(url, json=data, auth=auth) as resp:
-                try:
-                    message = await resp.json()
-                except TimeoutError:
-                    _LOGGER.error("%s: %s", ERROR_TIMEOUT, url)
-                except JSONDecodeError:
-                    message = {"msg": resp}
+            try:
+                async with http_method(
+                    url,
+                    data=rapi,
+                    json=data,
+                    auth=auth,
+                ) as resp:
+                    try:
+                        message = await resp.json()
+                    except JSONDecodeError:
+                        _LOGGER.error("Problem decoding JSON: %s", resp)
+                        message = {"msg": resp}
 
-                if resp.status == 400:
-                    _LOGGER.error("Error 400: %s", message["msg"])
-                    raise ParseJSONError
-                if resp.status == 401:
-                    error = await resp.text()
-                    _LOGGER.error("Authentication error: %s", error)
-                    raise AuthenticationError
-                if resp.status == 404:
-                    _LOGGER.error("%s", message["msg"])
-                    raise UnknownError
-                if resp.status == 405:
-                    _LOGGER.error("%s", message["msg"])
-                elif resp.status == 500:
-                    _LOGGER.error("%s", message["msg"])
+                    if resp.status == 400:
+                        _LOGGER.error("Error 400: %s", message["msg"])
+                        raise ParseJSONError
+                    if resp.status == 401:
+                        error = await resp.text()
+                        _LOGGER.error("Authentication error: %s", error)
+                        raise AuthenticationError
+                    if resp.status == 404:
+                        _LOGGER.error("%s", message["msg"])
+                        raise UnknownError
+                    if resp.status == 405:
+                        _LOGGER.error("%s", message["msg"])
+                    elif resp.status == 500:
+                        _LOGGER.error("%s", message["msg"])
 
-                return message
+                    return message
+
+            except TimeoutError:
+                _LOGGER.error(ERROR_TIMEOUT)
+                message = {"msg": ERROR_TIMEOUT}
+            except ServerTimeoutError:
+                _LOGGER.error("%s: %s", ERROR_TIMEOUT, url)
+                message = {"msg": ERROR_TIMEOUT}
+            except ContentTypeError as err:
+                _LOGGER.error("%s", err)
+                message = {"msg": err}
+
+            return message
 
     async def send_command(self, command: str) -> tuple | None:
         """Send a RAPI command to the charger and parses the response."""
@@ -234,8 +256,10 @@ class OpenEVSE:
         data = {"json": 1, "rapi": command}
 
         _LOGGER.debug("Posting data: %s to %s", command, url)
-        value = await self.process_request(url=url, method="post", data=data)
+        value = await self.process_request(url=url, method="post", rapi=data)
         if "ret" not in value:
+            if "msg" in value:
+                return False, value["msg"]
             return False, ""
         return value["cmd"], value["ret"]
 
