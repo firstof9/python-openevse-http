@@ -726,7 +726,7 @@ async def test_get_charging_power(fixture, expected, request):
 async def test_set_divertmode(test_charger_v2, mock_aioclient, caplog):
     """Test v4 set divert mode."""
     await test_charger_v2.update()
-    value = {"msg": "done"}
+    value = {"Divert Mode changed"}
     mock_aioclient.post(
         TEST_URL_DIVERT,
         status=200,
@@ -735,19 +735,3 @@ async def test_set_divertmode(test_charger_v2, mock_aioclient, caplog):
     with caplog.at_level(logging.DEBUG):
         await test_charger_v2.divert_mode("normal")
     assert "Setting charge mode to normal" in caplog.text
-
-
-async def test_set_divertmode_err(test_charger_v2, mock_aioclient, caplog):
-    """Test v4 set divert mode error."""
-    await test_charger_v2.update()
-    value = {"msg": "This is a test error message."}
-    mock_aioclient.post(
-        TEST_URL_DIVERT,
-        status=404,
-        body=json.dumps(value),
-    )
-    with caplog.at_level(logging.DEBUG):
-        with pytest.raises(openevsehttp.UnknownError):
-            await test_charger_v2.divert_mode("normal")
-    assert "Setting charge mode to normal" in caplog.text
-    assert "This is a test error message." in caplog.text

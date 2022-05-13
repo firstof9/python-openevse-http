@@ -400,9 +400,6 @@ class OpenEVSE:
             url=url, method="post", data=data
         )  # noqa: E501
         _LOGGER.debug("divert_mode response: %s", response)
-        if response["msg"] != "done":
-            _LOGGER.error("Problem issuing command: %s", response["msg"])
-            raise UnknownError
         return response
 
     async def get_override(self) -> None:
