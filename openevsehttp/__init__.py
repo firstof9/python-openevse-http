@@ -405,7 +405,6 @@ class OpenEVSE:
             raise UnknownError
         return response
 
-
     async def get_override(self) -> None:
         """Get the manual override status."""
         url = f"{self.url}override"
