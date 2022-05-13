@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import datetime
+import json
 import logging
 from json.decoder import JSONDecodeError
 from typing import Any, Callable, Optional
@@ -216,7 +217,10 @@ class OpenEVSE:
                     auth=auth,
                 ) as resp:
                     try:
-                        message = await resp.json()
+                        message = await resp.text()
+                        message = json.loads(message)
+                    except ValueError:
+                        _LOGGER.warning("Non JSON response: %s", message)
                     except JSONDecodeError:
                         _LOGGER.error("Problem decoding JSON: %s", resp)
                         message = {"msg": resp}

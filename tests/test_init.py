@@ -726,11 +726,11 @@ async def test_get_charging_power(fixture, expected, request):
 async def test_set_divertmode(test_charger_v2, mock_aioclient, caplog):
     """Test v4 set divert mode."""
     await test_charger_v2.update()
-    value = {"Divert Mode changed"}
+    value = "Divert Mode changed"
     mock_aioclient.post(
         TEST_URL_DIVERT,
         status=200,
-        body=json.dumps(value),
+        body=value,
     )
     with caplog.at_level(logging.DEBUG):
         await test_charger_v2.divert_mode("normal")
