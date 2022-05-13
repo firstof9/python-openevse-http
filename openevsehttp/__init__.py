@@ -5,7 +5,6 @@ import asyncio
 import datetime
 import json
 import logging
-from json.decoder import JSONDecodeError
 from typing import Any, Callable, Optional
 
 import aiohttp  # type: ignore
@@ -221,9 +220,6 @@ class OpenEVSE:
                         message = json.loads(message)
                     except ValueError:
                         _LOGGER.warning("Non JSON response: %s", message)
-                    except JSONDecodeError:
-                        _LOGGER.error("Problem decoding JSON: %s", resp)
-                        message = {"msg": resp}
 
                     if resp.status == 400:
                         _LOGGER.error("Error 400: %s", message["msg"])

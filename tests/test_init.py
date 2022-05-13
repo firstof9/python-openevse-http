@@ -735,3 +735,4 @@ async def test_set_divertmode(test_charger_v2, mock_aioclient, caplog):
     with caplog.at_level(logging.DEBUG):
         await test_charger_v2.divert_mode("normal")
     assert "Setting charge mode to normal" in caplog.text
+    assert "Non JSON response: Divert Mode changed" in caplog.text
