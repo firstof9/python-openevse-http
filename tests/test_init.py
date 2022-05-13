@@ -14,6 +14,7 @@ pytestmark = pytest.mark.asyncio
 TEST_URL_RAPI = "http://openevse.test.tld/r"
 TEST_URL_OVERRIDE = "http://openevse.test.tld/override"
 TEST_URL_CONFIG = "http://openevse.test.tld/config"
+TEST_URL_DIVERT = "http://openevse.test.tld/divertmode"
 
 
 async def test_get_status_auth(test_charger_auth):
@@ -720,3 +721,18 @@ async def test_get_charging_power(fixture, expected, request):
     await charger.update()
     status = charger.charging_power
     assert status == expected
+
+
+async def test_set_divertmode(test_charger_v2, mock_aioclient, caplog):
+    """Test v4 set divert mode."""
+    await test_charger_v2.update()
+    value = "Divert Mode changed"
+    mock_aioclient.post(
+        TEST_URL_DIVERT,
+        status=200,
+        body=value,
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_v2.divert_mode("normal")
+    assert "Setting charge mode to normal" in caplog.text
+    assert "Non JSON response: Divert Mode changed" in caplog.text

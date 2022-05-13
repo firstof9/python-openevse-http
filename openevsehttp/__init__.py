@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import asyncio
 import datetime
+import json
 import logging
-from json.decoder import JSONDecodeError
 from typing import Any, Callable, Optional
 
 import aiohttp  # type: ignore
@@ -216,10 +216,10 @@ class OpenEVSE:
                     auth=auth,
                 ) as resp:
                     try:
-                        message = await resp.json()
-                    except JSONDecodeError:
-                        _LOGGER.error("Problem decoding JSON: %s", resp)
-                        message = {"msg": resp}
+                        message = await resp.text()
+                        message = json.loads(message)
+                    except ValueError:
+                        _LOGGER.warning("Non JSON response: %s", message)
 
                     if resp.status == 400:
                         _LOGGER.error("Error 400: %s", message["msg"])
@@ -380,15 +380,15 @@ class OpenEVSE:
             _LOGGER.error("Problem issuing command: %s", response["msg"])
             raise UnknownError
 
-    async def divert_mode(self, mode: str = "Normal") -> None:
+    async def divert_mode(self, mode: str = "normal") -> None:
         """Set the divert mode to either Normal or Eco modes."""
         url = f"{self.url}divertmode"
 
-        if mode != "Normal" or mode != "Eco":
+        if mode not in ["normal", "eco"]:
             _LOGGER.error("Invalid value for divertmode: %s", mode)
             raise ValueError
 
-        if mode == "Normal":
+        if mode == "normal":
             value = 1
         else:
             value = 2
@@ -399,9 +399,8 @@ class OpenEVSE:
         response = await self.process_request(
             url=url, method="post", data=data
         )  # noqa: E501
-        if response["msg"] != "done":
-            _LOGGER.error("Problem issuing command: %s", response["msg"])
-            raise UnknownError
+        _LOGGER.debug("divert_mode response: %s", response)
+        return response
 
     async def get_override(self) -> None:
         """Get the manual override status."""
