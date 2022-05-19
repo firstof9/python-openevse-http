@@ -15,7 +15,7 @@
     "offset": 0,
     "max_current_soft": 48,
     "min_current_hard": 6,
-    "max_current_hard": 48,    
+    "max_current_hard": 48,
     "mqtt_supported_protocols": [
       "mqtt",
       "mqtts"
