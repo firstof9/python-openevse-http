@@ -5,7 +5,7 @@ import asyncio
 import datetime
 import json
 import logging
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 import aiohttp  # type: ignore
 from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
@@ -182,8 +182,8 @@ class OpenEVSE:
         self._config: dict = {}
         self._override = None
         self._ws_listening = False
-        self.websocket: Optional[OpenEVSEWebsocket] = None
-        self.callback: Optional[Callable] = None
+        self.websocket: OpenEVSEWebsocket | None = None
+        self.callback: Callable | None = None
         self._loop = None
 
     async def process_request(
@@ -428,7 +428,7 @@ class OpenEVSE:
         """Get the manual override status."""
         url = f"{self.url}override"
 
-        _LOGGER.debug("Geting data from %s", url)
+        _LOGGER.debug("Getting data from %s", url)
         response = await self.process_request(url=url, method="get")
         return response
 
@@ -487,9 +487,9 @@ class OpenEVSE:
 
     async def clear_override(self) -> None:
         """Clear the manual override status."""
-        url = f"{self.url}overrride"
+        url = f"{self.url}override"
 
-        _LOGGER.debug("Clearing manual overrride %s", url)
+        _LOGGER.debug("Clearing manual override %s", url)
         response = await self.process_request(url=url, method="delete")
         _LOGGER.debug("Toggle response: %s", response["msg"])
 
@@ -690,7 +690,7 @@ class OpenEVSE:
 
     @property
     def ambient_temperature(self) -> float | None:
-        """Return the temperature of the ambient sensor, in degrees Celcius."""
+        """Return the temperature of the ambient sensor, in degrees Celsius."""
         assert self._status is not None
         temp = None
         if "temp" in self._status and self._status["temp"]:
@@ -703,7 +703,7 @@ class OpenEVSE:
     def rtc_temperature(self) -> float | None:
         """Return the temperature of the real time clock sensor.
 
-        In degrees Celcius.
+        In degrees Celsius.
         """
         assert self._status is not None
         temp = self._status["temp2"] if self._status["temp2"] else None
@@ -715,7 +715,7 @@ class OpenEVSE:
     def ir_temperature(self) -> float | None:
         """Return the temperature of the IR remote sensor.
 
-        In degrees Celcius.
+        In degrees Celsius.
         """
         assert self._status is not None
         temp = self._status["temp3"] if self._status["temp3"] else None
@@ -725,7 +725,7 @@ class OpenEVSE:
 
     @property
     def esp_temperature(self) -> float | None:
-        """Return the temperature of the ESP sensor, in degrees Celcius."""
+        """Return the temperature of the ESP sensor, in degrees Celsius."""
         assert self._status is not None
         if "temp4" in self._status:
             temp = self._status["temp4"] if self._status["temp4"] else None
@@ -734,7 +734,7 @@ class OpenEVSE:
         return None
 
     @property
-    def time(self) -> Optional[datetime.datetime]:
+    def time(self) -> datetime.datetime | None:
         """Get the RTC time."""
         assert self._status is not None
         if "time" in self._status:
