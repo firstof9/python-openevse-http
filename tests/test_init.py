@@ -4,6 +4,7 @@ from unittest import mock
 
 import logging
 from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
+from tests.common import load_fixture
 
 import pytest
 
@@ -736,3 +737,14 @@ async def test_set_divertmode(test_charger_v2, mock_aioclient, caplog):
         await test_charger_v2.divert_mode("normal")
     assert "Setting charge mode to normal" in caplog.text
     assert "Non JSON response: Divert Mode changed" in caplog.text
+
+async def test_test_and_get(test_charger, mock_aioclient, caplog):
+    """Test v4 Status reply"""
+    data = await test_charger.test_and_get()
+    mock_aioclient.get(
+        TEST_URL_CONFIG,
+        status=200,
+        body=load_fixture("v4_json/config.json"),
+    )
+    assert data["serial"] == "1234567890AB"
+    assert data["model"] == "unknown"

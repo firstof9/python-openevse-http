@@ -16,6 +16,7 @@ from .exceptions import (
     AlreadyListening,
     AuthenticationError,
     MissingMethod,
+    MissingSerial,
     ParseJSONError,
     UnknownError,
 )
@@ -286,6 +287,27 @@ class OpenEVSE:
             self.websocket = OpenEVSEWebsocket(
                 self.url, self._update_status, self._user, self._pwd
             )
+
+    async def test_and_get(self) -> dict:
+        """Test connection.
+
+        Return model serial number as dict
+        """
+        url = f"{self.url}config"
+        data = {}
+
+        response = await self.process_request(url, method="get")
+        if "wifi_serial" in response: 
+            serial = response["wifi_serial"]
+        else:
+            raise MissingSerial
+        if "buildenv" in response:
+            model = response["buildenv"]
+        else:
+            model = "unknown"
+
+        data = {"serial": serial, "model": model}
+        return data
 
     def ws_start(self):
         """Start the websocket listener."""
