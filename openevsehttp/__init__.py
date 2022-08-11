@@ -297,7 +297,7 @@ class OpenEVSE:
         data = {}
 
         response = await self.process_request(url, method="get")
-        if "wifi_serial" in response: 
+        if "wifi_serial" in response:
             serial = response["wifi_serial"]
         else:
             raise MissingSerial
