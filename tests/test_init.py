@@ -3,16 +3,14 @@
 import asyncio
 import json
 import logging
-from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
-from tests.common import load_fixture
 from unittest import mock
-
 
 import pytest
 from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
 
 import openevsehttp
 from tests.common import load_fixture
+from openevsehttp.exceptions import MissingSerial
 
 pytestmark = pytest.mark.asyncio
 
@@ -743,7 +741,7 @@ async def test_set_divertmode(test_charger_v2, mock_aioclient, caplog):
     assert "Non JSON response: Divert Mode changed" in caplog.text
 
 
-async def test_test_and_get(test_charger, mock_aioclient, caplog):
+async def test_test_and_get(test_charger, test_charger_v2, mock_aioclient, caplog):
     """Test v4 Status reply"""
     data = await test_charger.test_and_get()
     mock_aioclient.get(
@@ -753,3 +751,8 @@ async def test_test_and_get(test_charger, mock_aioclient, caplog):
     )
     assert data["serial"] == "1234567890AB"
     assert data["model"] == "unknown"
+
+    with pytest.raises(MissingSerial):
+        with caplog.at_level(logging.DEBUG):
+            data = await test_charger_v2.test_and_get()
+    assert "Older firmware detected, missing serial." in caplog.text

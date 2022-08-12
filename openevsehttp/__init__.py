@@ -300,6 +300,7 @@ class OpenEVSE:
         if "wifi_serial" in response:
             serial = response["wifi_serial"]
         else:
+            _LOGGER.debug("Older firmware detected, missing serial.")
             raise MissingSerial
         if "buildenv" in response:
             model = response["buildenv"]
