@@ -19,3 +19,7 @@ class MissingMethod(Exception):
 
 class AlreadyListening(Exception):
     """Exception for already listening websocket."""
+
+
+class MissingSerial(Exception):
+    """Exception for missing serial number."""
