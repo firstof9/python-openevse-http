@@ -816,14 +816,16 @@ class OpenEVSE:
         return None
 
     @property
-    def charging_power(self) -> float:
+    def charging_power(self) -> float | None:
         """Return the charge power.
 
         Calculate Watts base on V*I
         """
-        assert self._status is not None
-        value = round(self._status["voltage"] * self._status["amp"], 2)
-        return value
+        if self._status is not None and any(
+            key in self._status for key in ["voltage", "amp"]
+        ):
+            return round(self._status["voltage"] * self._status["amp"], 2)
+        return None
 
     # There is currently no min/max amps JSON data
     # available via HTTP API methods
