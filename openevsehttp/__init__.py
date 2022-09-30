@@ -526,6 +526,14 @@ class OpenEVSE:
             response = await self.send_command(command)
             _LOGGER.debug("Set current response: %s", response[1])
 
+    # Restart OpenEVSE WiFi
+    async def restart_wifi(self) -> None:
+        """Restart OpenEVSE Wifi module."""
+        url = f"{self.url}restart"
+
+        response = await self.process_request(url=url, method="get")
+        _LOGGER.debug("Restart response: %s", response)
+
     @property
     def hostname(self) -> str:
         """Return charger hostname."""
