@@ -16,6 +16,7 @@ from .exceptions import (
     AlreadyListening,
     AuthenticationError,
     MissingMethod,
+    MissingSerial,
     ParseJSONError,
     UnknownError,
 )
@@ -287,6 +288,28 @@ class OpenEVSE:
                 self.url, self._update_status, self._user, self._pwd
             )
 
+    async def test_and_get(self) -> dict:
+        """Test connection.
+
+        Return model serial number as dict
+        """
+        url = f"{self.url}config"
+        data = {}
+
+        response = await self.process_request(url, method="get")
+        if "wifi_serial" in response:
+            serial = response["wifi_serial"]
+        else:
+            _LOGGER.debug("Older firmware detected, missing serial.")
+            raise MissingSerial
+        if "buildenv" in response:
+            model = response["buildenv"]
+        else:
+            model = "unknown"
+
+        data = {"serial": serial, "model": model}
+        return data
+
     def ws_start(self):
         """Start the websocket listener."""
         if self._ws_listening:
@@ -502,6 +525,14 @@ class OpenEVSE:
             command = f"$SC {amps}"
             response = await self.send_command(command)
             _LOGGER.debug("Set current response: %s", response[1])
+
+    # Restart OpenEVSE WiFi
+    async def restart_wifi(self) -> None:
+        """Restart OpenEVSE Wifi module."""
+        url = f"{self.url}restart"
+
+        response = await self.process_request(url=url, method="get")
+        _LOGGER.debug("Restart response: %s", response)
 
     @property
     def hostname(self) -> str:
@@ -793,14 +824,16 @@ class OpenEVSE:
         return None
 
     @property
-    def charging_power(self) -> float:
+    def charging_power(self) -> float | None:
         """Return the charge power.
 
         Calculate Watts base on V*I
         """
-        assert self._status is not None
-        value = round(self._status["voltage"] * self._status["amp"], 2)
-        return value
+        if self._status is not None and any(
+            key in self._status for key in ["voltage", "amp"]
+        ):
+            return round(self._status["voltage"] * self._status["amp"], 2)
+        return None
 
     # There is currently no min/max amps JSON data
     # available via HTTP API methods
