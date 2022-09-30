@@ -18,6 +18,7 @@ TEST_URL_RAPI = "http://openevse.test.tld/r"
 TEST_URL_OVERRIDE = "http://openevse.test.tld/override"
 TEST_URL_CONFIG = "http://openevse.test.tld/config"
 TEST_URL_DIVERT = "http://openevse.test.tld/divertmode"
+TEST_URL_RESTART = "http://openevse.test.tld/restart"
 
 
 async def test_get_status_auth(test_charger_auth):
@@ -756,3 +757,15 @@ async def test_test_and_get(test_charger, test_charger_v2, mock_aioclient, caplo
         with caplog.at_level(logging.DEBUG):
             data = await test_charger_v2.test_and_get()
     assert "Older firmware detected, missing serial." in caplog.text
+
+
+async def test_restart(test_charger_v2, mock_aioclient, caplog):
+    """Test v4 set divert mode."""
+    mock_aioclient.get(
+        TEST_URL_RESTART,
+        status=200,
+        body="1",
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_v2.restart_wifi()
+    assert "Restart response: 1" in caplog.text
