@@ -534,6 +534,44 @@ class OpenEVSE:
         response = await self.process_request(url=url, method="get")
         _LOGGER.debug("Restart response: %s", response)
 
+    # Firmwave version
+    async def firmware_check(self) -> dict | None:
+        """Return the latest firmware version."""
+        base_url = "https://api.github.com/repos/OpenEVSE/"
+        url = None
+        method = "get"
+
+        cutoff = AwesomeVersion("4.0.0")
+        current = AwesomeVersion(self._config["version"])
+
+        if current >= cutoff:
+            url = f"{base_url}ESP32_WiFi_V4.x/releases/latest"
+        else:
+            url = f"{base_url}ESP8266_WiFi_v2.x/releases/latest"
+
+        async with aiohttp.ClientSession() as session:
+            http_method = getattr(session, method)
+            _LOGGER.debug(
+                "Connecting to %s using method %s",
+                url,
+                method,
+            )
+            async with http_method(url) as resp:
+                if resp.status != 200:
+                    return None
+                message = await resp.text()
+                message = json.loads(message)
+                response = {}
+                response["latest_version"] = message["tag_name"]
+                release_notes = message["body"]
+                response["release_summary"] = (
+                    (release_notes[:253] + "..")
+                    if len(release_notes) > 255
+                    else release_notes
+                )
+                response["release_url"] = message["html_url"]
+                return response
+
     @property
     def hostname(self) -> str:
         """Return charger hostname."""
