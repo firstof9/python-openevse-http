@@ -19,6 +19,12 @@ TEST_URL_OVERRIDE = "http://openevse.test.tld/override"
 TEST_URL_CONFIG = "http://openevse.test.tld/config"
 TEST_URL_DIVERT = "http://openevse.test.tld/divertmode"
 TEST_URL_RESTART = "http://openevse.test.tld/restart"
+TEST_URL_GITHUB_v4 = (
+    "https://api.github.com/repos/OpenEVSE/ESP32_WiFi_V4.x/releases/latest"
+)
+TEST_URL_GITHUB_v2 = (
+    "https://api.github.com/repos/OpenEVSE/ESP8266_WiFi_v2.x/releases/latest"
+)
 
 
 async def test_get_status_auth(test_charger_auth):
@@ -769,3 +775,32 @@ async def test_restart(test_charger_v2, mock_aioclient, caplog):
     with caplog.at_level(logging.DEBUG):
         await test_charger_v2.restart_wifi()
     assert "Restart response: 1" in caplog.text
+
+
+async def test_firmware_check(test_charger, test_charger_v2, mock_aioclient, caplog):
+    """Test v4 Status reply"""
+    await test_charger.update()
+    mock_aioclient.get(
+        TEST_URL_GITHUB_v4,
+        status=200,
+        body=load_fixture("github_v4.json"),
+    )
+    firmware = await test_charger.firmware_check()
+    assert firmware["latest_version"] == "4.1.4"
+
+    mock_aioclient.get(
+        TEST_URL_GITHUB_v4,
+        status=404,
+        body="",
+    )
+    firmware = await test_charger.firmware_check()
+    assert firmware == None
+
+    await test_charger_v2.update()
+    mock_aioclient.get(
+        TEST_URL_GITHUB_v2,
+        status=200,
+        body=load_fixture("github_v2.json"),
+    )
+    firmware = await test_charger_v2.firmware_check()
+    assert firmware["latest_version"] == "2.9.1"
