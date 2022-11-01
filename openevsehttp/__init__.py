@@ -469,9 +469,18 @@ class OpenEVSE:
         #   4.x: use HTTP API call
 
         cutoff = AwesomeVersion("4.0.0")
-        current = AwesomeVersion(self._config["version"])
+        current = ""
 
         _LOGGER.debug("Detected firmware: %s", current)
+
+        if "dev" in self._config["version"]:
+            value = self._config["version"]
+            _LOGGER.debug("Stripping 'dev' from version.")
+            value = value.split(".")
+            value = ".".join(value[0:3])
+            current = AwesomeVersion(value)
+        else:
+            current = AwesomeVersion(self._config["version"])
 
         if current >= cutoff:
             url = f"{self.url}override"
@@ -500,7 +509,18 @@ class OpenEVSE:
         #   4.1.2: use HTTP API call
         amps = int(amps)
         cutoff = AwesomeVersion("4.1.2")
-        current = AwesomeVersion(self._config["version"])
+        current = ""
+
+        _LOGGER.debug("Detected firmware: %s", current)
+
+        if "dev" in self._config["version"]:
+            value = self._config["version"]
+            _LOGGER.debug("Stripping 'dev' from version.")
+            value = value.split(".")
+            value = ".".join(value[0:3])
+            current = AwesomeVersion(value)
+        else:
+            current = AwesomeVersion(self._config["version"])
 
         if current >= cutoff:
             url = f"{self.url}config"
@@ -542,7 +562,18 @@ class OpenEVSE:
         method = "get"
 
         cutoff = AwesomeVersion("4.0.0")
-        current = AwesomeVersion(self._config["version"])
+        current = ""
+
+        _LOGGER.debug("Detected firmware: %s", current)
+
+        if "dev" in self._config["version"]:
+            value = self._config["version"]
+            _LOGGER.debug("Stripping 'dev' from version.")
+            value = value.split(".")
+            value = ".".join(value[0:3])
+            current = AwesomeVersion(value)
+        else:
+            current = AwesomeVersion(self._config["version"])
 
         if current >= cutoff:
             url = f"{base_url}ESP32_WiFi_V4.x/releases/latest"
@@ -642,7 +673,12 @@ class OpenEVSE:
     def wifi_firmware(self) -> str:
         """Return the ESP firmware version."""
         assert self._config is not None
-        return self._config["version"]
+        value = self._config["version"]
+        if "dev" in value:
+            _LOGGER.debug("Stripping 'dev' from version.")
+            value = value.split(".")
+            value = ".".join(value[0:3])
+        return value
 
     @property
     def ip_address(self) -> str:
