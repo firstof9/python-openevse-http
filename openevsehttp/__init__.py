@@ -473,9 +473,10 @@ class OpenEVSE:
 
         _LOGGER.debug("Detected firmware: %s", current)
 
-        if "dev" in current:
+        if "dev" in value:
             _LOGGER.debug("Stripping 'dev' from version.")
-            current = current[0:2]        
+            value = value.split(".")
+            value = ".".join(value[0:3])
 
         if current >= cutoff:
             url = f"{self.url}override"
@@ -547,6 +548,11 @@ class OpenEVSE:
 
         cutoff = AwesomeVersion("4.0.0")
         current = AwesomeVersion(self._config["version"])
+
+        if "dev" in value:
+            _LOGGER.debug("Stripping 'dev' from version.")
+            value = value.split(".")
+            value = ".".join(value[0:3])
 
         if current >= cutoff:
             url = f"{base_url}ESP32_WiFi_V4.x/releases/latest"
@@ -646,7 +652,12 @@ class OpenEVSE:
     def wifi_firmware(self) -> str:
         """Return the ESP firmware version."""
         assert self._config is not None
-        return self._config["version"]
+        value = self._config["version"]
+        if "dev" in value:
+            _LOGGER.debug("Stripping 'dev' from version.")
+            value = value.split(".")
+            value = ".".join(value[0:3])
+        return value
 
     @property
     def ip_address(self) -> str:

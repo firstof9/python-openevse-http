@@ -221,7 +221,12 @@ async def test_get_service_level(fixture, expected, request):
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", "4.1.2"), ("test_charger_v2", "2.9.1")]
+    "fixture, expected",
+    [
+        ("test_charger", "4.1.2"),
+        ("test_charger_v2", "2.9.1"),
+        ("test_charger_dev", "4.1.5"),
+    ],
 )
 async def test_get_wifi_firmware(fixture, expected, request):
     """Test v4 Status reply."""
