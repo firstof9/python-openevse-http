@@ -473,6 +473,10 @@ class OpenEVSE:
 
         _LOGGER.debug("Detected firmware: %s", current)
 
+        if "dev" in current:
+            _LOGGER.debug("Stripping 'dev' from version.")
+            current = current[0:2]        
+
         if current >= cutoff:
             url = f"{self.url}override"
 
