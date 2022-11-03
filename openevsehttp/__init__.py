@@ -542,7 +542,7 @@ class OpenEVSE:
         else:
             # RAPI commands
             _LOGGER.debug("Setting current via RAPI")
-            command = f"$SC {amps}"
+            command = f"$SC {amps} N"
             response = await self.send_command(command)
             _LOGGER.debug("Set current response: %s", response[1])
 
