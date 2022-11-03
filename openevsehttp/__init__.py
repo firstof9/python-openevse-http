@@ -834,9 +834,11 @@ class OpenEVSE:
         return float(round(self._status["wattsec"] / 3600, 2))
 
     @property
-    def protocol_version(self) -> str:
+    def protocol_version(self) -> str | None:
         """Return the protocol version."""
         assert self._config is not None
+        if self._config["protocol"] == "-":
+            return None
         return self._config["protocol"]
 
     @property

@@ -437,7 +437,7 @@ async def test_get_usage_session(fixture, expected, request):
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", "-"), ("test_charger_v2", "4.0.1")]
+    "fixture, expected", [("test_charger", None), ("test_charger_v2", "4.0.1")]
 )
 async def test_get_protocol_version(fixture, expected, request):
     """Test v4 Status reply."""
