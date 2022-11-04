@@ -548,11 +548,22 @@ class OpenEVSE:
 
     # Restart OpenEVSE WiFi
     async def restart_wifi(self) -> None:
-        """Restart OpenEVSE Wifi module."""
+        """Restart OpenEVSE WiFi module."""
         url = f"{self.url}restart"
 
         response = await self.process_request(url=url, method="get")
-        _LOGGER.debug("Restart response: %s", response)
+        _LOGGER.debug("WiFi Restart response: %s", response)
+
+    # Restart EVSE module
+    async def restart_evse(self) -> None:
+        """Restart EVSE module."""
+        _LOGGER.debug("Restarting EVSE module via RAPI")
+        command = "$FR"
+
+        response = await self.send_command(command)
+        if isinstance(response, tuple):
+            response = response[1]
+        _LOGGER.debug("EVSE Restart response: %s", response)
 
     # Firmwave version
     async def firmware_check(self) -> dict | None:
