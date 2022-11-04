@@ -809,3 +809,17 @@ async def test_firmware_check(test_charger, test_charger_v2, mock_aioclient, cap
     )
     firmware = await test_charger_v2.firmware_check()
     assert firmware["latest_version"] == "2.9.1"
+
+
+async def test_evse_restart(test_charger_v2, mock_aioclient, caplog):
+    """Test EVSE module restart."""
+    await test_charger_v2.update()
+    value = {"cmd": "OK", "ret": "$OK^20"}
+    mock_aioclient.post(
+        TEST_URL_RAPI,
+        status=200,
+        body=json.dumps(value),
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_v2.restart_evse()
+    assert "EVSE Restart response: $OK^20" in caplog.text
