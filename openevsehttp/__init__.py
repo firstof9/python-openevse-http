@@ -683,6 +683,13 @@ class OpenEVSE:
         return self._config["firmware"]
 
     @property
+    def max_current_soft(self) -> int | None:
+        """Return the firmware version."""
+        if self._config is not None and "max_current_soft" in self._config:
+            return self._config["max_current_soft"]
+        return None
+
+    @property
     def wifi_firmware(self) -> str:
         """Return the ESP firmware version."""
         assert self._config is not None
