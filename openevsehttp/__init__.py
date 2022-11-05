@@ -222,20 +222,21 @@ class OpenEVSE:
                     except ValueError:
                         _LOGGER.warning("Non JSON response: %s", message)
 
+                    error = await resp.text()
+
                     if resp.status == 400:
                         _LOGGER.error("Error 400: %s", message["msg"])
                         raise ParseJSONError
                     if resp.status == 401:
-                        error = await resp.text()
                         _LOGGER.error("Authentication error: %s", error)
                         raise AuthenticationError
                     if resp.status == 404:
-                        _LOGGER.error("%s", message["msg"])
+                        _LOGGER.error("%s", error)
                         raise UnknownError
                     if resp.status == 405:
-                        _LOGGER.error("%s", message["msg"])
+                        _LOGGER.error("%s", error)
                     elif resp.status == 500:
-                        _LOGGER.error("%s", message["msg"])
+                        _LOGGER.error("%s", error)
 
                     return message
 
