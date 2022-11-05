@@ -900,3 +900,14 @@ async def test_vehicle_eta(fixture, expected, request):
     await charger.update()
     status = charger.vehicle_eta
     assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 48), ("test_charger_v2", None)]
+)
+async def test_max_current_soft(fixture, expected, request):
+    """Test max_current_soft reply."""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    status = charger.max_current_soft
+    assert status == expected
