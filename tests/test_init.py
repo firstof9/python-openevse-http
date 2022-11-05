@@ -823,3 +823,80 @@ async def test_evse_restart(test_charger_v2, mock_aioclient, caplog):
     with caplog.at_level(logging.DEBUG):
         await test_charger_v2.restart_evse()
     assert "EVSE Restart response: $OK^20" in caplog.text
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", True), ("test_charger_v2", None)]
+)
+async def test_shaper_active(fixture, expected, request):
+    """Test shaper_active reply."""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    status = charger.shaper_active
+    assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 2299), ("test_charger_v2", None)]
+)
+async def test_shaper_live_power(fixture, expected, request):
+    """Test shaper_live_power reply."""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    status = charger.shaper_live_power
+    assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 21), ("test_charger_v2", None)]
+)
+async def test_shaper_current_power(fixture, expected, request):
+    """Test shaper_current_power reply."""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    status = charger.shaper_current_power
+    assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 4000), ("test_charger_v2", None)]
+)
+async def test_shaper_max_power(fixture, expected, request):
+    """Test shaper_max_power reply."""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    status = charger.shaper_max_power
+    assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", "75%"), ("test_charger_v2", None)]
+)
+async def test_vehicle_soc(fixture, expected, request):
+    """Test vehicle_soc reply."""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    status = charger.vehicle_soc
+    assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", "468KM"), ("test_charger_v2", None)]
+)
+async def test_vehicle_range(fixture, expected, request):
+    """Test vehicle_range reply."""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    status = charger.vehicle_range
+    assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", 18000), ("test_charger_v2", None)]
+)
+async def test_vehicle_eta(fixture, expected, request):
+    """Test vehicle_eta reply."""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    status = charger.vehicle_eta
+    assert status == expected

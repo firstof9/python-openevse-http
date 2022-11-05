@@ -360,6 +360,8 @@ class OpenEVSE:
             _LOGGER.debug("ws_data: %s", data)
             if "wh" in data.keys():
                 data["watthour"] = data.pop("wh")
+            elif "config_version" in data.keys():
+                self.update()
             self._status.update(data)
 
             if self.callback is not None:
@@ -920,6 +922,57 @@ class OpenEVSE:
             key in self._status for key in ["voltage", "amp"]
         ):
             return round(self._status["voltage"] * self._status["amp"], 2)
+        return None
+
+    @property
+    def shaper_active(self) -> bool | None:
+        """Return if shper is active."""
+        if self._status is not None and "shaper" in self._status:
+            return bool(self._status["shaper"])
+        return None
+
+    @property
+    def shaper_live_power(self) -> int | None:
+        """Return shaper live power reading."""
+        if self._status is not None and "shaper_live_pwr" in self._status:
+            return self._status["shaper_live_pwr"]
+        return None
+
+    @property
+    def shaper_current_power(self) -> int | None:
+        """Return shaper live power reading."""
+        if self._status is not None and "shaper_cur" in self._status:
+            if self._status["shaper_cur"] == 255:
+                return self._status["pilot"]
+            return self._status["shaper_cur"]
+        return None
+
+    @property
+    def shaper_max_power(self) -> int | None:
+        """Return shaper live power reading."""
+        if self._status is not None and "shaper_max_pwr" in self._status:
+            return self._status["shaper_max_pwr"]
+        return None
+
+    @property
+    def vehicle_soc(self) -> int | None:
+        """Return battery level."""
+        if self._status is not None and "vehicle_soc" in self._status:
+            return self._status["vehicle_soc"]
+        return None
+
+    @property
+    def vehicle_range(self) -> int | None:
+        """Return battery range."""
+        if self._status is not None and "vehicle_range" in self._status:
+            return self._status["vehicle_range"]
+        return None
+
+    @property
+    def vehicle_eta(self) -> int | None:
+        """Return tiem to full charge."""
+        if self._status is not None and "vehicle_eta" in self._status:
+            return self._status["vehicle_eta"]
         return None
 
     # There is currently no min/max amps JSON data
