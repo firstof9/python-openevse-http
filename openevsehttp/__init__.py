@@ -977,7 +977,7 @@ class OpenEVSE:
 
     @property
     def vehicle_eta(self) -> int | None:
-        """Return tiem to full charge."""
+        """Return time to full charge."""
         if self._status is not None and "vehicle_eta" in self._status:
             return self._status["vehicle_eta"]
         return None
