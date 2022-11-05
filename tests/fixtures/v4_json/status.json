@@ -41,5 +41,12 @@
     "divert_update": 11,
     "ota_update": 0,
     "time": "2021-08-10T23:00:11Z",
-    "offset": "-0700"
+    "offset": "-0700",
+    "shaper": 1,
+    "shaper_live_pwr": 2299, 
+    "shaper_max_pwr": 4000, 
+    "shaper_cur": 21,
+    "vehicle_soc": "75%",
+    "vehicle_range": "468KM",
+    "vehicle_eta": 18000
   }
