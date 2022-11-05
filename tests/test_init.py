@@ -870,7 +870,7 @@ async def test_shaper_max_power(fixture, expected, request):
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", "75%"), ("test_charger_v2", None)]
+    "fixture, expected", [("test_charger", 75), ("test_charger_v2", None)]
 )
 async def test_vehicle_soc(fixture, expected, request):
     """Test vehicle_soc reply."""
@@ -881,7 +881,7 @@ async def test_vehicle_soc(fixture, expected, request):
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", "468KM"), ("test_charger_v2", None)]
+    "fixture, expected", [("test_charger", 468), ("test_charger_v2", None)]
 )
 async def test_vehicle_range(fixture, expected, request):
     """Test vehicle_range reply."""

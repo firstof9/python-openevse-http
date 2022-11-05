@@ -46,7 +46,7 @@
     "shaper_live_pwr": 2299, 
     "shaper_max_pwr": 4000, 
     "shaper_cur": 21,
-    "vehicle_soc": "75%",
-    "vehicle_range": "468KM",
+    "vehicle_soc": 75,
+    "vehicle_range": 468,
     "vehicle_eta": 18000
   }
