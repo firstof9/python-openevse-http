@@ -903,7 +903,7 @@ async def test_vehicle_eta(fixture, expected, request):
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 48), ("test_charger_v2", None)]
+    "fixture, expected", [("test_charger", 48), ("test_charger_v2", 25)]
 )
 async def test_max_current_soft(fixture, expected, request):
     """Test max_current_soft reply."""
