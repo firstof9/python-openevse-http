@@ -688,7 +688,7 @@ class OpenEVSE:
         """Return the firmware version."""
         if self._config is not None and "max_current_soft" in self._config:
             return self._config["max_current_soft"]
-        return None
+        return self._status["pilot"]
 
     @property
     def wifi_firmware(self) -> str:
