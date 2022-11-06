@@ -275,7 +275,6 @@ class OpenEVSE:
 
         return message
 
-
     async def send_command(self, command: str) -> tuple | None:
         """Send a RAPI command to the charger and parses the response."""
         url = f"{self.url}r"
