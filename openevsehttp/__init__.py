@@ -223,20 +223,28 @@ class OpenEVSE:
                         _LOGGER.warning("Non JSON response: %s", message)
 
                     error = await resp.text()
+                    _LOGGER.debug("Unparsed error: %s", error)
+                    error = self.parse_rapi_error(error)
 
                     if resp.status == 400:
-                        _LOGGER.error("Error 400: %s", message["msg"])
+                        _LOGGER.error("400: %s", message["msg"])
                         raise ParseJSONError
                     if resp.status == 401:
                         _LOGGER.error("Authentication error: %s", error)
                         raise AuthenticationError
                     if resp.status == 404:
-                        _LOGGER.error("%s", error)
+                        cmd = error["cmd"]
+                        msg = error["error"]
+                        _LOGGER.error("404 command [%s]: %s", cmd, msg)
                         raise UnknownError
                     if resp.status == 405:
-                        _LOGGER.error("%s", error)
+                        cmd = error["cmd"]
+                        msg = error["error"]
+                        _LOGGER.error("405 command [%s]: %s", cmd, msg)
                     elif resp.status == 500:
-                        _LOGGER.error("%s", error)
+                        cmd = error["cmd"]
+                        msg = error["error"]
+                        _LOGGER.error("500 command [%s]: %s", cmd, msg)
 
                     return message
 
@@ -251,6 +259,22 @@ class OpenEVSE:
                 message = {"msg": err}
 
             return message
+
+    def parse_rapi_error(response) -> dict:
+        """Parse RAPI error message."""
+        message = {}
+        if "cmd" in response:
+            message["cmd"] = response["cmd"]
+        else:
+            message["cmd"] = "unknown"
+
+        if "error" in response:
+            message["error"] = response["error"]
+        else:
+            message["error"] = "unknown"
+
+        return message
+
 
     async def send_command(self, command: str) -> tuple | None:
         """Send a RAPI command to the charger and parses the response."""
