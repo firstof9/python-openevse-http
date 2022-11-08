@@ -818,7 +818,9 @@ async def test_restart(test_charger_v2, mock_aioclient, caplog):
     assert "Restart response: 1" in caplog.text
 
 
-async def test_firmware_check(test_charger, test_charger_v2, mock_aioclient, caplog):
+async def test_firmware_check(
+    test_charger, test_charger_dev, test_charger_v2, mock_aioclient, caplog
+):
     """Test v4 Status reply"""
     await test_charger.update()
     mock_aioclient.get(
@@ -836,6 +838,17 @@ async def test_firmware_check(test_charger, test_charger_v2, mock_aioclient, cap
     )
     firmware = await test_charger.firmware_check()
     assert firmware == None
+
+    await test_charger_dev.update()
+    mock_aioclient.get(
+        TEST_URL_GITHUB_v4,
+        status=200,
+        body=load_fixture("github_v4.json"),
+    )
+    with caplog.at_level(logging.DEBUG):
+        firmware = await test_charger_dev.firmware_check()
+    assert "Stripping 'dev' from version." in caplog.text
+    assert firmware["latest_version"] == "4.1.4"
 
     await test_charger_v2.update()
     mock_aioclient.get(
