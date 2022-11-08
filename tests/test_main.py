@@ -8,7 +8,7 @@ from unittest import mock
 import pytest
 from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
 
-import openevsehttp
+import openevsehttp.__main__ as main
 from tests.common import load_fixture
 from openevsehttp.exceptions import MissingSerial
 
@@ -36,7 +36,7 @@ async def test_get_status_auth(test_charger_auth):
 
 async def test_get_status_auth_err(test_charger_auth_err):
     """Test v4 Status reply."""
-    with pytest.raises(openevsehttp.AuthenticationError):
+    with pytest.raises(main.AuthenticationError):
         await test_charger_auth_err.update()
         assert test_charger_auth_err is None
 
@@ -94,7 +94,7 @@ async def test_send_command_parse_err(test_charger_auth, mock_aioclient):
     mock_aioclient.post(
         TEST_URL_RAPI, status=400, body='{"msg": "Could not parse JSON"}'
     )
-    with pytest.raises(openevsehttp.ParseJSONError):
+    with pytest.raises(main.ParseJSONError):
         status = await test_charger_auth.send_command("test")
         assert status is None
 
@@ -105,7 +105,7 @@ async def test_send_command_auth_err(test_charger_auth, mock_aioclient):
         TEST_URL_RAPI,
         status=401,
     )
-    with pytest.raises(openevsehttp.AuthenticationError):
+    with pytest.raises(main.AuthenticationError):
         status = await test_charger_auth.send_command("test")
         assert status is None
 
@@ -118,7 +118,7 @@ async def test_send_command_async_timeout(test_charger_auth, mock_aioclient, cap
     )
     with caplog.at_level(logging.DEBUG):
         await test_charger_auth.send_command("test")
-    assert openevsehttp.ERROR_TIMEOUT in caplog.text
+    assert main.ERROR_TIMEOUT in caplog.text
 
 
 async def test_send_command_server_timeout(test_charger_auth, mock_aioclient, caplog):
@@ -129,7 +129,7 @@ async def test_send_command_server_timeout(test_charger_auth, mock_aioclient, ca
     )
     with caplog.at_level(logging.DEBUG):
         await test_charger_auth.send_command("test")
-    assert f"{openevsehttp.ERROR_TIMEOUT}: {TEST_URL_RAPI}" in caplog.text
+    assert f"{main.ERROR_TIMEOUT}: {TEST_URL_RAPI}" in caplog.text
 
 
 @pytest.mark.parametrize(
@@ -626,7 +626,7 @@ async def test_get_manual_override(fixture, expected, request):
         # assert status == expected
 
 
-async def test_toggle_override(test_charger, mock_aioclient, caplog):
+async def test_toggle_override(test_charger, test_charger_dev, mock_aioclient, caplog):
     """Test v4 Status reply."""
     await test_charger.update()
     mock_aioclient.patch(
@@ -636,6 +636,17 @@ async def test_toggle_override(test_charger, mock_aioclient, caplog):
     )
     with caplog.at_level(logging.DEBUG):
         await test_charger.toggle_override()
+    assert "Toggling manual override http" in caplog.text
+
+    await test_charger_dev.update()
+    mock_aioclient.patch(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body="OK",
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_dev.toggle_override()
+    assert "Stripping 'dev' from version." in caplog.text
     assert "Toggling manual override http" in caplog.text
 
 
@@ -713,7 +724,9 @@ async def test_set_current_error(test_charger, mock_aioclient, caplog):
     assert "Invalid value for max_current_soft: 60" in caplog.text
 
 
-async def test_set_current_v2(test_charger_v2, mock_aioclient, caplog):
+async def test_set_current_v2(
+    test_charger_v2, test_charger_dev, mock_aioclient, caplog
+):
     """Test v4 Status reply."""
     await test_charger_v2.update()
     value = {"cmd": "OK", "ret": "$OK^20"}
@@ -725,6 +738,17 @@ async def test_set_current_v2(test_charger_v2, mock_aioclient, caplog):
     with caplog.at_level(logging.DEBUG):
         await test_charger_v2.set_current(12)
     assert "Setting current via RAPI" in caplog.text
+
+    await test_charger_dev.update()
+    value = {"msg": "OK"}
+    mock_aioclient.post(
+        TEST_URL_CONFIG,
+        status=200,
+        body=json.dumps(value),
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_dev.set_current(12)
+    assert "Stripping 'dev' from version." in caplog.text
 
 
 @pytest.mark.parametrize(
@@ -749,8 +773,31 @@ async def test_set_divertmode(test_charger_v2, mock_aioclient, caplog):
     )
     with caplog.at_level(logging.DEBUG):
         await test_charger_v2.divert_mode("normal")
-    assert "Setting charge mode to normal" in caplog.text
-    assert "Non JSON response: Divert Mode changed" in caplog.text
+        assert (
+            "Connecting to http://openevse.test.tld/divertmode with data payload of {'divertmode': 1} using method post"
+            in caplog.text
+        )
+        assert "Setting charge mode to normal" in caplog.text
+        assert "Non JSON response: Divert Mode changed" in caplog.text
+
+    mock_aioclient.post(
+        TEST_URL_DIVERT,
+        status=200,
+        body=value,
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_v2.divert_mode("eco")
+        assert "Setting charge mode to eco" in caplog.text
+
+    mock_aioclient.post(
+        TEST_URL_DIVERT,
+        status=200,
+        body=value,
+    )
+    with pytest.raises(ValueError):
+        with caplog.at_level(logging.DEBUG):
+            await test_charger_v2.divert_mode("crazy")
+            assert "Invalid value for divertmode: crazy" in caplog.text
 
 
 async def test_test_and_get(test_charger, test_charger_v2, mock_aioclient, caplog):
@@ -782,7 +829,9 @@ async def test_restart(test_charger_v2, mock_aioclient, caplog):
     assert "Restart response: 1" in caplog.text
 
 
-async def test_firmware_check(test_charger, test_charger_v2, mock_aioclient, caplog):
+async def test_firmware_check(
+    test_charger, test_charger_dev, test_charger_v2, mock_aioclient, caplog
+):
     """Test v4 Status reply"""
     await test_charger.update()
     mock_aioclient.get(
@@ -800,6 +849,17 @@ async def test_firmware_check(test_charger, test_charger_v2, mock_aioclient, cap
     )
     firmware = await test_charger.firmware_check()
     assert firmware == None
+
+    await test_charger_dev.update()
+    mock_aioclient.get(
+        TEST_URL_GITHUB_v4,
+        status=200,
+        body=load_fixture("github_v4.json"),
+    )
+    with caplog.at_level(logging.DEBUG):
+        firmware = await test_charger_dev.firmware_check()
+    assert "Stripping 'dev' from version." in caplog.text
+    assert firmware["latest_version"] == "4.1.4"
 
     await test_charger_v2.update()
     mock_aioclient.get(
