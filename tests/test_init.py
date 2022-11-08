@@ -8,7 +8,7 @@ from unittest import mock
 import pytest
 from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
 
-import openevsehttp
+import openevsehttp.__main__ as __main__
 from tests.common import load_fixture
 from openevsehttp.exceptions import MissingSerial
 
@@ -36,7 +36,7 @@ async def test_get_status_auth(test_charger_auth):
 
 async def test_get_status_auth_err(test_charger_auth_err):
     """Test v4 Status reply."""
-    with pytest.raises(openevsehttp.AuthenticationError):
+    with pytest.raises(__main__.AuthenticationError):
         await test_charger_auth_err.update()
         assert test_charger_auth_err is None
 
@@ -94,7 +94,7 @@ async def test_send_command_parse_err(test_charger_auth, mock_aioclient):
     mock_aioclient.post(
         TEST_URL_RAPI, status=400, body='{"msg": "Could not parse JSON"}'
     )
-    with pytest.raises(openevsehttp.ParseJSONError):
+    with pytest.raises(__main__.ParseJSONError):
         status = await test_charger_auth.send_command("test")
         assert status is None
 
@@ -105,7 +105,7 @@ async def test_send_command_auth_err(test_charger_auth, mock_aioclient):
         TEST_URL_RAPI,
         status=401,
     )
-    with pytest.raises(openevsehttp.AuthenticationError):
+    with pytest.raises(__main__.AuthenticationError):
         status = await test_charger_auth.send_command("test")
         assert status is None
 
@@ -118,7 +118,7 @@ async def test_send_command_async_timeout(test_charger_auth, mock_aioclient, cap
     )
     with caplog.at_level(logging.DEBUG):
         await test_charger_auth.send_command("test")
-    assert openevsehttp.ERROR_TIMEOUT in caplog.text
+    assert __main__.ERROR_TIMEOUT in caplog.text
 
 
 async def test_send_command_server_timeout(test_charger_auth, mock_aioclient, caplog):
@@ -129,7 +129,7 @@ async def test_send_command_server_timeout(test_charger_auth, mock_aioclient, ca
     )
     with caplog.at_level(logging.DEBUG):
         await test_charger_auth.send_command("test")
-    assert f"{openevsehttp.ERROR_TIMEOUT}: {TEST_URL_RAPI}" in caplog.text
+    assert f"{__main__.ERROR_TIMEOUT}: {TEST_URL_RAPI}" in caplog.text
 
 
 @pytest.mark.parametrize(

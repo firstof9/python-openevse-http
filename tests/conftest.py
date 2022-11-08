@@ -4,7 +4,7 @@ import json
 import pytest
 from aioresponses import aioresponses
 
-import openevsehttp
+import openevsehttp.__main__ as __main__
 from tests.common import load_fixture
 
 TEST_URL_STATUS = "http://openevse.test.tld/status"
@@ -26,7 +26,7 @@ def test_charger_auth(mock_aioclient):
         status=200,
         body=load_fixture("v4_json/config.json"),
     )
-    return openevsehttp.OpenEVSE(TEST_TLD, user="testuser", pwd="fakepassword")
+    return __main__.OpenEVSE(TEST_TLD, user="testuser", pwd="fakepassword")
 
 
 @pytest.fixture(name="test_charger_auth_err")
@@ -40,7 +40,7 @@ def test_charger_auth_err(mock_aioclient):
         TEST_URL_CONFIG,
         status=401,
     )
-    return openevsehttp.OpenEVSE(TEST_TLD, user="testuser", pwd="fakepassword")
+    return __main__.OpenEVSE(TEST_TLD, user="testuser", pwd="fakepassword")
 
 
 @pytest.fixture(name="test_charger")
@@ -56,7 +56,7 @@ def test_charger(mock_aioclient):
         status=200,
         body=load_fixture("v4_json/config.json"),
     )
-    return openevsehttp.OpenEVSE(TEST_TLD)
+    return __main__.OpenEVSE(TEST_TLD)
 
 
 @pytest.fixture(name="test_charger_dev")
@@ -72,7 +72,7 @@ def test_charger_dev(mock_aioclient):
         status=200,
         body=load_fixture("v4_json/config-dev.json"),
     )
-    return openevsehttp.OpenEVSE(TEST_TLD)
+    return __main__.OpenEVSE(TEST_TLD)
 
 
 @pytest.fixture(name="test_charger_v2")
@@ -88,7 +88,7 @@ def test_charger_v2(mock_aioclient):
         status=200,
         body=load_fixture("v2_json/config.json"),
     )
-    return openevsehttp.OpenEVSE(TEST_TLD)
+    return __main__.OpenEVSE(TEST_TLD)
 
 
 @pytest.fixture
