@@ -713,7 +713,9 @@ async def test_set_current_error(test_charger, mock_aioclient, caplog):
     assert "Invalid value for max_current_soft: 60" in caplog.text
 
 
-async def test_set_current_v2(test_charger_v2, test_charger_dev, mock_aioclient, caplog):
+async def test_set_current_v2(
+    test_charger_v2, test_charger_dev, mock_aioclient, caplog
+):
     """Test v4 Status reply."""
     await test_charger_v2.update()
     value = {"cmd": "OK", "ret": "$OK^20"}
@@ -736,7 +738,6 @@ async def test_set_current_v2(test_charger_v2, test_charger_dev, mock_aioclient,
     with caplog.at_level(logging.DEBUG):
         await test_charger_dev.set_current(12)
     assert "Stripping 'dev' from version." in caplog.text
-
 
 
 @pytest.mark.parametrize(
