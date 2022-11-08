@@ -344,7 +344,7 @@ class OpenEVSE:
         cutoff = AwesomeVersion("4.0.0")
         current = ""
 
-        _LOGGER.debug("Detected firmware: %s", current)
+        _LOGGER.debug("Detected firmware: %s", self._config["version"])
 
         if "dev" in self._config["version"]:
             value = self._config["version"]
