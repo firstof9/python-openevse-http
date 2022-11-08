@@ -749,12 +749,31 @@ async def test_set_divertmode(test_charger_v2, mock_aioclient, caplog):
     )
     with caplog.at_level(logging.DEBUG):
         await test_charger_v2.divert_mode("normal")
-    assert (
-        "Connecting to http://openevse.test.tld/divertmode with data payload of {'divertmode': 1} using method post"
-        in caplog.text
+        assert (
+            "Connecting to http://openevse.test.tld/divertmode with data payload of {'divertmode': 1} using method post"
+            in caplog.text
+        )
+        assert "Setting charge mode to normal" in caplog.text
+        assert "Non JSON response: Divert Mode changed" in caplog.text
+
+    mock_aioclient.post(
+        TEST_URL_DIVERT,
+        status=200,
+        body=value,
     )
-    assert "Setting charge mode to normal" in caplog.text
-    assert "Non JSON response: Divert Mode changed" in caplog.text
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_v2.divert_mode("eco")
+        assert "Setting charge mode to eco" in caplog.text
+
+    mock_aioclient.post(
+        TEST_URL_DIVERT,
+        status=200,
+        body=value,
+    )
+    with pytest.raises(ValueError):
+        with caplog.at_level(logging.DEBUG):
+            await test_charger_v2.divert_mode("crazy")
+            assert "Invalid value for divertmode: crazy" in caplog.text
 
 
 async def test_test_and_get(test_charger, test_charger_v2, mock_aioclient, caplog):
