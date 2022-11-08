@@ -20,6 +20,13 @@ from .exceptions import (
     ParseJSONError,
     UnknownError,
 )
+from .websocket import (
+    SIGNAL_CONNECTION_STATE,
+    STATE_CONNECTED,
+    STATE_DISCONNECTED,
+    STATE_STOPPED,
+    OpenEVSEWebsocket,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -39,141 +46,14 @@ states = {
     255: "Disabled",
 }
 
-ERROR_AUTH_FAILURE = "Authorization failure"
-ERROR_TOO_MANY_RETRIES = "Too many retries"
-ERROR_UNKNOWN = "Unknown"
 ERROR_TIMEOUT = "Timeout while updating"
-
 INFO_LOOP_RUNNING = "Event loop already running, not creating new one."
-
-MAX_FAILED_ATTEMPTS = 5
-
-SIGNAL_CONNECTION_STATE = "websocket_state"
-STATE_CONNECTED = "connected"
-STATE_DISCONNECTED = "disconnected"
-STATE_STARTING = "starting"
-STATE_STOPPED = "stopped"
-
-
-class OpenEVSEWebsocket:
-    """Represent a websocket connection to a OpenEVSE charger."""
-
-    def __init__(
-        self,
-        server,
-        callback,
-        user=None,
-        password=None,
-    ):
-        """Initialize a OpenEVSEWebsocket instance."""
-        self.session = aiohttp.ClientSession()
-        self.uri = self._get_uri(server)
-        self._user = user
-        self._password = password
-        self.callback = callback
-        self._state = None
-        self.failed_attempts = 0
-        self._error_reason = None
-
-    @property
-    def state(self):
-        """Return the current state."""
-        return self._state
-
-    @state.setter
-    def state(self, value):
-        """Set the state."""
-        self._state = value
-        _LOGGER.debug("Websocket %s", value)
-        self.callback(SIGNAL_CONNECTION_STATE, value, self._error_reason)
-        self._error_reason = None
-
-    @staticmethod
-    def _get_uri(server):
-        """Generate the websocket URI."""
-        return server[: server.rfind("/")].replace("http", "ws") + "/ws"
-
-    async def running(self):
-        """Open a persistent websocket connection and act on events."""
-        self.state = STATE_STARTING
-        auth = None
-
-        if self._user and self._password:
-            auth = aiohttp.BasicAuth(self._user, self._password)
-
-        try:
-            async with self.session.ws_connect(
-                self.uri,
-                heartbeat=15,
-                auth=auth,
-            ) as ws_client:
-                self.state = STATE_CONNECTED
-                self.failed_attempts = 0
-
-                async for message in ws_client:
-                    if self.state == STATE_STOPPED:
-                        break
-
-                    if message.type == aiohttp.WSMsgType.TEXT:
-                        msg = message.json()
-                        msgtype = "data"
-                        self.callback(msgtype, msg, None)
-
-                    elif message.type == aiohttp.WSMsgType.CLOSED:
-                        _LOGGER.warning("Websocket connection closed")
-                        break
-
-                    elif message.type == aiohttp.WSMsgType.ERROR:
-                        _LOGGER.error("Websocket error")
-                        break
-
-        except aiohttp.ClientResponseError as error:
-            if error.status == 401:
-                _LOGGER.error("Credentials rejected: %s", error)
-                self._error_reason = ERROR_AUTH_FAILURE
-            else:
-                _LOGGER.error("Unexpected response received: %s", error)
-                self._error_reason = ERROR_UNKNOWN
-            self.state = STATE_STOPPED
-        except (aiohttp.ClientConnectionError, asyncio.TimeoutError) as error:
-            if self.failed_attempts >= MAX_FAILED_ATTEMPTS:
-                self._error_reason = ERROR_TOO_MANY_RETRIES
-                self.state = STATE_STOPPED
-            elif self.state != STATE_STOPPED:
-                retry_delay = min(2 ** (self.failed_attempts - 1) * 30, 300)
-                self.failed_attempts += 1
-                _LOGGER.error(
-                    "Websocket connection failed, retrying in %ds: %s",
-                    retry_delay,
-                    error,
-                )
-                self.state = STATE_DISCONNECTED
-                await asyncio.sleep(retry_delay)
-        except Exception as error:  # pylint: disable=broad-except
-            if self.state != STATE_STOPPED:
-                _LOGGER.exception("Unexpected exception occurred: %s", error)
-                self._error_reason = ERROR_UNKNOWN
-                self.state = STATE_STOPPED
-        else:
-            if self.state != STATE_STOPPED:
-                self.state = STATE_DISCONNECTED
-                await asyncio.sleep(5)
-
-    async def listen(self):
-        """Start the listening websocket."""
-        self.failed_attempts = 0
-        while self.state != STATE_STOPPED:
-            await self.running()
-
-    def close(self):
-        """Close the listening websocket."""
-        self.state = STATE_STOPPED
 
 
 class OpenEVSE:
     """Represent an OpenEVSE charger."""
 
-    def __init__(self, host: str, user: str = None, pwd: str = None) -> None:
+    def __init__(self, host: str, user: str = "", pwd: str = "") -> None:
         """Connect to an OpenEVSE charger equipped with wifi or ethernet."""
         self._user = user
         self._pwd = pwd
@@ -189,7 +69,7 @@ class OpenEVSE:
     async def process_request(
         self,
         url: str,
-        method: str = None,
+        method: str = "",
         data: Any = None,
         rapi: Any = None,
     ) -> Any:
@@ -216,34 +96,24 @@ class OpenEVSE:
                     json=data,
                     auth=auth,
                 ) as resp:
+                    message = await resp.text()
                     try:
-                        message = await resp.text()
                         message = json.loads(message)
                     except ValueError:
                         _LOGGER.warning("Non JSON response: %s", message)
-
-                    error = await resp.text()
 
                     if resp.status == 400:
                         _LOGGER.error("Error 400: %s", message["msg"])
                         raise ParseJSONError
                     if resp.status == 401:
-                        _LOGGER.error("Authentication error: %s", error)
+                        _LOGGER.error("Authentication error: %s", message)
                         raise AuthenticationError
-                    if resp.status == 404:
-                        _LOGGER.error("%s", error)
-                        raise UnknownError
-                    if resp.status == 405:
-                        _LOGGER.error("%s", error)
-                    elif resp.status == 500:
-                        _LOGGER.error("%s", error)
+                    if resp.status in [404, 405, 500]:
+                        _LOGGER.error("%s", message)
 
                     return message
 
-            except TimeoutError:
-                _LOGGER.error(ERROR_TIMEOUT)
-                message = {"msg": ERROR_TIMEOUT}
-            except ServerTimeoutError:
+            except (TimeoutError, ServerTimeoutError):
                 _LOGGER.error("%s: %s", ERROR_TIMEOUT, url)
                 message = {"msg": ERROR_TIMEOUT}
             except ContentTypeError as err:
