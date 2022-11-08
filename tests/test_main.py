@@ -647,7 +647,7 @@ async def test_toggle_override(test_charger, test_charger_dev, mock_aioclient, c
     with caplog.at_level(logging.DEBUG):
         await test_charger_dev.toggle_override()
     assert "Stripping 'dev' from version." in caplog.text
-    assert "Toggling manual override http" in caplog.text    
+    assert "Toggling manual override http" in caplog.text
 
 
 async def test_toggle_override_v2(test_charger_v2, mock_aioclient, caplog):
