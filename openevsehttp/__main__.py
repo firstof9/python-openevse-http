@@ -228,7 +228,7 @@ class OpenEVSE:
                 self._ws_listening = False
 
         elif msgtype == "data":
-            _LOGGER.debug("ws_data: %s", data)
+            _LOGGER.debug("Websocket data: %s", data)
             if "wh" in data.keys():
                 data["watthour"] = data.pop("wh")
             elif "config_version" in data.keys():
