@@ -10,7 +10,7 @@ from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
 
 import openevsehttp.__main__ as main
 from tests.common import load_fixture
-from openevsehttp.exceptions import MissingSerial
+from openevsehttp.exceptions import MissingSerial, UnsupportedFeature
 
 pytestmark = pytest.mark.asyncio
 
@@ -971,3 +971,42 @@ async def test_max_current_soft(fixture, expected, request):
     await charger.update()
     status = charger.max_current_soft
     assert status == expected
+
+
+async def test_set_override(test_charger, test_charger_v2, mock_aioclient, caplog):
+    """Test v4 Status reply"""
+    await test_charger.update()
+    mock_aioclient.post(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body='{"msg": "OK"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        status = await test_charger.set_override("active")
+        assert status == {"msg": "OK"}
+        assert "Override data: {'state': 'active', 'auto_release': True}" in caplog.text
+
+    with pytest.raises(UnsupportedFeature):
+        with caplog.at_level(logging.DEBUG):
+            await test_charger_v2.update()
+            status = await test_charger_v2.set_override("active")
+            assert "Feature not supported for older firmware." in caplog.text
+
+
+async def test_clear_override(test_charger, test_charger_v2, mock_aioclient, caplog):
+    """Test v4 Status reply"""
+    await test_charger.update()
+    mock_aioclient.delete(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body='{"msg": "OK"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.clear_override()
+        assert "Toggle response: OK" in caplog.text
+
+    with pytest.raises(UnsupportedFeature):
+        with caplog.at_level(logging.DEBUG):
+            await test_charger_v2.update()
+            status = await test_charger_v2.clear_override()
+            assert "Feature not supported for older firmware." in caplog.text

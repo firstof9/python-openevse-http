@@ -19,6 +19,7 @@ from .exceptions import (
     MissingSerial,
     ParseJSONError,
     UnknownError,
+    UnsupportedFeature,
 )
 from .websocket import (
     SIGNAL_CONNECTION_STATE,
@@ -300,6 +301,9 @@ class OpenEVSE:
 
     async def get_override(self) -> None:
         """Get the manual override status."""
+        if not self._version_check("4.0.0"):
+            _LOGGER.debug("Feature not supported for older firmware.")
+            raise UnsupportedFeature
         url = f"{self.url}override"
 
         _LOGGER.debug("Getting data from %s", url)
@@ -309,13 +313,16 @@ class OpenEVSE:
     async def set_override(
         self,
         state: str,
-        charge_current: int,
-        max_current: int,
-        energy_limit: int,
-        time_limit: int,
+        charge_current: int | None = None,
+        max_current: int | None = None,
+        energy_limit: int | None = None,
+        time_limit: int | None = None,
         auto_release: bool = True,
-    ) -> str:
+    ) -> Any:
         """Set the manual override status."""
+        if not self._version_check("4.0.0"):
+            _LOGGER.debug("Feature not supported for older firmware.")
+            raise UnsupportedFeature
         url = f"{self.url}override"
 
         if state not in ["active", "disabled"]:
@@ -323,13 +330,19 @@ class OpenEVSE:
 
         data = {
             "state": state,
-            "charge_current": charge_current,
-            "max_current": max_current,
-            "energy_limit": energy_limit,
-            "time_limit": time_limit,
             "auto_release": auto_release,
         }
 
+        if charge_current:
+            data["charge_current"] = charge_current
+        if max_current:
+            data["max_current"] = max_current
+        if energy_limit:
+            data["energy_limit"] = energy_limit
+        if time_limit:
+            data["time_limit"] = time_limit
+
+        _LOGGER.debug("Override data: %s", data)
         _LOGGER.debug("Setting override config on %s", url)
         response = await self.process_request(
             url=url, method="post", data=data
@@ -340,22 +353,7 @@ class OpenEVSE:
         """Toggle the manual override status."""
         #   3.x: use RAPI commands $FE (enable) and $FS (sleep)
         #   4.x: use HTTP API call
-
-        cutoff = AwesomeVersion("4.0.0")
-        current = ""
-
-        _LOGGER.debug("Detected firmware: %s", self._config["version"])
-
-        if "dev" in self._config["version"]:
-            value = self._config["version"]
-            _LOGGER.debug("Stripping 'dev' from version.")
-            value = value.split(".")
-            value = ".".join(value[0:3])
-            current = AwesomeVersion(value)
-        else:
-            current = AwesomeVersion(self._config["version"])
-
-        if current >= cutoff:
+        if self._version_check("4.0.0"):
             url = f"{self.url}override"
 
             _LOGGER.debug("Toggling manual override %s", url)
@@ -370,6 +368,9 @@ class OpenEVSE:
 
     async def clear_override(self) -> None:
         """Clear the manual override status."""
+        if not self._version_check("4.0.0"):
+            _LOGGER.debug("Feature not supported for older firmware.")
+            raise UnsupportedFeature
         url = f"{self.url}override"
 
         _LOGGER.debug("Clearing manual override %s", url)
@@ -381,21 +382,8 @@ class OpenEVSE:
         #   3.x - 4.1.0: use RAPI commands $SC <amps>
         #   4.1.2: use HTTP API call
         amps = int(amps)
-        cutoff = AwesomeVersion("4.1.2")
-        current = ""
 
-        _LOGGER.debug("Detected firmware: %s", current)
-
-        if "dev" in self._config["version"]:
-            value = self._config["version"]
-            _LOGGER.debug("Stripping 'dev' from version.")
-            value = value.split(".")
-            value = ".".join(value[0:3])
-            current = AwesomeVersion(value)
-        else:
-            current = AwesomeVersion(self._config["version"])
-
-        if current >= cutoff:
+        if self._version_check("4.1.2"):
             url = f"{self.url}config"
 
             if (
@@ -487,6 +475,26 @@ class OpenEVSE:
                 )
                 response["release_url"] = message["html_url"]
                 return response
+
+    def _version_check(self, min_version: str) -> bool:
+        """Return bool if minimum version is met."""
+        cutoff = AwesomeVersion(min_version)
+        current = ""
+
+        _LOGGER.debug("Detected firmware: %s", self._config["version"])
+
+        if "dev" in self._config["version"]:
+            value = self._config["version"]
+            _LOGGER.debug("Stripping 'dev' from version.")
+            value = value.split(".")
+            value = ".".join(value[0:3])
+            current = AwesomeVersion(value)
+        else:
+            current = AwesomeVersion(self._config["version"])
+
+        if current >= cutoff:
+            return True
+        return False
 
     @property
     def hostname(self) -> str:
