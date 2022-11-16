@@ -23,3 +23,7 @@ class AlreadyListening(Exception):
 
 class MissingSerial(Exception):
     """Exception for missing serial number."""
+
+
+class UnsupportedFeature(Exception):
+    """Exception for firmware that is too old."""

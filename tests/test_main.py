@@ -10,7 +10,7 @@ from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
 
 import openevsehttp.__main__ as main
 from tests.common import load_fixture
-from openevsehttp.exceptions import MissingSerial
+from openevsehttp.exceptions import MissingSerial, UnsupportedFeature
 
 pytestmark = pytest.mark.asyncio
 
@@ -971,3 +971,115 @@ async def test_max_current_soft(fixture, expected, request):
     await charger.update()
     status = charger.max_current_soft
     assert status == expected
+
+
+async def test_set_override(test_charger, test_charger_v2, mock_aioclient, caplog):
+    """Test set override function."""
+    await test_charger.update()
+    mock_aioclient.post(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body='{"msg": "OK"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        status = await test_charger.set_override("active")
+        assert status == {"msg": "OK"}
+        assert "Override data: {'state': 'active', 'auto_release': True}" in caplog.text
+
+        mock_aioclient.post(
+            TEST_URL_OVERRIDE,
+            status=200,
+            body='{"msg": "OK"}',
+        )
+        status = await test_charger.set_override("active", 30)
+        assert (
+            "Override data: {'state': 'active', 'auto_release': True, 'charge_current': 30}"
+            in caplog.text
+        )
+        mock_aioclient.post(
+            TEST_URL_OVERRIDE,
+            status=200,
+            body='{"msg": "OK"}',
+        )
+        status = await test_charger.set_override("active", 30, 32)
+        assert (
+            "Override data: {'state': 'active', 'auto_release': True, 'charge_current': 30, 'max_current': 32}"
+            in caplog.text
+        )
+        mock_aioclient.post(
+            TEST_URL_OVERRIDE,
+            status=200,
+            body='{"msg": "OK"}',
+        )
+        status = await test_charger.set_override("active", 30, 32, 2000)
+        assert (
+            "Override data: {'state': 'active', 'auto_release': True, 'charge_current': 30, 'max_current': 32, 'energy_limit': 2000}"
+            in caplog.text
+        )
+        mock_aioclient.post(
+            TEST_URL_OVERRIDE,
+            status=200,
+            body='{"msg": "OK"}',
+        )
+        status = await test_charger.set_override("active", 30, 32, 2000, 5000)
+        assert (
+            "Override data: {'state': 'active', 'auto_release': True, 'charge_current': 30, 'max_current': 32, 'energy_limit': 2000, 'time_limit': 5000}"
+            in caplog.text
+        )
+
+    with pytest.raises(ValueError):
+        with caplog.at_level(logging.DEBUG):
+            await test_charger.set_override("invalid")
+            assert "Invalid override state: invalid" in caplog.text
+
+    with pytest.raises(UnsupportedFeature):
+        with caplog.at_level(logging.DEBUG):
+            await test_charger_v2.update()
+            status = await test_charger_v2.set_override("active")
+            assert "Feature not supported for older firmware." in caplog.text
+
+
+async def test_clear_override(test_charger, test_charger_v2, mock_aioclient, caplog):
+    """Test clear override function."""
+    await test_charger.update()
+    mock_aioclient.delete(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body='{"msg": "OK"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.clear_override()
+        assert "Toggle response: OK" in caplog.text
+
+    with pytest.raises(UnsupportedFeature):
+        with caplog.at_level(logging.DEBUG):
+            await test_charger_v2.update()
+            await test_charger_v2.clear_override()
+            assert "Feature not supported for older firmware." in caplog.text
+
+
+async def test_get_override(test_charger, test_charger_v2, mock_aioclient, caplog):
+    """Test get override function."""
+    await test_charger.update()
+    value = {
+        "state": "active",
+        "charge_current": 0,
+        "max_current": 0,
+        "energy_limit": 0,
+        "time_limit": 0,
+        "auto_release": True,
+    }
+    mock_aioclient.get(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body=json.dumps(value),
+    )
+    with caplog.at_level(logging.DEBUG):
+        status = await test_charger.get_override()
+        assert status == value
+
+    with pytest.raises(UnsupportedFeature):
+        with caplog.at_level(logging.DEBUG):
+            await test_charger_v2.update()
+            await test_charger_v2.get_override()
+            assert "Feature not supported for older firmware." in caplog.text
