@@ -326,6 +326,7 @@ class OpenEVSE:
         url = f"{self.url}override"
 
         if state not in ["active", "disabled"]:
+            _LOGGER.error("Invalid override state: %s", state)
             raise ValueError
 
         data = {
