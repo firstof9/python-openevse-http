@@ -7,4 +7,4 @@ pytest-asyncio
 requests_mock
 aiohttp
 aioresponses
-tox==4.0.19
+tox==4.1.1
