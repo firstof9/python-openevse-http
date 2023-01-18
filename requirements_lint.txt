@@ -2,6 +2,6 @@
 black==22.12.0
 flake8==6.0.0
 mypy==0.991
-pydocstyle==6.2.3
+pydocstyle==6.3.0
 isort==5.11.4
 pylint==2.15.10
