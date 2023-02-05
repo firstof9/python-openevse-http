@@ -1001,6 +1001,15 @@ async def test_set_override(test_charger, test_charger_v2, mock_aioclient, caplo
             status=200,
             body='{"msg": "OK"}',
         )
+        status = await test_charger.set_override(charge_current=30)
+        assert (
+            "Override data: {'auto_release': True, 'charge_current': 30}" in caplog.text
+        )
+        mock_aioclient.post(
+            TEST_URL_OVERRIDE,
+            status=200,
+            body='{"msg": "OK"}',
+        )
         status = await test_charger.set_override("active", 30, 32)
         assert (
             "Override data: {'auto_release': True, 'state': 'active', 'charge_current': 30, 'max_current': 32}"
