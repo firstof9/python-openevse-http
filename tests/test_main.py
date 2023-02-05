@@ -703,7 +703,7 @@ async def test_set_current(test_charger, mock_aioclient, caplog):
         TEST_URL_OVERRIDE,
         status=200,
         body='{"msg": "OK"}',
-    )    
+    )
     with caplog.at_level(logging.DEBUG):
         await test_charger.set_current(12)
     assert "Setting current limit to 12" in caplog.text
