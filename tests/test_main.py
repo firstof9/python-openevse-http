@@ -699,29 +699,28 @@ async def test_wifi_serial(fixture, expected, request):
 async def test_set_current(test_charger, mock_aioclient, caplog):
     """Test v4 Status reply."""
     await test_charger.update()
-    value = {"msg": "done"}
     mock_aioclient.post(
-        TEST_URL_CONFIG,
+        TEST_URL_OVERRIDE,
         status=200,
-        body=json.dumps(value),
+        body='{"msg": "OK"}',
     )
     with caplog.at_level(logging.DEBUG):
         await test_charger.set_current(12)
-    assert "Setting max_current_soft to 12" in caplog.text
+    assert "Setting current limit to 12" in caplog.text
 
 
 async def test_set_current_error(test_charger, mock_aioclient, caplog):
     """Test v4 Status reply."""
     await test_charger.update()
     mock_aioclient.post(
-        TEST_URL_CONFIG,
+        TEST_URL_OVERRIDE,
         status=200,
-        body="OK",
+        body='{"msg": "OK"}',
     )
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(ValueError):
             await test_charger.set_current(60)
-    assert "Invalid value for max_current_soft: 60" in caplog.text
+    assert "Invalid value for current limit: 60" in caplog.text
 
 
 async def test_set_current_v2(
@@ -742,9 +741,9 @@ async def test_set_current_v2(
     await test_charger_dev.update()
     value = {"msg": "OK"}
     mock_aioclient.post(
-        TEST_URL_CONFIG,
+        TEST_URL_OVERRIDE,
         status=200,
-        body=json.dumps(value),
+        body='{"msg": "OK"}',
     )
     with caplog.at_level(logging.DEBUG):
         await test_charger_dev.set_current(12)

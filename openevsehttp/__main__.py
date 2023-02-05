@@ -388,21 +388,15 @@ class OpenEVSE:
         amps = int(amps)
 
         if self._version_check("4.1.2"):
-            url = f"{self.url}config"
-
             if (
                 amps < self._config["min_current_hard"]
                 or amps > self._config["max_current_hard"]
             ):
-                _LOGGER.error("Invalid value for max_current_soft: %s", amps)
+                _LOGGER.error("Invalid value for current limit: %s", amps)
                 raise ValueError
 
-            data = {"max_current_soft": amps}
-
-            _LOGGER.debug("Setting max_current_soft to %s", amps)
-            response = await self.process_request(
-                url=url, method="post", data=data
-            )  # noqa: E501
+            _LOGGER.debug("Setting current limit to %s", amps)
+            response = await self.set_override(charge_current=amps)
             _LOGGER.debug("Set current response: %s", response)
 
         else:
