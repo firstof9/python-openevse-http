@@ -5,7 +5,7 @@ import asyncio
 import datetime
 import json
 import logging
-from typing import Any, Callable, Union, Dict, Optional, Tuple
+from typing import Any, Callable, Union, Dict
 
 import aiohttp  # type: ignore
 from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
@@ -403,6 +403,7 @@ class OpenEVSE:
             response = await self.process_request(
                 url=url, method="post", data=data
             )  # noqa: E501
+            _LOGGER.debug("Set current response: %s", response)
 
         else:
             # RAPI commands
