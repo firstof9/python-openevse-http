@@ -388,8 +388,6 @@ class OpenEVSE:
         amps = int(amps)
 
         if self._version_check("4.1.2"):
-            url = f"{self.url}config"
-
             if (
                 amps < self._config["min_current_hard"]
                 or amps > self._config["max_current_hard"]
