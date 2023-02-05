@@ -277,7 +277,9 @@ class OpenEVSE:
             _LOGGER.error("Problem issuing command: %s", response["msg"])
             raise UnknownError
 
-    async def divert_mode(self, mode: str = "normal") -> Union[Dict[str, str], Dict[str, Any]]:
+    async def divert_mode(
+        self, mode: str = "normal"
+    ) -> Union[Dict[str, str], Dict[str, Any]]:
         """Set the divert mode to either Normal or Eco modes."""
         url = f"{self.url}divertmode"
 
