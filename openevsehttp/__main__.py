@@ -333,15 +333,15 @@ class OpenEVSE:
             "auto_release": auto_release,
         }
 
-        if state:
+        if state is not None:
             data["state"] = state
-        if charge_current:
+        if charge_current is not None:
             data["charge_current"] = charge_current
-        if max_current:
+        if max_current is not None:
             data["max_current"] = max_current
-        if energy_limit:
+        if energy_limit is not None:
             data["energy_limit"] = energy_limit
-        if time_limit:
+        if time_limit is not None:
             data["time_limit"] = time_limit
 
         _LOGGER.debug("Override data: %s", data)
