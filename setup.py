@@ -18,7 +18,7 @@ setup(
     long_description=README_FILE.read_text(encoding="utf-8"),
     long_description_content_type="text/markdown",
     packages=find_packages(exclude=["test.*", "tests"]),
-    python_requires=">=3.8",
+    python_requires=">=3.10",
     install_requires=["aiohttp", "requests"],
     entry_points={},
     include_package_data=True,
@@ -28,8 +28,7 @@ setup(
         "Intended Audience :: Developers",
         "Natural Language :: English",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
     ],
 )
