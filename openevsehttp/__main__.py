@@ -312,7 +312,7 @@ class OpenEVSE:
 
     async def set_override(
         self,
-        state: str,
+        state: str | None = None,
         charge_current: int | None = None,
         max_current: int | None = None,
         energy_limit: int | None = None,
@@ -325,15 +325,16 @@ class OpenEVSE:
             raise UnsupportedFeature
         url = f"{self.url}override"
 
-        if state not in ["active", "disabled"]:
+        if state not in ["active", "disabled", None]:
             _LOGGER.error("Invalid override state: %s", state)
             raise ValueError
 
         data = {
-            "state": state,
             "auto_release": auto_release,
         }
 
+        if state:
+            data["state"] = state
         if charge_current:
             data["charge_current"] = charge_current
         if max_current:
