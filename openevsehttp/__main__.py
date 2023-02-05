@@ -5,7 +5,7 @@ import asyncio
 import datetime
 import json
 import logging
-from typing import Any, Callable
+from typing import Any, Callable, Union, Dict, Optional, Tuple
 
 import aiohttp  # type: ignore
 from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
@@ -73,7 +73,7 @@ class OpenEVSE:
         method: str = "",
         data: Any = None,
         rapi: Any = None,
-    ) -> Any:
+    ) -> dict[str, str] | dict[str, Any]:
         """Return result of processed HTTP request."""
         auth = None
         if method is None:
@@ -123,7 +123,7 @@ class OpenEVSE:
 
             return message
 
-    async def send_command(self, command: str) -> tuple | None:
+    async def send_command(self, command: str) -> tuple:
         """Send a RAPI command to the charger and parses the response."""
         url = f"{self.url}r"
         data = {"json": 1, "rapi": command}
@@ -134,7 +134,7 @@ class OpenEVSE:
             if "msg" in value:
                 return False, value["msg"]
             return False, ""
-        return value["cmd"], value["ret"]
+        return (value["cmd"], value["ret"])
 
     async def update(self) -> None:
         """Update the values."""
@@ -251,7 +251,7 @@ class OpenEVSE:
         assert self.websocket
         return self.websocket.state
 
-    async def get_schedule(self) -> list:
+    async def get_schedule(self) -> Union[Dict[str, str], Dict[str, Any]]:
         """Return the current schedule."""
         url = f"{self.url}schedule"
 
@@ -277,7 +277,7 @@ class OpenEVSE:
             _LOGGER.error("Problem issuing command: %s", response["msg"])
             raise UnknownError
 
-    async def divert_mode(self, mode: str = "normal") -> None:
+    async def divert_mode(self, mode: str = "normal") -> Union[Dict[str, str], Dict[str, Any]]:
         """Set the divert mode to either Normal or Eco modes."""
         url = f"{self.url}divertmode"
 
@@ -299,7 +299,7 @@ class OpenEVSE:
         _LOGGER.debug("divert_mode response: %s", response)
         return response
 
-    async def get_override(self) -> None:
+    async def get_override(self) -> Union[Dict[str, str], Dict[str, Any]]:
         """Get the manual override status."""
         if not self._version_check("4.0.0"):
             _LOGGER.debug("Feature not supported for older firmware.")
@@ -325,13 +325,13 @@ class OpenEVSE:
             raise UnsupportedFeature
         url = f"{self.url}override"
 
+        data: dict[str, Any] = {}
+
         if state not in ["active", "disabled", None]:
             _LOGGER.error("Invalid override state: %s", state)
             raise ValueError
 
-        data = {
-            "auto_release": auto_release,
-        }
+        data["auto_release"] = auto_release
 
         if state is not None:
             data["state"] = state
@@ -365,8 +365,8 @@ class OpenEVSE:
             # Older firmware use RAPI commands
             _LOGGER.debug("Toggling manual override via RAPI")
             command = "$FE" if self._status["state"] == 254 else "$FS"
-            response = await self.send_command(command)
-            _LOGGER.debug("Toggle response: %s", response[1])
+            response, msg = await self.send_command(command)
+            _LOGGER.debug("Toggle response: %s", msg)
 
     async def clear_override(self) -> None:
         """Clear the manual override status."""
@@ -406,8 +406,8 @@ class OpenEVSE:
             # RAPI commands
             _LOGGER.debug("Setting current via RAPI")
             command = f"$SC {amps} N"
-            response = await self.send_command(command)
-            _LOGGER.debug("Set current response: %s", response[1])
+            response, msg = await self.send_command(command)
+            _LOGGER.debug("Set current response: %s", msg)
 
     # Restart OpenEVSE WiFi
     async def restart_wifi(self) -> None:
