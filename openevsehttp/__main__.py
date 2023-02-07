@@ -85,9 +85,10 @@ class OpenEVSE:
         async with aiohttp.ClientSession() as session:
             http_method = getattr(session, method)
             _LOGGER.debug(
-                "Connecting to %s with data payload of %s using method %s",
+                "Connecting to %s with data: %s rapi: %s using method %s",
                 url,
                 data,
+                rapi,
                 method,
             )
             try:
@@ -428,6 +429,10 @@ class OpenEVSE:
     # Firmwave version
     async def firmware_check(self) -> dict | None:
         """Return the latest firmware version."""
+        if "version" not in self._config:
+            # Throw warning if we can't find the version
+            _LOGGER.warning("Unable to find firmware version.")
+            return None
         base_url = "https://api.github.com/repos/OpenEVSE/"
         url = None
         method = "get"
@@ -477,6 +482,10 @@ class OpenEVSE:
 
     def _version_check(self, min_version: str) -> bool:
         """Return bool if minimum version is met."""
+        if "version" not in self._config:
+            # Throw warning if we can't find the version
+            _LOGGER.warning("Unable to find firmware version.")
+            return False        
         cutoff = AwesomeVersion(min_version)
         current = ""
 
