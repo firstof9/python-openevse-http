@@ -75,6 +75,22 @@ def test_charger_dev(mock_aioclient):
     return main.OpenEVSE(TEST_TLD)
 
 
+@pytest.fixture(name="test_charger_broken")
+def test_charger_broken(mock_aioclient):
+    """Load the charger data."""
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=200,
+        body=load_fixture("v4_json/status-broken.json"),
+    )
+    mock_aioclient.get(
+        TEST_URL_CONFIG,
+        status=200,
+        body=load_fixture("v4_json/config-broken.json"),
+    )
+    return main.OpenEVSE(TEST_TLD)
+
+
 @pytest.fixture(name="test_charger_v2")
 def test_charger_v2(mock_aioclient):
     """Load the charger data."""

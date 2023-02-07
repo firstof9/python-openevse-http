@@ -709,7 +709,9 @@ async def test_set_current(test_charger, mock_aioclient, caplog):
     assert "Setting current limit to 12" in caplog.text
 
 
-async def test_set_current_error(test_charger, mock_aioclient, caplog):
+async def test_set_current_error(
+    test_charger, test_charger_broken, mock_aioclient, caplog
+):
     """Test v4 Status reply."""
     await test_charger.update()
     mock_aioclient.post(
@@ -721,6 +723,16 @@ async def test_set_current_error(test_charger, mock_aioclient, caplog):
         with pytest.raises(ValueError):
             await test_charger.set_current(60)
     assert "Invalid value for current limit: 60" in caplog.text
+
+    await test_charger_broken.update()
+    mock_aioclient.post(
+        TEST_URL_RAPI,
+        status=200,
+        body='{"cmd": "OK", "ret": "$OK^20"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_broken.set_current(24)
+    assert "Unable to find firmware version." in caplog.text
 
 
 async def test_set_current_v2(
@@ -751,7 +763,8 @@ async def test_set_current_v2(
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 7728), ("test_charger_v2", 0)]
+    "fixture, expected",
+    [("test_charger", 7728), ("test_charger_v2", 0), ("test_charger_broken", None)],
 )
 async def test_get_charging_power(fixture, expected, request):
     """Test v4 Status reply."""
@@ -773,7 +786,7 @@ async def test_set_divertmode(test_charger_v2, mock_aioclient, caplog):
     with caplog.at_level(logging.DEBUG):
         await test_charger_v2.divert_mode("normal")
         assert (
-            "Connecting to http://openevse.test.tld/divertmode with data payload of {'divertmode': 1} using method post"
+            "Connecting to http://openevse.test.tld/divertmode with data: {'divertmode': 1} rapi: None using method post"
             in caplog.text
         )
         assert "Setting charge mode to normal" in caplog.text
@@ -829,7 +842,12 @@ async def test_restart(test_charger_v2, mock_aioclient, caplog):
 
 
 async def test_firmware_check(
-    test_charger, test_charger_dev, test_charger_v2, mock_aioclient, caplog
+    test_charger,
+    test_charger_dev,
+    test_charger_v2,
+    test_charger_broken,
+    mock_aioclient,
+    caplog,
 ):
     """Test v4 Status reply"""
     await test_charger.update()
@@ -869,6 +887,17 @@ async def test_firmware_check(
     firmware = await test_charger_v2.firmware_check()
     assert firmware["latest_version"] == "2.9.1"
 
+    await test_charger_broken.update()
+    mock_aioclient.get(
+        TEST_URL_GITHUB_v4,
+        status=200,
+        body=load_fixture("github_v4.json"),
+    )
+    with caplog.at_level(logging.DEBUG):
+        firmware = await test_charger_broken.firmware_check()
+    assert "Unable to find firmware version." in caplog.text
+    assert firmware is None
+
 
 async def test_evse_restart(test_charger_v2, mock_aioclient, caplog):
     """Test EVSE module restart."""
@@ -907,7 +936,8 @@ async def test_shaper_live_power(fixture, expected, request):
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 21), ("test_charger_v2", None)]
+    "fixture, expected",
+    [("test_charger", 21), ("test_charger_v2", None), ("test_charger_broken", 48)],
 )
 async def test_shaper_current_power(fixture, expected, request):
     """Test shaper_current_power reply."""
