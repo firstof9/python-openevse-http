@@ -709,7 +709,9 @@ async def test_set_current(test_charger, mock_aioclient, caplog):
     assert "Setting current limit to 12" in caplog.text
 
 
-async def test_set_current_error(test_charger, test_charger_broken, mock_aioclient, caplog):
+async def test_set_current_error(
+    test_charger, test_charger_broken, mock_aioclient, caplog
+):
     """Test v4 Status reply."""
     await test_charger.update()
     mock_aioclient.post(
@@ -731,6 +733,7 @@ async def test_set_current_error(test_charger, test_charger_broken, mock_aioclie
     with caplog.at_level(logging.DEBUG):
         await test_charger_broken.set_current(24)
     assert "Unable to find firmware version." in caplog.text
+
 
 async def test_set_current_v2(
     test_charger_v2, test_charger_dev, mock_aioclient, caplog
@@ -760,7 +763,8 @@ async def test_set_current_v2(
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 7728), ("test_charger_v2", 0), ("test_charger_broken", None)]
+    "fixture, expected",
+    [("test_charger", 7728), ("test_charger_v2", 0), ("test_charger_broken", None)],
 )
 async def test_get_charging_power(fixture, expected, request):
     """Test v4 Status reply."""
@@ -838,7 +842,12 @@ async def test_restart(test_charger_v2, mock_aioclient, caplog):
 
 
 async def test_firmware_check(
-    test_charger, test_charger_dev, test_charger_v2, test_charger_broken, mock_aioclient, caplog
+    test_charger,
+    test_charger_dev,
+    test_charger_v2,
+    test_charger_broken,
+    mock_aioclient,
+    caplog,
 ):
     """Test v4 Status reply"""
     await test_charger.update()
@@ -927,7 +936,8 @@ async def test_shaper_live_power(fixture, expected, request):
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 21), ("test_charger_v2", None), ("test_charger_broken", 48)]
+    "fixture, expected",
+    [("test_charger", 21), ("test_charger_v2", None), ("test_charger_broken", 48)],
 )
 async def test_shaper_current_power(fixture, expected, request):
     """Test shaper_current_power reply."""

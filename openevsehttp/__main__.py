@@ -485,7 +485,7 @@ class OpenEVSE:
         if "version" not in self._config:
             # Throw warning if we can't find the version
             _LOGGER.warning("Unable to find firmware version.")
-            return False        
+            return False
         cutoff = AwesomeVersion(min_version)
         current = ""
 
