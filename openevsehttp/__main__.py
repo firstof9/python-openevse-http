@@ -5,7 +5,7 @@ import asyncio
 import datetime
 import json
 import logging
-from typing import Any, Callable, Union, Dict
+from typing import Any, Callable, Dict, Union
 
 import aiohttp  # type: ignore
 from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
@@ -358,12 +358,26 @@ class OpenEVSE:
         """Toggle the manual override status."""
         #   3.x: use RAPI commands $FE (enable) and $FS (sleep)
         #   4.x: use HTTP API call
-        if self._version_check("4.0.0"):
+        lower = "4.0.0"
+        upper = "4.1.7"
+        if self._version_check(lower, upper):
             url = f"{self.url}override"
 
             _LOGGER.debug("Toggling manual override %s", url)
             response = await self.process_request(url=url, method="patch")
             _LOGGER.debug("Toggle response: %s", response)
+        # Firmware > 4.1.7 use alternative method
+        elif self._version_check(upper):
+            _LOGGER.debug("Checking override status.")
+            override = await self.get_override()
+            if override["status"] == "active":
+                _LOGGER.debug("Disabling override.")
+                result = await self.set_override("disabled")
+                _LOGGER.debug("Enable response: %s", result)
+            else:
+                _LOGGER.debug("Enabling override.")
+                result = await self.set_override("active")
+                _LOGGER.debug("Disable response: %s", result)
         else:
             # Older firmware use RAPI commands
             _LOGGER.debug("Toggling manual override via RAPI")
@@ -480,7 +494,7 @@ class OpenEVSE:
                 response["release_url"] = message["html_url"]
                 return response
 
-    def _version_check(self, min_version: str) -> bool:
+    def _version_check(self, min_version: str, max_version: str = "") -> bool:
         """Return bool if minimum version is met."""
         if "version" not in self._config:
             # Throw warning if we can't find the version
@@ -488,6 +502,9 @@ class OpenEVSE:
             return False
         cutoff = AwesomeVersion(min_version)
         current = ""
+        limit = ""
+        if max_version != "":
+            limit = AwesomeVersion(max_version)
 
         _LOGGER.debug("Detected firmware: %s", self._config["version"])
 
@@ -500,6 +517,10 @@ class OpenEVSE:
         else:
             current = AwesomeVersion(self._config["version"])
 
+        if limit:
+            if cutoff <= current <= limit:
+                return True
+            return False
         if current >= cutoff:
             return True
         return False
