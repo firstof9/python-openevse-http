@@ -626,7 +626,9 @@ async def test_get_manual_override(fixture, expected, request):
         # assert status == expected
 
 
-async def test_toggle_override(test_charger, test_charger_dev, mock_aioclient, caplog):
+async def test_toggle_override(
+    test_charger, test_charger_dev, test_charger_new, mock_aioclient, caplog
+):
     """Test v4 Status reply."""
     await test_charger.update()
     mock_aioclient.patch(
@@ -647,6 +649,38 @@ async def test_toggle_override(test_charger, test_charger_dev, mock_aioclient, c
     with caplog.at_level(logging.DEBUG):
         await test_charger_dev.toggle_override()
     assert "Stripping 'dev' from version." in caplog.text
+    assert "Toggling manual override http" in caplog.text
+
+    value = {
+        "state": "active",
+        "charge_current": 0,
+        "max_current": 0,
+        "energy_limit": 0,
+        "time_limit": 0,
+        "auto_release": True,
+    }
+    mock_aioclient.get(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body=json.dumps(value),
+    )
+
+    mock_aioclient.post(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body='{"msg": "OK"}',
+    )
+
+    await test_charger_new.update()
+    mock_aioclient.patch(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body="OK",
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_new.toggle_override()
+    assert "Checking override status." in caplog.text
+    assert "Disabling override." in caplog.text
     assert "Toggling manual override http" in caplog.text
 
 

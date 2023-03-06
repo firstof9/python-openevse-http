@@ -370,7 +370,7 @@ class OpenEVSE:
         elif self._version_check(upper):
             _LOGGER.debug("Checking override status.")
             override = await self.get_override()
-            if override["status"] == "active":
+            if override["state"] == "active":
                 _LOGGER.debug("Disabling override.")
                 result = await self.set_override("disabled")
                 _LOGGER.debug("Enable response: %s", result)
