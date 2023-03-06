@@ -373,11 +373,11 @@ class OpenEVSE:
             if override["state"] == "active":
                 _LOGGER.debug("Disabling override.")
                 result = await self.set_override("disabled")
-                _LOGGER.debug("Enable response: %s", result)
+                _LOGGER.debug("Disable response: %s", result)
             else:
                 _LOGGER.debug("Enabling override.")
                 result = await self.set_override("active")
-                _LOGGER.debug("Disable response: %s", result)
+                _LOGGER.debug("Enable response: %s", result)
         else:
             # Older firmware use RAPI commands
             _LOGGER.debug("Toggling manual override via RAPI")
