@@ -279,23 +279,15 @@ class OpenEVSE:
             raise UnknownError
 
     async def divert_mode(
-        self, mode: str = "normal"
-    ) -> Union[Dict[str, str], Dict[str, Any]]:
+        self, mode: bool
+    ) -> dict[str, str] | dict[str, Any]:
         """Set the divert mode to either Normal or Eco modes."""
-        url = f"{self.url}divertmode"
+        url = f"{self.url}config"
+        mode = bool(mode)
 
-        if mode not in ["normal", "eco"]:
-            _LOGGER.error("Invalid value for divertmode: %s", mode)
-            raise ValueError
+        data = {"divert_enabled": mode}
 
-        if mode == "normal":
-            value = 1
-        else:
-            value = 2
-
-        data = {"divertmode": value}
-
-        _LOGGER.debug("Setting charge mode to %s", mode)
+        _LOGGER.debug("Toggling divert: %s", mode)
         response = await self.process_request(
             url=url, method="post", data=data
         )  # noqa: E501
@@ -360,25 +352,12 @@ class OpenEVSE:
         #   4.x: use HTTP API call
         lower = "4.0.0"
         upper = "4.1.7"
-        if self._version_check(lower, upper):
+        if self._version_check(lower):
             url = f"{self.url}override"
 
             _LOGGER.debug("Toggling manual override %s", url)
             response = await self.process_request(url=url, method="patch")
             _LOGGER.debug("Toggle response: %s", response)
-        # Firmware > 4.1.7 use alternative method
-        elif self._version_check(upper):
-            _LOGGER.debug("Checking override status.")
-            override = await self.get_override()
-            _LOGGER.debug("Override status: %s", override)
-            if "state" in override and override["state"] == "active":
-                _LOGGER.debug("Disabling override.")
-                result = await self.set_override("disabled")
-                _LOGGER.debug("Disable response: %s", result)
-            else:
-                _LOGGER.debug("Enabling override.")
-                result = await self.set_override("active")
-                _LOGGER.debug("Enable response: %s", result)
         else:
             # Older firmware use RAPI commands
             _LOGGER.debug("Toggling manual override via RAPI")
