@@ -59,7 +59,6 @@
     "ohm_enabled": false,
     "sntp_enabled": true,
     "tesla_enabled": false,
-    "divert_enabled": true,
     "pause_uses_disabled": false,
     "mqtt_protocol": "mqtt",
     "charge_mode": "fast"

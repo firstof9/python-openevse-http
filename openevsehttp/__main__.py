@@ -278,24 +278,25 @@ class OpenEVSE:
             _LOGGER.error("Problem issuing command: %s", response["msg"])
             raise UnknownError
 
-    async def divert_mode(
-        self, mode: str = "normal"
-    ) -> Union[Dict[str, str], Dict[str, Any]]:
+    async def divert_mode(self) -> dict[str, str] | dict[str, Any]:
         """Set the divert mode to either Normal or Eco modes."""
-        url = f"{self.url}divertmode"
+        if not self._version_check("4.0.0"):
+            _LOGGER.debug("Feature not supported for older firmware.")
+            raise UnsupportedFeature
 
-        if mode not in ["normal", "eco"]:
-            _LOGGER.error("Invalid value for divertmode: %s", mode)
-            raise ValueError
+        assert self._config
 
-        if mode == "normal":
-            value = 1
+        if "divert_enabled" in self._config:
+            _LOGGER.debug("Divert Enabled: %s", self._config["divert_enabled"])
+            mode = not self._config["divert_enabled"]
         else:
-            value = 2
+            _LOGGER.debug("Unable to check divert status.")
+            raise UnsupportedFeature
 
-        data = {"divertmode": value}
+        url = f"{self.url}config"
+        data = {"divert_enabled": mode}
 
-        _LOGGER.debug("Setting charge mode to %s", mode)
+        _LOGGER.debug("Toggling divert: %s", mode)
         response = await self.process_request(
             url=url, method="post", data=data
         )  # noqa: E501
@@ -359,26 +360,12 @@ class OpenEVSE:
         #   3.x: use RAPI commands $FE (enable) and $FS (sleep)
         #   4.x: use HTTP API call
         lower = "4.0.0"
-        upper = "4.1.7"
-        if self._version_check(lower, upper):
+        if self._version_check(lower):
             url = f"{self.url}override"
 
             _LOGGER.debug("Toggling manual override %s", url)
             response = await self.process_request(url=url, method="patch")
             _LOGGER.debug("Toggle response: %s", response)
-        # Firmware > 4.1.7 use alternative method
-        elif self._version_check(upper):
-            _LOGGER.debug("Checking override status.")
-            override = await self.get_override()
-            _LOGGER.debug("Override status: %s", override)
-            if "state" in override and override["state"] == "active":
-                _LOGGER.debug("Disabling override.")
-                result = await self.set_override("disabled")
-                _LOGGER.debug("Disable response: %s", result)
-            else:
-                _LOGGER.debug("Enabling override.")
-                result = await self.set_override("active")
-                _LOGGER.debug("Enable response: %s", result)
         else:
             # Older firmware use RAPI commands
             _LOGGER.debug("Toggling manual override via RAPI")
@@ -819,8 +806,10 @@ class OpenEVSE:
     @property
     def divert_active(self) -> bool:
         """Return if divert is active."""
-        assert self._status is not None
-        return self._status["divert_active"]
+        assert self._config is not None
+        if "divert_enabled" in self._config:
+            return self._config["divert_enabled"]
+        return False
 
     @property
     def wifi_serial(self) -> str | None:

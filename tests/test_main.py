@@ -603,15 +603,15 @@ async def test_get_smoothed_available_current(fixture, expected, request):
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
+    "fixture, expected",
+    [("test_charger", True), ("test_charger_v2", False), ("test_charger_new", False)],
 )
 async def test_get_divert_active(fixture, expected, request):
     """Test v4 Status reply."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
-    with pytest.raises(KeyError):
-        status = charger.divert_active
-        # assert status == expected
+    status = charger.divert_active
+    assert status == expected
 
 
 @pytest.mark.parametrize(
@@ -679,8 +679,6 @@ async def test_toggle_override(
     )
     with caplog.at_level(logging.DEBUG):
         await test_charger_new.toggle_override()
-    assert "Checking override status." in caplog.text
-    assert "Disabling override." in caplog.text
     assert "Toggling manual override http" in caplog.text
 
     value = {
@@ -708,7 +706,7 @@ async def test_toggle_override(
     )
     with caplog.at_level(logging.DEBUG):
         await test_charger_new.toggle_override()
-    assert "Enabling override." in caplog.text
+    assert "Toggling manual override http" in caplog.text
 
 
 async def test_toggle_override_v2(test_charger_v2, mock_aioclient, caplog):
@@ -835,42 +833,54 @@ async def test_get_charging_power(fixture, expected, request):
     assert status == expected
 
 
-async def test_set_divertmode(test_charger_v2, mock_aioclient, caplog):
+async def test_set_divertmode(
+    test_charger_new, test_charger_v2, test_charger_broken, mock_aioclient, caplog
+):
     """Test v4 set divert mode."""
-    await test_charger_v2.update()
+    await test_charger_new.update()
     value = "Divert Mode changed"
     mock_aioclient.post(
-        TEST_URL_DIVERT,
+        TEST_URL_CONFIG,
         status=200,
         body=value,
     )
     with caplog.at_level(logging.DEBUG):
-        await test_charger_v2.divert_mode("normal")
+        await test_charger_new.divert_mode()
         assert (
-            "Connecting to http://openevse.test.tld/divertmode with data: {'divertmode': 1} rapi: None using method post"
+            "Connecting to http://openevse.test.tld/config with data: {'divert_enabled': True} rapi: None using method post"
             in caplog.text
         )
-        assert "Setting charge mode to normal" in caplog.text
+        assert "Toggling divert: True" in caplog.text
         assert "Non JSON response: Divert Mode changed" in caplog.text
 
     mock_aioclient.post(
-        TEST_URL_DIVERT,
+        TEST_URL_CONFIG,
         status=200,
         body=value,
     )
+    test_charger_new._config["divert_enabled"] = True
     with caplog.at_level(logging.DEBUG):
-        await test_charger_v2.divert_mode("eco")
-        assert "Setting charge mode to eco" in caplog.text
+        await test_charger_new.divert_mode()
+        assert "Toggling divert: False" in caplog.text
 
     mock_aioclient.post(
-        TEST_URL_DIVERT,
+        TEST_URL_CONFIG,
         status=200,
         body=value,
     )
-    with pytest.raises(ValueError):
-        with caplog.at_level(logging.DEBUG):
-            await test_charger_v2.divert_mode("crazy")
-            assert "Invalid value for divertmode: crazy" in caplog.text
+    await test_charger_v2.update()
+    with pytest.raises(UnsupportedFeature):
+        await test_charger_v2.divert_mode()
+
+    mock_aioclient.post(
+        TEST_URL_CONFIG,
+        status=200,
+        body=value,
+    )
+    await test_charger_broken.update()
+    test_charger_broken._config["version"] = "4.1.8"
+    with pytest.raises(UnsupportedFeature):
+        await test_charger_broken.divert_mode()
 
 
 async def test_test_and_get(test_charger, test_charger_v2, mock_aioclient, caplog):
@@ -1182,3 +1192,14 @@ async def test_get_override(test_charger, test_charger_v2, mock_aioclient, caplo
             await test_charger_v2.update()
             await test_charger_v2.get_override()
             assert "Feature not supported for older firmware." in caplog.text
+
+
+async def test_version_check(test_charger_new, mock_aioclient, caplog):
+    """Test version check function."""
+    await test_charger_new.update()
+
+    result = test_charger_new._version_check("4.0.0")
+    assert result
+
+    result = test_charger_new._version_check("4.0.0", "4.1.7")
+    assert not result
