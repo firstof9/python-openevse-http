@@ -806,9 +806,7 @@ class OpenEVSE:
     @property
     def divert_active(self) -> bool:
         """Return if divert is active."""
-        assert self._status is not None
-        if "divert_active" in self._status:
-            return self._status["divert_active"]
+        assert self._config is not None
         if "divert_enabled" in self._config:
             return self._config["divert_enabled"]
         return False
