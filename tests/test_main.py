@@ -833,7 +833,9 @@ async def test_get_charging_power(fixture, expected, request):
     assert status == expected
 
 
-async def test_set_divertmode(test_charger_new, test_charger_v2, test_charger_broken, mock_aioclient, caplog):
+async def test_set_divertmode(
+    test_charger_new, test_charger_v2, test_charger_broken, mock_aioclient, caplog
+):
     """Test v4 set divert mode."""
     await test_charger_new.update()
     value = "Divert Mode changed"
@@ -860,12 +862,12 @@ async def test_set_divertmode(test_charger_new, test_charger_v2, test_charger_br
     with caplog.at_level(logging.DEBUG):
         await test_charger_new.divert_mode()
         assert "Toggling divert: False" in caplog.text
-    
+
     mock_aioclient.post(
         TEST_URL_CONFIG,
         status=200,
         body=value,
-    )    
+    )
     await test_charger_v2.update()
     with pytest.raises(UnsupportedFeature):
         await test_charger_v2.divert_mode()
@@ -874,11 +876,11 @@ async def test_set_divertmode(test_charger_new, test_charger_v2, test_charger_br
         TEST_URL_CONFIG,
         status=200,
         body=value,
-    )    
+    )
     await test_charger_broken.update()
     test_charger_broken._config["version"] = "4.1.8"
     with pytest.raises(UnsupportedFeature):
-        await test_charger_broken.divert_mode()        
+        await test_charger_broken.divert_mode()
 
 
 async def test_test_and_get(test_charger, test_charger_v2, mock_aioclient, caplog):
