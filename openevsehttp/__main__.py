@@ -282,7 +282,7 @@ class OpenEVSE:
         """Set the divert mode to either Normal or Eco modes."""
         url = f"{self.url}config"
         if not isinstance(mode, bool):
-            raise ValueError("Invalid value for divertmode: %s ", mode)
+            raise ValueError(f"Invalid value for divertmode: {mode}")
 
         mode = bool(mode)
 
