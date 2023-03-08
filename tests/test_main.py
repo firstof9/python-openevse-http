@@ -1172,12 +1172,13 @@ async def test_get_override(test_charger, test_charger_v2, mock_aioclient, caplo
             await test_charger_v2.get_override()
             assert "Feature not supported for older firmware." in caplog.text
 
-async def test_version_check(test_charger_new, mock_aioclient,caplog):
+
+async def test_version_check(test_charger_new, mock_aioclient, caplog):
     """Test version check function."""
     await test_charger_new.update()
 
     result = test_charger_new._version_check("4.0.0")
     assert result
 
-    result = test_charger_new._version_check("4.0.0","4.1.7")
+    result = test_charger_new._version_check("4.0.0", "4.1.7")
     assert not result

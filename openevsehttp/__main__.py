@@ -283,15 +283,12 @@ class OpenEVSE:
         if not self._version_check("4.0.0"):
             _LOGGER.debug("Feature not supported for older firmware.")
             raise UnsupportedFeature
-        
+
         assert self._config
 
         if "divert_enabled" in self._config:
             _LOGGER.debug("Divert Enabled: %s", self._config["divert_enabled"])
-            if not bool(self._config["divert_enabled"]):
-                mode = True
-            else:
-                mode = False
+            mode = not self._config["divert_enabled"]
         else:
             _LOGGER.debug("Unable to check divert status.")
             raise UnsupportedFeature
