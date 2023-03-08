@@ -603,7 +603,8 @@ async def test_get_smoothed_available_current(fixture, expected, request):
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", True), ("test_charger_v2", False), ("test_charger_new", False)]
+    "fixture, expected",
+    [("test_charger", True), ("test_charger_v2", False), ("test_charger_new", False)],
 )
 async def test_get_divert_active(fixture, expected, request):
     """Test v4 Status reply."""
