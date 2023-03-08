@@ -807,7 +807,11 @@ class OpenEVSE:
     def divert_active(self) -> bool:
         """Return if divert is active."""
         assert self._status is not None
-        return self._status["divert_active"]
+        if "divert_active" in self._status:
+            return self._status["divert_active"]
+        if "divert_enabled" in self._config:
+            return self._config["divert_enabled"]
+        return False
 
     @property
     def wifi_serial(self) -> str | None:

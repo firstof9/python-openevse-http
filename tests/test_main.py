@@ -603,15 +603,14 @@ async def test_get_smoothed_available_current(fixture, expected, request):
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
+    "fixture, expected", [("test_charger", True), ("test_charger_v2", False), ("test_charger_new", False)]
 )
 async def test_get_divert_active(fixture, expected, request):
     """Test v4 Status reply."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
-    with pytest.raises(KeyError):
-        status = charger.divert_active
-        # assert status == expected
+    status = charger.divert_active
+    assert status == expected
 
 
 @pytest.mark.parametrize(
@@ -859,7 +858,7 @@ async def test_set_divertmode(test_charger_new, mock_aioclient, caplog):
     test_charger_new._config["divert_enabled"] = True
     with caplog.at_level(logging.DEBUG):
         await test_charger_new.divert_mode()
-        assert "Toggling divert: True" in caplog.text
+        assert "Toggling divert: False" in caplog.text
 
 
 async def test_test_and_get(test_charger, test_charger_v2, mock_aioclient, caplog):
