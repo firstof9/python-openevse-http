@@ -679,8 +679,6 @@ async def test_toggle_override(
     )
     with caplog.at_level(logging.DEBUG):
         await test_charger_new.toggle_override()
-    assert "Checking override status." in caplog.text
-    assert "Disabling override." in caplog.text
     assert "Toggling manual override http" in caplog.text
 
     value = {
@@ -708,7 +706,7 @@ async def test_toggle_override(
     )
     with caplog.at_level(logging.DEBUG):
         await test_charger_new.toggle_override()
-    assert "Enabling override." in caplog.text
+    assert "Toggling manual override http" in caplog.text
 
 
 async def test_toggle_override_v2(test_charger_v2, mock_aioclient, caplog):
@@ -840,30 +838,30 @@ async def test_set_divertmode(test_charger_v2, mock_aioclient, caplog):
     await test_charger_v2.update()
     value = "Divert Mode changed"
     mock_aioclient.post(
-        TEST_URL_DIVERT,
+        TEST_URL_CONFIG,
         status=200,
         body=value,
     )
     with caplog.at_level(logging.DEBUG):
-        await test_charger_v2.divert_mode("normal")
+        await test_charger_v2.divert_mode(False)
         assert (
-            "Connecting to http://openevse.test.tld/divertmode with data: {'divertmode': 1} rapi: None using method post"
+            "Connecting to http://openevse.test.tld/config with data: {'divert_enabled': False} rapi: None using method post"
             in caplog.text
         )
-        assert "Setting charge mode to normal" in caplog.text
+        assert "Toggling divert: False" in caplog.text
         assert "Non JSON response: Divert Mode changed" in caplog.text
 
     mock_aioclient.post(
-        TEST_URL_DIVERT,
+        TEST_URL_CONFIG,
         status=200,
         body=value,
     )
     with caplog.at_level(logging.DEBUG):
-        await test_charger_v2.divert_mode("eco")
-        assert "Setting charge mode to eco" in caplog.text
+        await test_charger_v2.divert_mode(True)
+        assert "Toggling divert: True" in caplog.text
 
     mock_aioclient.post(
-        TEST_URL_DIVERT,
+        TEST_URL_CONFIG,
         status=200,
         body=value,
     )

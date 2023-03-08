@@ -278,11 +278,12 @@ class OpenEVSE:
             _LOGGER.error("Problem issuing command: %s", response["msg"])
             raise UnknownError
 
-    async def divert_mode(
-        self, mode: bool
-    ) -> dict[str, str] | dict[str, Any]:
+    async def divert_mode(self, mode: bool) -> dict[str, str] | dict[str, Any]:
         """Set the divert mode to either Normal or Eco modes."""
         url = f"{self.url}config"
+        if not isinstance(mode, bool):
+            raise ValueError("Invalid value for divertmode: %s ", mode)
+
         mode = bool(mode)
 
         data = {"divert_enabled": mode}
@@ -351,7 +352,6 @@ class OpenEVSE:
         #   3.x: use RAPI commands $FE (enable) and $FS (sleep)
         #   4.x: use HTTP API call
         lower = "4.0.0"
-        upper = "4.1.7"
         if self._version_check(lower):
             url = f"{self.url}override"
 
