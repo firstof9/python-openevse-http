@@ -833,9 +833,9 @@ async def test_get_charging_power(fixture, expected, request):
     assert status == expected
 
 
-async def test_set_divertmode(test_charger_v2, mock_aioclient, caplog):
+async def test_set_divertmode(test_charger_new, mock_aioclient, caplog):
     """Test v4 set divert mode."""
-    await test_charger_v2.update()
+    await test_charger_new.update()
     value = "Divert Mode changed"
     mock_aioclient.post(
         TEST_URL_CONFIG,
@@ -843,12 +843,12 @@ async def test_set_divertmode(test_charger_v2, mock_aioclient, caplog):
         body=value,
     )
     with caplog.at_level(logging.DEBUG):
-        await test_charger_v2.divert_mode(False)
+        await test_charger_new.divert_mode()
         assert (
-            "Connecting to http://openevse.test.tld/config with data: {'divert_enabled': False} rapi: None using method post"
+            "Connecting to http://openevse.test.tld/config with data: {'divert_enabled': True} rapi: None using method post"
             in caplog.text
         )
-        assert "Toggling divert: False" in caplog.text
+        assert "Toggling divert: True" in caplog.text
         assert "Non JSON response: Divert Mode changed" in caplog.text
 
     mock_aioclient.post(
@@ -856,19 +856,10 @@ async def test_set_divertmode(test_charger_v2, mock_aioclient, caplog):
         status=200,
         body=value,
     )
+    test_charger_new._config["divert_enabled"] = True
     with caplog.at_level(logging.DEBUG):
-        await test_charger_v2.divert_mode(True)
+        await test_charger_new.divert_mode()
         assert "Toggling divert: True" in caplog.text
-
-    mock_aioclient.post(
-        TEST_URL_CONFIG,
-        status=200,
-        body=value,
-    )
-    with pytest.raises(ValueError):
-        with caplog.at_level(logging.DEBUG):
-            await test_charger_v2.divert_mode("crazy")
-            assert "Invalid value for divertmode: crazy" in caplog.text
 
 
 async def test_test_and_get(test_charger, test_charger_v2, mock_aioclient, caplog):
@@ -1180,3 +1171,13 @@ async def test_get_override(test_charger, test_charger_v2, mock_aioclient, caplo
             await test_charger_v2.update()
             await test_charger_v2.get_override()
             assert "Feature not supported for older firmware." in caplog.text
+
+async def test_version_check(test_charger_new, mock_aioclient,caplog):
+    """Test version check function."""
+    await test_charger_new.update()
+
+    result = test_charger_new._version_check("4.0.0")
+    assert result
+
+    result = test_charger_new._version_check("4.0.0","4.1.7")
+    assert not result

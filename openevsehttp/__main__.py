@@ -278,14 +278,25 @@ class OpenEVSE:
             _LOGGER.error("Problem issuing command: %s", response["msg"])
             raise UnknownError
 
-    async def divert_mode(self, mode: bool) -> dict[str, str] | dict[str, Any]:
+    async def divert_mode(self) -> dict[str, str] | dict[str, Any]:
         """Set the divert mode to either Normal or Eco modes."""
+        if not self._version_check("4.0.0"):
+            _LOGGER.debug("Feature not supported for older firmware.")
+            raise UnsupportedFeature
+        
+        assert self._config
+
+        if "divert_enabled" in self._config:
+            _LOGGER.debug("Divert Enabled: %s", self._config["divert_enabled"])
+            if not bool(self._config["divert_enabled"]):
+                mode = True
+            else:
+                mode = False
+        else:
+            _LOGGER.debug("Unable to check divert status.")
+            raise UnsupportedFeature
+
         url = f"{self.url}config"
-        if not isinstance(mode, bool):
-            raise ValueError(f"Invalid value for divertmode: {mode}")
-
-        mode = bool(mode)
-
         data = {"divert_enabled": mode}
 
         _LOGGER.debug("Toggling divert: %s", mode)
