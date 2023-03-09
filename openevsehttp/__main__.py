@@ -416,7 +416,7 @@ class OpenEVSE:
         """Set the service level of the EVSE."""
         if not isinstance(level, int) or not 0 <= level <= 2:
             _LOGGER.error("Invalid service level: %s", level)
-            raise (ValueError)
+            raise ValueError
 
         url = f"{self.url}config"
         data = {"service": level}
