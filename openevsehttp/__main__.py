@@ -113,6 +113,8 @@ class OpenEVSE:
                     if resp.status in [404, 405, 500]:
                         _LOGGER.error("%s", message)
 
+                    if method == "post" and "config_version" in message:
+                        await self.update()
                     return message
 
             except (TimeoutError, ServerTimeoutError):
