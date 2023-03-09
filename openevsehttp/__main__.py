@@ -789,6 +789,12 @@ class OpenEVSE:
         return "eco"
 
     @property
+    def charge_mode(self) -> str:
+        """Return the charge mode."""
+        assert self._config is not None
+        return self._config["charge_mode"]
+
+    @property
     def available_current(self) -> float:
         """Return the computed available current for divert."""
         assert self._status is not None

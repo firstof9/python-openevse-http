@@ -1256,3 +1256,14 @@ async def test_set_charge_mode(test_charger, mock_aioclient, caplog):
     )
     with pytest.raises(ValueError):
         await test_charger.set_charge_mode("test")
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger", "fast"), ("test_charger_v2", "fast")]
+)
+async def test_charge_mode(fixture, expected, request):
+    """Test vehicle_range reply."""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    status = charger.charge_mode
+    assert status == expected
