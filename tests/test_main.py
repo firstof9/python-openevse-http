@@ -1267,3 +1267,55 @@ async def test_charge_mode(fixture, expected, request):
     await charger.update()
     status = charger.charge_mode
     assert status == expected
+
+
+async def test_set_service_level(test_charger, mock_aioclient, caplog):
+    """Test set service level."""
+    await test_charger.update()
+    value = {"msg": "done"}
+    mock_aioclient.post(
+        TEST_URL_CONFIG,
+        status=200,
+        body=json.dumps(value),
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.set_service_level(1)
+
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=200,
+        body=load_fixture("v4_json/status.json"),
+    )
+    mock_aioclient.get(
+        TEST_URL_CONFIG,
+        status=200,
+        body=load_fixture("v4_json/config.json"),
+    )
+    value = {"config_version": 2, "msg": "done"}
+    mock_aioclient.post(
+        TEST_URL_CONFIG,
+        status=200,
+        body=json.dumps(value),
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.set_service_level(2)
+
+    value = {"msg": "error"}
+    mock_aioclient.post(
+        TEST_URL_CONFIG,
+        status=200,
+        body=json.dumps(value),
+    )
+    with caplog.at_level(logging.DEBUG):
+        with pytest.raises(UnknownError):
+            await test_charger.set_service_level(1)
+            assert "Problem issuing command: error" in caplog.text
+
+    value = {"msg": "done"}
+    mock_aioclient.post(
+        TEST_URL_CONFIG,
+        status=200,
+        body=json.dumps(value),
+    )
+    with pytest.raises(ValueError):
+        await test_charger.set_service_level("A")

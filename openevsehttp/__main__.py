@@ -235,7 +235,7 @@ class OpenEVSE:
             _LOGGER.debug("Websocket data: %s", data)
             if "wh" in data.keys():
                 data["watthour"] = data.pop("wh")
-            elif "config_version" in data.keys():
+            if "config_version" in data.keys():
                 self.update()
             self._status.update(data)
 
@@ -411,6 +411,25 @@ class OpenEVSE:
             command = f"$SC {amps} N"
             response, msg = await self.send_command(command)
             _LOGGER.debug("Set current response: %s", msg)
+
+    async def set_service_level(self, level: int = 2) -> None:
+        """Set the service level of the EVSE."""
+        if not isinstance(level, int) or not 0 <= level <= 2:
+            _LOGGER.error("Invalid service level: %s", level)
+            raise ValueError
+
+        url = f"{self.url}config"
+        data = {"service": level}
+
+        _LOGGER.debug("Set service level to: %s", level)
+        response = await self.process_request(
+            url=url, method="post", data=data
+        )  # noqa: E501
+        _LOGGER.debug("service response: %s", response)
+        result = response["msg"]
+        if result not in ["done", "no change"]:
+            _LOGGER.error("Problem issuing command: %s", response["msg"])
+            raise UnknownError
 
     # Restart OpenEVSE WiFi
     async def restart_wifi(self) -> None:
