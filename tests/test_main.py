@@ -9,11 +9,12 @@ import pytest
 from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
 
 import openevsehttp.__main__ as main
+from openevsehttp.exceptions import MissingSerial, UnknownError, UnsupportedFeature
 from tests.common import load_fixture
-from openevsehttp.exceptions import MissingSerial, UnsupportedFeature
 
 pytestmark = pytest.mark.asyncio
 
+TEST_URL_STATUS = "http://openevse.test.tld/status"
 TEST_URL_RAPI = "http://openevse.test.tld/r"
 TEST_URL_OVERRIDE = "http://openevse.test.tld/override"
 TEST_URL_CONFIG = "http://openevse.test.tld/config"
@@ -1203,3 +1204,55 @@ async def test_version_check(test_charger_new, mock_aioclient, caplog):
 
     result = test_charger_new._version_check("4.0.0", "4.1.7")
     assert not result
+
+
+async def test_set_charge_mode(test_charger, mock_aioclient, caplog):
+    """Test v4 Status reply."""
+    await test_charger.update()
+    value = {"msg": "done"}
+    mock_aioclient.post(
+        TEST_URL_CONFIG,
+        status=200,
+        body=json.dumps(value),
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.set_charge_mode("eco")
+
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=200,
+        body=load_fixture("v4_json/status.json"),
+    )
+    mock_aioclient.get(
+        TEST_URL_CONFIG,
+        status=200,
+        body=load_fixture("v4_json/config.json"),
+    )
+    value = {"config_version": 2, "msg": "done"}
+    mock_aioclient.post(
+        TEST_URL_CONFIG,
+        status=200,
+        body=json.dumps(value),
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.set_charge_mode("fast")
+
+    value = {"msg": "error"}
+    mock_aioclient.post(
+        TEST_URL_CONFIG,
+        status=200,
+        body=json.dumps(value),
+    )
+    with caplog.at_level(logging.DEBUG):
+        with pytest.raises(UnknownError):
+            await test_charger.set_charge_mode("fast")
+            assert "Problem issuing command: error" in caplog.text
+
+    value = {"msg": "done"}
+    mock_aioclient.post(
+        TEST_URL_CONFIG,
+        status=200,
+        body=json.dumps(value),
+    )
+    with pytest.raises(ValueError):
+        await test_charger.set_charge_mode("test")
