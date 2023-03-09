@@ -9,8 +9,7 @@ import pytest
 from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
 
 import openevsehttp.__main__ as main
-from openevsehttp.exceptions import (MissingSerial, UnknownError,
-                                     UnsupportedFeature)
+from openevsehttp.exceptions import MissingSerial, UnknownError, UnsupportedFeature
 from tests.common import load_fixture
 
 pytestmark = pytest.mark.asyncio
