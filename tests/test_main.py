@@ -1223,7 +1223,7 @@ async def test_set_charge_mode(test_charger, mock_aioclient, caplog):
         status=200,
         body=json.dumps(value),
     )
-    with caplog.at_level(logging.DEBUG):        
+    with caplog.at_level(logging.DEBUG):
         await test_charger.set_charge_mode("fast")
 
     value = {"msg": "error"}
@@ -1243,5 +1243,5 @@ async def test_set_charge_mode(test_charger, mock_aioclient, caplog):
         status=200,
         body=json.dumps(value),
     )
-    with pytest.raises(ValueError):      
+    with pytest.raises(ValueError):
         await test_charger.set_charge_mode("test")
