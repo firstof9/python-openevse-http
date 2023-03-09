@@ -266,7 +266,7 @@ class OpenEVSE:
         """Set the charge mode."""
         url = f"{self.url}config"
 
-        if mode != "fast" or mode != "eco":
+        if mode not in ["fast", "eco"]:
             _LOGGER.error("Invalid value for charge_mode: %s", mode)
             raise ValueError
 
@@ -276,7 +276,8 @@ class OpenEVSE:
         response = await self.process_request(
             url=url, method="post", data=data
         )  # noqa: E501
-        if response["msg"] != "done":
+        result = response["msg"]
+        if result not in ["done", "no change"]:
             _LOGGER.error("Problem issuing command: %s", response["msg"])
             raise UnknownError
 

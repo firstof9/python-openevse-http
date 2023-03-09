@@ -10,7 +10,7 @@ from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
 
 import openevsehttp.__main__ as main
 from tests.common import load_fixture
-from openevsehttp.exceptions import MissingSerial, UnsupportedFeature
+from openevsehttp.exceptions import MissingSerial, UnknownError, UnsupportedFeature
 
 pytestmark = pytest.mark.asyncio
 
@@ -1203,3 +1203,45 @@ async def test_version_check(test_charger_new, mock_aioclient, caplog):
 
     result = test_charger_new._version_check("4.0.0", "4.1.7")
     assert not result
+
+
+async def test_set_charge_mode(test_charger, mock_aioclient, caplog):
+    """Test v4 Status reply."""
+    await test_charger.update()
+    value = {"msg": "done"}
+    mock_aioclient.post(
+        TEST_URL_CONFIG,
+        status=200,
+        body=json.dumps(value),
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.set_charge_mode("eco")
+
+    value = {"msg": "done"}
+    mock_aioclient.post(
+        TEST_URL_CONFIG,
+        status=200,
+        body=json.dumps(value),
+    )
+    with caplog.at_level(logging.DEBUG):        
+        await test_charger.set_charge_mode("fast")
+
+    value = {"msg": "error"}
+    mock_aioclient.post(
+        TEST_URL_CONFIG,
+        status=200,
+        body=json.dumps(value),
+    )
+    with caplog.at_level(logging.DEBUG):
+        with pytest.raises(UnknownError):
+            await test_charger.set_charge_mode("fast")
+            assert "Problem issuing command: error" in caplog.text
+
+    value = {"msg": "done"}
+    mock_aioclient.post(
+        TEST_URL_CONFIG,
+        status=200,
+        body=json.dumps(value),
+    )
+    with pytest.raises(ValueError):      
+        await test_charger.set_charge_mode("test")
