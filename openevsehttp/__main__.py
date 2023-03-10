@@ -49,6 +49,7 @@ states = {
 
 ERROR_TIMEOUT = "Timeout while updating"
 INFO_LOOP_RUNNING = "Event loop already running, not creating new one."
+UPDATE_TRIGGERS = ["config_version", "claims_version", "override_version", "schedule_version","schedule_plan_version", "limit_version"]
 
 
 class OpenEVSE:
@@ -235,7 +236,7 @@ class OpenEVSE:
             _LOGGER.debug("Websocket data: %s", data)
             if "wh" in data.keys():
                 data["watthour"] = data.pop("wh")
-            if "config_version" in data.keys():
+            if data.keys() in UPDATE_TRIGGERS:
                 self.update()
             self._status.update(data)
 
