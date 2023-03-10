@@ -49,7 +49,14 @@ states = {
 
 ERROR_TIMEOUT = "Timeout while updating"
 INFO_LOOP_RUNNING = "Event loop already running, not creating new one."
-UPDATE_TRIGGERS = ["config_version", "claims_version", "override_version", "schedule_version","schedule_plan_version", "limit_version"]
+UPDATE_TRIGGERS = [
+    "config_version",
+    "claims_version",
+    "override_version",
+    "schedule_version",
+    "schedule_plan_version",
+    "limit_version",
+]
 
 
 class OpenEVSE:
