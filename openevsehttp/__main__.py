@@ -243,7 +243,7 @@ class OpenEVSE:
             _LOGGER.debug("Websocket data: %s", data)
             if "wh" in data.keys():
                 data["watthour"] = data.pop("wh")
-            if data.keys() in UPDATE_TRIGGERS:
+            if UPDATE_TRIGGERS in data.keys():
                 self.update()
             self._status.update(data)
 
