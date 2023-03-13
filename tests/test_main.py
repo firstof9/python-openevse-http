@@ -360,7 +360,12 @@ async def test_get_current_capacity(fixture, expected, request):
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 64582), ("test_charger_v2", 1585443)]
+    "fixture, expected",
+    [
+        ("test_charger", 64582),
+        ("test_charger_v2", 1585443),
+        ("test_charger_new", 12345678),
+    ],
 )
 async def test_get_usage_total(fixture, expected, request):
     """Test v4 Status reply."""
@@ -427,7 +432,12 @@ async def test_get_time(fixture, expected, request):
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 275.71), ("test_charger_v2", 7003.41)]
+    "fixture, expected",
+    [
+        ("test_charger", 275.71),
+        ("test_charger_v2", 7003.41),
+        ("test_charger_new", 7004),
+    ],
 )
 async def test_get_usage_session(fixture, expected, request):
     """Test v4 Status reply."""
@@ -1319,3 +1329,63 @@ async def test_set_service_level(test_charger, mock_aioclient, caplog):
     )
     with pytest.raises(ValueError):
         await test_charger.set_service_level("A")
+
+
+@pytest.mark.parametrize(
+    "fixture, expected",
+    [("test_charger", None), ("test_charger_v2", None), ("test_charger_new", False)],
+)
+async def test_get_has_limit(fixture, expected, request):
+    """Test has_limit reply."""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    status = charger.has_limit
+    assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected",
+    [("test_charger", None), ("test_charger_v2", None), ("test_charger_new", 1234)],
+)
+async def test_get_total_day(fixture, expected, request):
+    """Test total_day reply."""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    status = charger.total_day
+    assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected",
+    [("test_charger", None), ("test_charger_v2", None), ("test_charger_new", 12345)],
+)
+async def test_get_total_week(fixture, expected, request):
+    """Test total_week reply."""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    status = charger.total_week
+    assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected",
+    [("test_charger", None), ("test_charger_v2", None), ("test_charger_new", 123456)],
+)
+async def test_get_total_month(fixture, expected, request):
+    """Test total_month reply."""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    status = charger.total_month
+    assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected",
+    [("test_charger", None), ("test_charger_v2", None), ("test_charger_new", 1234567)],
+)
+async def test_get_total_year(fixture, expected, request):
+    """Test total_year reply."""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    status = charger.total_year
+    assert status == expected

@@ -81,7 +81,7 @@ def test_charger_new(mock_aioclient):
     mock_aioclient.get(
         TEST_URL_STATUS,
         status=200,
-        body=load_fixture("v4_json/status.json"),
+        body=load_fixture("v4_json/status-new.json"),
     )
     mock_aioclient.get(
         TEST_URL_CONFIG,

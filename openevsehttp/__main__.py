@@ -719,6 +719,8 @@ class OpenEVSE:
     def usage_total(self) -> float:
         """Return the total energy usage in Wh."""
         assert self._status is not None
+        if "total_energy" in self._status:
+            return self._status["total_energy"]
         return self._status["watthour"]
 
     @property
@@ -781,7 +783,49 @@ class OpenEVSE:
         Return the energy usage in Wh.
         """
         assert self._status is not None
+        if "session_energy" in self._status:
+            return self._status["session_energy"]
         return float(round(self._status["wattsec"] / 3600, 2))
+
+    @property
+    def total_day(self) -> float | None:
+        """Get the total day energy usage."""
+        assert self._status is not None
+        if "total_day" in self._status:
+            return self._status["total_day"]
+        return None
+
+    @property
+    def total_week(self) -> float | None:
+        """Get the total week energy usage."""
+        assert self._status is not None
+        if "total_week" in self._status:
+            return self._status["total_week"]
+        return None
+
+    @property
+    def total_month(self) -> float | None:
+        """Get the total week energy usage."""
+        assert self._status is not None
+        if "total_month" in self._status:
+            return self._status["total_month"]
+        return None
+
+    @property
+    def total_year(self) -> float | None:
+        """Get the total year energy usage."""
+        assert self._status is not None
+        if "total_year" in self._status:
+            return self._status["total_year"]
+        return None
+
+    @property
+    def has_limit(self) -> bool | None:
+        """Return if a limit has been set."""
+        assert self._status is not None
+        if "has_limit" in self._status:
+            return self._status["has_limit"]
+        return None
 
     @property
     def protocol_version(self) -> str | None:
