@@ -149,6 +149,7 @@ class OpenEVSE:
 
     async def update(self) -> None:
         """Update the values."""
+        # TODO: add addiontal endpoints to update
         urls = [f"{self.url}config"]
 
         if not self._ws_listening:
@@ -244,6 +245,7 @@ class OpenEVSE:
             keys = data.keys()
             if "wh" in keys:
                 data["watthour"] = data.pop("wh")
+            # TODO: update specific endpoints based on _version prefix
             if any(key in keys for key in UPDATE_TRIGGERS):
                 self.update()
             self._status.update(data)
