@@ -360,7 +360,12 @@ async def test_get_current_capacity(fixture, expected, request):
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 64582), ("test_charger_v2", 1585443)]
+    "fixture, expected",
+    [
+        ("test_charger", 64582),
+        ("test_charger_v2", 1585443),
+        ("test_charger_new", 12345678),
+    ],
 )
 async def test_get_usage_total(fixture, expected, request):
     """Test v4 Status reply."""
