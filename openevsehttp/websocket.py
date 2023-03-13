@@ -71,7 +71,7 @@ class OpenEVSEWebsocket:
                 heartbeat=15,
                 auth=auth,
             ) as ws_client:
-                self.state = STATE_CONNECTED
+                await OpenEVSEWebsocket.state.fset(self, STATE_CONNECTED)
                 self.failed_attempts = 0
 
                 async for message in ws_client:
@@ -102,7 +102,7 @@ class OpenEVSEWebsocket:
         except (aiohttp.ClientConnectionError, asyncio.TimeoutError) as error:
             if self.failed_attempts >= MAX_FAILED_ATTEMPTS:
                 self._error_reason = ERROR_TOO_MANY_RETRIES
-                self.state = STATE_STOPPED
+                await OpenEVSEWebsocket.state.fset(self, STATE_STOPPED)
             elif self.state != STATE_STOPPED:
                 retry_delay = min(2 ** (self.failed_attempts - 1) * 30, 300)
                 self.failed_attempts += 1
@@ -117,10 +117,10 @@ class OpenEVSEWebsocket:
             if self.state != STATE_STOPPED:
                 _LOGGER.exception("Unexpected exception occurred: %s", error)
                 self._error_reason = ERROR_UNKNOWN
-                self.state = STATE_STOPPED
+                await OpenEVSEWebsocket.state.fset(self, STATE_STOPPED)
         else:
             if self.state != STATE_STOPPED:
-                self.state = STATE_DISCONNECTED
+                await OpenEVSEWebsocket.state.fset(self, STATE_DISCONNECTED)
                 await asyncio.sleep(5)
 
     async def listen(self):
