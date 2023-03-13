@@ -45,11 +45,11 @@ class OpenEVSEWebsocket:
         return self._state
 
     @state.setter
-    def state(self, value):
+    async def state(self, value):
         """Set the state."""
         self._state = value
         _LOGGER.debug("Websocket %s", value)
-        self.callback(SIGNAL_CONNECTION_STATE, value, self._error_reason)
+        await self.callback(SIGNAL_CONNECTION_STATE, value, self._error_reason)
         self._error_reason = None
 
     @staticmethod
@@ -81,7 +81,7 @@ class OpenEVSEWebsocket:
                     if message.type == aiohttp.WSMsgType.TEXT:
                         msg = message.json()
                         msgtype = "data"
-                        self.callback(msgtype, msg, None)
+                        await self.callback(msgtype, msg, None)
 
                     elif message.type == aiohttp.WSMsgType.CLOSED:
                         _LOGGER.warning("Websocket connection closed")
@@ -129,6 +129,6 @@ class OpenEVSEWebsocket:
         while self.state != STATE_STOPPED:
             await self.running()
 
-    def close(self):
+    async def close(self):
         """Close the listening websocket."""
-        self.state = STATE_STOPPED
+        await OpenEVSEWebsocket.state.fset(self, STATE_STOPPED)

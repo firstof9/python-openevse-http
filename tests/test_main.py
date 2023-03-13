@@ -187,7 +187,7 @@ async def test_get_ammeter_offset(fixture, expected, request):
     """Test v4 Status reply."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
-    charger.ws_disconnect()
+    await charger.ws_disconnect()
     status = charger.ammeter_offset
     assert status == expected
 
