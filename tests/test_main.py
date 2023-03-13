@@ -1398,7 +1398,7 @@ async def test_websocket_functions(test_charger, mock_aioclient, caplog):
         TEST_URL_WS,
         status=200,
         body=load_fixture("websocket.json"),
-    )    
+    )
     await test_charger.update()
     test_charger.ws_start()
     await test_charger.ws_disconnect()
