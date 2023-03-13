@@ -194,7 +194,7 @@ class OpenEVSE:
         data = {"serial": serial, "model": model}
         return data
 
-    def ws_start(self):
+    def ws_start(self) -> None:
         """Start the websocket listener."""
         if self._ws_listening:
             raise AlreadyListening
@@ -218,7 +218,7 @@ class OpenEVSE:
             except RuntimeError:
                 _LOGGER.info(INFO_LOOP_RUNNING)
 
-    def _update_status(self, msgtype, data, error):
+    async def _update_status(self, msgtype, data, error):
         """Update data from websocket listener."""
         if msgtype == SIGNAL_CONNECTION_STATE:
             if data == STATE_CONNECTED:
@@ -247,16 +247,16 @@ class OpenEVSE:
                 data["watthour"] = data.pop("wh")
             # TODO: update specific endpoints based on _version prefix
             if any(key in keys for key in UPDATE_TRIGGERS):
-                self.update()
+                await self.update()
             self._status.update(data)
 
             if self.callback is not None:
                 self.callback()  # pylint: disable=not-callable
 
-    def ws_disconnect(self) -> None:
+    async def ws_disconnect(self) -> None:
         """Disconnect the websocket listener."""
         assert self.websocket
-        self.websocket.close()
+        await self.websocket.close()
         self._ws_listening = False
 
     @property

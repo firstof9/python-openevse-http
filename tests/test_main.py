@@ -20,6 +20,7 @@ TEST_URL_OVERRIDE = "http://openevse.test.tld/override"
 TEST_URL_CONFIG = "http://openevse.test.tld/config"
 TEST_URL_DIVERT = "http://openevse.test.tld/divertmode"
 TEST_URL_RESTART = "http://openevse.test.tld/restart"
+TEST_URL_WS = "ws://openevse.test.tld/ws"
 TEST_URL_GITHUB_v4 = (
     "https://api.github.com/repos/OpenEVSE/ESP32_WiFi_V4.x/releases/latest"
 )
@@ -187,7 +188,7 @@ async def test_get_ammeter_offset(fixture, expected, request):
     """Test v4 Status reply."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
-    charger.ws_disconnect()
+    await charger.ws_disconnect()
     status = charger.ammeter_offset
     assert status == expected
 
@@ -1389,3 +1390,15 @@ async def test_get_total_year(fixture, expected, request):
     await charger.update()
     status = charger.total_year
     assert status == expected
+
+
+async def test_websocket_functions(test_charger, mock_aioclient, caplog):
+    """Test v4 Status reply."""
+    mock_aioclient.get(
+        TEST_URL_WS,
+        status=200,
+        body=load_fixture("websocket.json"),
+    )
+    await test_charger.update()
+    test_charger.ws_start()
+    await test_charger.ws_disconnect()
