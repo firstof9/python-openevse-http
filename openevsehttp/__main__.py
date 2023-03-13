@@ -49,6 +49,14 @@ states = {
 
 ERROR_TIMEOUT = "Timeout while updating"
 INFO_LOOP_RUNNING = "Event loop already running, not creating new one."
+UPDATE_TRIGGERS = [
+    "config_version",
+    "claims_version",
+    "override_version",
+    "schedule_version",
+    "schedule_plan_version",
+    "limit_version",
+]
 
 
 class OpenEVSE:
@@ -141,6 +149,7 @@ class OpenEVSE:
 
     async def update(self) -> None:
         """Update the values."""
+        # TODO: add addiontal endpoints to update
         urls = [f"{self.url}config"]
 
         if not self._ws_listening:
@@ -233,9 +242,11 @@ class OpenEVSE:
 
         elif msgtype == "data":
             _LOGGER.debug("Websocket data: %s", data)
-            if "wh" in data.keys():
+            keys = data.keys()
+            if "wh" in keys:
                 data["watthour"] = data.pop("wh")
-            if "config_version" in data.keys():
+            # TODO: update specific endpoints based on _version prefix
+            if any(key in keys for key in UPDATE_TRIGGERS):
                 self.update()
             self._status.update(data)
 
