@@ -241,9 +241,10 @@ class OpenEVSE:
 
         elif msgtype == "data":
             _LOGGER.debug("Websocket data: %s", data)
-            if "wh" in data.keys():
+            keys = data.keys()
+            if "wh" in keys:
                 data["watthour"] = data.pop("wh")
-            if UPDATE_TRIGGERS in data.keys():
+            if any(key in keys for key in UPDATE_TRIGGERS):
                 self.update()
             self._status.update(data)
 
