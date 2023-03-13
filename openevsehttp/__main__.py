@@ -194,7 +194,7 @@ class OpenEVSE:
         data = {"serial": serial, "model": model}
         return data
 
-    def ws_start(self):
+    def ws_start(self) -> None:
         """Start the websocket listener."""
         if self._ws_listening:
             raise AlreadyListening
