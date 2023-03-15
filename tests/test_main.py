@@ -33,7 +33,7 @@ async def test_get_status_auth(test_charger_auth):
     """Test v4 Status reply."""
     await test_charger_auth.update()
     status = test_charger_auth.status
-    assert status == "Sleeping"
+    assert status == "sleeping"
 
 
 async def test_get_status_auth_err(test_charger_auth_err):
@@ -136,7 +136,7 @@ async def test_send_command_server_timeout(test_charger_auth, mock_aioclient, ca
 
 @pytest.mark.parametrize(
     "fixture, expected",
-    [("test_charger", "Sleeping"), ("test_charger_v2", "Not Connected")],
+    [("test_charger", "sleeping"), ("test_charger_v2", "not connected")],
 )
 async def test_get_status(fixture, expected, request):
     """Test v4 Status reply."""
@@ -503,7 +503,7 @@ async def test_get_vehicle(fixture, expected, request):
 
 @pytest.mark.parametrize(
     "fixture, expected",
-    [("test_charger", "Sleeping"), ("test_charger_v2", "Not Connected")],
+    [("test_charger", "sleeping"), ("test_charger_v2", "not connected")],
 )
 async def test_get_state(fixture, expected, request):
     """Test v4 Status reply."""
