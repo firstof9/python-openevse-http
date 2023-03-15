@@ -32,19 +32,19 @@ from .websocket import (
 _LOGGER = logging.getLogger(__name__)
 
 states = {
-    0: "Unknown",
-    1: "Not Connected",
-    2: "Connected",
-    3: "Charging",
-    4: "Vent Required",
-    5: "Diode Check Failed",
-    6: "GFCI Fault",
-    7: "No Ground",
-    8: "Stuck Relay",
-    9: "GFCI Self-Test Failure",
-    10: "Over Temperature",
-    254: "Sleeping",
-    255: "Disabled",
+    0: "unknown",
+    1: "not connected",
+    2: "connected",
+    3: "Ccarging",
+    4: "vent required",
+    5: "diode check failed",
+    6: "gfci fault",
+    7: "no ground",
+    8: "stuck relay",
+    9: "gfci self-test failure",
+    10: "over temperature",
+    254: "sleeping",
+    255: "disabled",
 }
 
 ERROR_TIMEOUT = "Timeout while updating"
