@@ -35,7 +35,7 @@ states = {
     0: "unknown",
     1: "not connected",
     2: "connected",
-    3: "Ccarging",
+    3: "charging",
     4: "vent required",
     5: "diode check failed",
     6: "gfci fault",
