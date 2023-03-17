@@ -1402,3 +1402,15 @@ async def test_websocket_functions(test_charger, mock_aioclient, caplog):
     await test_charger.update()
     test_charger.ws_start()
     await test_charger.ws_disconnect()
+
+
+@pytest.mark.parametrize(
+    "fixture, expected",
+    [("test_charger", 254), ("test_charger_v2", 1)],
+)
+async def test_get_state_raw(fixture, expected, request):
+    """Test v4 Status reply."""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    status = charger.state_raw
+    assert status == expected

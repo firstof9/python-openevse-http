@@ -689,6 +689,12 @@ class OpenEVSE:
         return states[int(self._status["state"])]
 
     @property
+    def state_raw(self) -> int:
+        """Return charger's state int form."""
+        assert self._status is not None
+        return self._status["state"]
+
+    @property
     def charge_time_elapsed(self) -> int:
         """Return elapsed charging time."""
         assert self._status is not None
