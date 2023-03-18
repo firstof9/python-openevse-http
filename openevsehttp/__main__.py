@@ -492,28 +492,38 @@ class OpenEVSE:
         else:
             url = f"{base_url}ESP8266_WiFi_v2.x/releases/latest"
 
-        async with aiohttp.ClientSession() as session:
-            http_method = getattr(session, method)
-            _LOGGER.debug(
-                "Connecting to %s using method %s",
-                url,
-                method,
-            )
-            async with http_method(url) as resp:
-                if resp.status != 200:
-                    return None
-                message = await resp.text()
-                message = json.loads(message)
-                response = {}
-                response["latest_version"] = message["tag_name"]
-                release_notes = message["body"]
-                response["release_summary"] = (
-                    (release_notes[:253] + "..")
-                    if len(release_notes) > 255
-                    else release_notes
+        try:
+            async with aiohttp.ClientSession() as session:
+                http_method = getattr(session, method)
+                _LOGGER.debug(
+                    "Connecting to %s using method %s",
+                    url,
+                    method,
                 )
-                response["release_url"] = message["html_url"]
-                return response
+                async with http_method(url) as resp:
+                    if resp.status != 200:
+                        return None
+                    message = await resp.text()
+                    message = json.loads(message)
+                    response = {}
+                    response["latest_version"] = message["tag_name"]
+                    release_notes = message["body"]
+                    response["release_summary"] = (
+                        (release_notes[:253] + "..")
+                        if len(release_notes) > 255
+                        else release_notes
+                    )
+                    response["release_url"] = message["html_url"]
+                    return response
+
+        except (TimeoutError, ServerTimeoutError):
+            _LOGGER.error("%s: %s", ERROR_TIMEOUT, url)
+        except ContentTypeError as err:
+            _LOGGER.error("%s", err)
+        except Exception as err:
+            _LOGGER.error("%s : %s", err, url)
+
+        return None
 
     def _version_check(self, min_version: str, max_version: str = "") -> bool:
         """Return bool if minimum version is met."""
