@@ -1,5 +1,7 @@
 """Library tests."""
 
+import aiohttp
+from aiohttp.client_reqrep import ConnectionKey
 import asyncio
 import json
 import logging
@@ -949,6 +951,22 @@ async def test_firmware_check(
     )
     firmware = await test_charger.firmware_check()
     assert firmware == None
+
+    mock_aioclient.get(
+        TEST_URL_GITHUB_v4,
+        exception=aiohttp.ClientConnectorError(
+            ConnectionKey("localhost", 80, False, None, None, None, None),
+            OSError(ConnectionError),
+        ),
+    )
+    with caplog.at_level(logging.DEBUG):
+        with pytest.raises(aiohttp.ClientConnectorError):
+            firmware = await test_charger.firmware_check()
+            assert (
+                f"Cannot connect to host localhost:80 ssl:default [None] : {TEST_URL_GITHUB_v4}"
+                in caplog.text
+            )
+        assert firmware is None
 
     await test_charger_dev.update()
     mock_aioclient.get(
