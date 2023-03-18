@@ -520,7 +520,7 @@ class OpenEVSE:
             _LOGGER.error("%s: %s", ERROR_TIMEOUT, url)
         except ContentTypeError as err:
             _LOGGER.error("%s", err)
-        except Exception as err:
+        except aiohttp.ClientConnectorError as err:
             _LOGGER.error("%s : %s", err, url)
 
         return None
