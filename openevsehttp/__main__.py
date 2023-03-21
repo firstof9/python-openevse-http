@@ -106,7 +106,13 @@ class OpenEVSE:
                     json=data,
                     auth=auth,
                 ) as resp:
-                    message = await resp.text()
+                    try:
+                        message = await resp.text()
+                    except UnicodeDecodeError:
+                        _LOGGER.debug("Decoding error")
+                        message = await resp.read()
+                        message = message.decode(errors="replace")
+
                     try:
                         message = json.loads(message)
                     except ValueError:
