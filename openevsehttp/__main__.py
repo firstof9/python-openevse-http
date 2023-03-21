@@ -106,7 +106,13 @@ class OpenEVSE:
                     json=data,
                     auth=auth,
                 ) as resp:
-                    message = await resp.text()
+                    try:
+                        message = await resp.text()
+                    except:
+                        _LOGGER.debug("Attempting alternate method to read response...")
+                        message = await resp.read()
+                        message = message.decode(errors='replace')
+
                     try:
                         message = json.loads(message)
                     except ValueError:
