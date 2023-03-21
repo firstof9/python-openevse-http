@@ -108,10 +108,10 @@ class OpenEVSE:
                 ) as resp:
                     try:
                         message = await resp.text()
-                    except:
-                        _LOGGER.debug("Attempting alternate method to read response...")
+                    except UnicodeDecodeError:
+                        _LOGGER.debug("Decoding error")
                         message = await resp.read()
-                        message = message.decode(errors='replace')
+                        message = message.decode(errors="replace")
 
                     try:
                         message = json.loads(message)
