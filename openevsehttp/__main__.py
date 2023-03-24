@@ -138,6 +138,7 @@ class OpenEVSE:
                 _LOGGER.error("%s", err)
                 message = {"msg": err}
 
+            session.close()
             return message
 
     async def send_command(self, command: str) -> tuple:
