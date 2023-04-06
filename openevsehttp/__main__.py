@@ -10,6 +10,7 @@ from typing import Any, Callable, Dict, Union
 import aiohttp  # type: ignore
 from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
 from awesomeversion import AwesomeVersion
+from awesomeversion.exceptions import AwesomeVersionCompareException
 
 from .const import MAX_AMPS, MIN_AMPS
 from .exceptions import (
@@ -489,10 +490,17 @@ class OpenEVSE:
             _LOGGER.debug("Stripping 'dev' from version.")
             value = value.split(".")
             value = ".".join(value[0:3])
-            _LOGGER.debug("Using version: %s", value)
-            current = AwesomeVersion(value)
+        elif "master" in self._config["version"]:
+            value = "dev"
         else:
-            current = AwesomeVersion(self._config["version"])
+            value = self._config["version"]
+
+        _LOGGER.debug("Using version: %s", value)
+        try:
+            current = AwesomeVersion(value)
+        except AwesomeVersionCompareException as err:
+            _LOGGER.error("Unable to determine firmware version.")
+            return None
 
         if current >= cutoff:
             url = f"{base_url}ESP32_WiFi_V4.x/releases/latest"
@@ -551,9 +559,16 @@ class OpenEVSE:
             _LOGGER.debug("Stripping 'dev' from version.")
             value = value.split(".")
             value = ".".join(value[0:3])
-            current = AwesomeVersion(value)
+        elif "master" in self._config["version"]:
+            value = "dev"            
         else:
-            current = AwesomeVersion(self._config["version"])
+            value = self._config["version"]
+
+        try:
+            AwesomeVersion(value)
+        except AwesomeVersionCompareException as err:
+            _LOGGER.debug(err)
+            return False
 
         if limit:
             if cutoff <= current <= limit:
