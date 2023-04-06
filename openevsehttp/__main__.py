@@ -499,7 +499,7 @@ class OpenEVSE:
         try:
             current = AwesomeVersion(value)
         except AwesomeVersionCompareException as err:
-            _LOGGER.error("Unable to determine firmware version.")
+            _LOGGER.error(err)
             return None
 
         if current >= cutoff:
@@ -560,12 +560,12 @@ class OpenEVSE:
             value = value.split(".")
             value = ".".join(value[0:3])
         elif "master" in self._config["version"]:
-            value = "dev"            
+            value = "dev"
         else:
             value = self._config["version"]
 
         try:
-            AwesomeVersion(value)
+            current = AwesomeVersion(value)
         except AwesomeVersionCompareException as err:
             _LOGGER.debug(err)
             return False
