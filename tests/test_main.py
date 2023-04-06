@@ -230,6 +230,7 @@ async def test_get_service_level(fixture, expected, request):
         ("test_charger", "4.1.2"),
         ("test_charger_v2", "2.9.1"),
         ("test_charger_dev", "4.1.5"),
+        ("test_charger_broken_semver", "master_abcd123"),
     ],
 )
 async def test_get_wifi_firmware(fixture, expected, request):
@@ -931,6 +932,7 @@ async def test_firmware_check(
     test_charger_dev,
     test_charger_v2,
     test_charger_broken,
+    test_charger_broken_semver,
     mock_aioclient,
     caplog,
 ):
@@ -988,6 +990,17 @@ async def test_firmware_check(
     assert firmware["latest_version"] == "2.9.1"
 
     await test_charger_broken.update()
+    mock_aioclient.get(
+        TEST_URL_GITHUB_v4,
+        status=200,
+        body=load_fixture("github_v4.json"),
+    )
+    with caplog.at_level(logging.DEBUG):
+        firmware = await test_charger_broken.firmware_check()
+    assert "Unable to find firmware version." in caplog.text
+    assert firmware is None
+
+    await test_charger_broken_semver.update()
     mock_aioclient.get(
         TEST_URL_GITHUB_v4,
         status=200,
