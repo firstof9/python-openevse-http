@@ -644,7 +644,12 @@ async def test_get_manual_override(fixture, expected, request):
 
 
 async def test_toggle_override(
-    test_charger, test_charger_dev, test_charger_new, test_charger_unknown_semver, mock_aioclient, caplog
+    test_charger,
+    test_charger_dev,
+    test_charger_new,
+    test_charger_unknown_semver,
+    mock_aioclient,
+    caplog,
 ):
     """Test v4 Status reply."""
     await test_charger.update()
@@ -851,7 +856,12 @@ async def test_get_charging_power(fixture, expected, request):
 
 
 async def test_set_divertmode(
-    test_charger_new, test_charger_v2, test_charger_broken, test_charger_unknown_semver, mock_aioclient, caplog
+    test_charger_new,
+    test_charger_v2,
+    test_charger_broken,
+    test_charger_unknown_semver,
+    mock_aioclient,
+    caplog,
 ):
     """Test v4 set divert mode."""
     await test_charger_new.update()
@@ -1140,7 +1150,9 @@ async def test_max_current_soft(fixture, expected, request):
     assert status == expected
 
 
-async def test_set_override(test_charger, test_charger_v2, test_charger_unknown_semver, mock_aioclient, caplog):
+async def test_set_override(
+    test_charger, test_charger_v2, test_charger_unknown_semver, mock_aioclient, caplog
+):
     """Test set override function."""
     await test_charger.update()
     mock_aioclient.post(
