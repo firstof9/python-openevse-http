@@ -7,6 +7,8 @@ import json
 import logging
 from unittest import mock
 
+from awesomeversion.exceptions import AwesomeVersionCompareException
+
 import pytest
 from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
 
@@ -230,6 +232,7 @@ async def test_get_service_level(fixture, expected, request):
         ("test_charger", "4.1.2"),
         ("test_charger_v2", "2.9.1"),
         ("test_charger_dev", "4.1.5"),
+        ("test_charger_broken_semver", "master_abcd123"),
     ],
 )
 async def test_get_wifi_firmware(fixture, expected, request):
@@ -641,7 +644,12 @@ async def test_get_manual_override(fixture, expected, request):
 
 
 async def test_toggle_override(
-    test_charger, test_charger_dev, test_charger_new, mock_aioclient, caplog
+    test_charger,
+    test_charger_dev,
+    test_charger_new,
+    test_charger_unknown_semver,
+    mock_aioclient,
+    caplog,
 ):
     """Test v4 Status reply."""
     await test_charger.update()
@@ -848,7 +856,12 @@ async def test_get_charging_power(fixture, expected, request):
 
 
 async def test_set_divertmode(
-    test_charger_new, test_charger_v2, test_charger_broken, mock_aioclient, caplog
+    test_charger_new,
+    test_charger_v2,
+    test_charger_broken,
+    test_charger_unknown_semver,
+    mock_aioclient,
+    caplog,
 ):
     """Test v4 set divert mode."""
     await test_charger_new.update()
@@ -896,6 +909,17 @@ async def test_set_divertmode(
     with pytest.raises(UnsupportedFeature):
         await test_charger_broken.divert_mode()
 
+    mock_aioclient.post(
+        TEST_URL_CONFIG,
+        status=200,
+        body=value,
+    )
+    await test_charger_unknown_semver.update()
+    with pytest.raises(UnsupportedFeature):
+        with caplog.at_level(logging.DEBUG):
+            await test_charger_unknown_semver.divert_mode()
+            assert "Non-semver firmware version detected." in caplog.text
+
 
 async def test_test_and_get(test_charger, test_charger_v2, mock_aioclient, caplog):
     """Test v4 Status reply"""
@@ -931,6 +955,8 @@ async def test_firmware_check(
     test_charger_dev,
     test_charger_v2,
     test_charger_broken,
+    test_charger_broken_semver,
+    test_charger_unknown_semver,
     mock_aioclient,
     caplog,
 ):
@@ -997,6 +1023,28 @@ async def test_firmware_check(
         firmware = await test_charger_broken.firmware_check()
     assert "Unable to find firmware version." in caplog.text
     assert firmware is None
+
+    await test_charger_broken_semver.update()
+    mock_aioclient.get(
+        TEST_URL_GITHUB_v4,
+        status=200,
+        body=load_fixture("github_v4.json"),
+    )
+    firmware = await test_charger_broken_semver.firmware_check()
+    assert firmware["latest_version"] == "4.1.4"
+
+    await test_charger_unknown_semver.update()
+    assert test_charger_unknown_semver.wifi_firmware == "random_a4f11e"
+    mock_aioclient.get(
+        TEST_URL_GITHUB_v4,
+        status=200,
+        body=load_fixture("github_v4.json"),
+    )
+    with caplog.at_level(logging.DEBUG):
+        firmware = await test_charger_unknown_semver.firmware_check()
+        assert "Using version: random_a4f11e" in caplog.text
+        assert "Non-semver firmware version detected." in caplog.text
+        assert firmware is None
 
 
 async def test_evse_restart(test_charger_v2, mock_aioclient, caplog):
@@ -1102,7 +1150,9 @@ async def test_max_current_soft(fixture, expected, request):
     assert status == expected
 
 
-async def test_set_override(test_charger, test_charger_v2, mock_aioclient, caplog):
+async def test_set_override(
+    test_charger, test_charger_v2, test_charger_unknown_semver, mock_aioclient, caplog
+):
     """Test set override function."""
     await test_charger.update()
     mock_aioclient.post(
@@ -1174,6 +1224,10 @@ async def test_set_override(test_charger, test_charger_v2, mock_aioclient, caplo
         with caplog.at_level(logging.DEBUG):
             await test_charger_v2.update()
             status = await test_charger_v2.set_override("active")
+            assert "Feature not supported for older firmware." in caplog.text
+
+            await test_charger_unknown_semver.update()
+            status = await test_charger_unknown_semver.set_override("active")
             assert "Feature not supported for older firmware." in caplog.text
 
 

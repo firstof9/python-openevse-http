@@ -10,6 +10,7 @@ from typing import Any, Callable, Dict, Union
 import aiohttp  # type: ignore
 from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
 from awesomeversion import AwesomeVersion
+from awesomeversion.exceptions import AwesomeVersionCompareException
 
 from .const import MAX_AMPS, MIN_AMPS
 from .exceptions import (
@@ -489,15 +490,22 @@ class OpenEVSE:
             _LOGGER.debug("Stripping 'dev' from version.")
             value = value.split(".")
             value = ".".join(value[0:3])
-            _LOGGER.debug("Using version: %s", value)
-            current = AwesomeVersion(value)
+        elif "master" in self._config["version"]:
+            value = "dev"
         else:
-            current = AwesomeVersion(self._config["version"])
+            value = self._config["version"]
 
-        if current >= cutoff:
-            url = f"{base_url}ESP32_WiFi_V4.x/releases/latest"
-        else:
-            url = f"{base_url}ESP8266_WiFi_v2.x/releases/latest"
+        _LOGGER.debug("Using version: %s", value)
+        current = AwesomeVersion(value)
+
+        try:
+            if current >= cutoff:
+                url = f"{base_url}ESP32_WiFi_V4.x/releases/latest"
+            else:
+                url = f"{base_url}ESP8266_WiFi_v2.x/releases/latest"
+        except AwesomeVersionCompareException:
+            _LOGGER.warning("Non-semver firmware version detected.")
+            return None
 
         try:
             async with aiohttp.ClientSession() as session:
@@ -551,16 +559,26 @@ class OpenEVSE:
             _LOGGER.debug("Stripping 'dev' from version.")
             value = value.split(".")
             value = ".".join(value[0:3])
-            current = AwesomeVersion(value)
+        elif "master" in self._config["version"]:
+            value = "dev"
         else:
-            current = AwesomeVersion(self._config["version"])
+            value = self._config["version"]
+
+        current = AwesomeVersion(value)
 
         if limit:
-            if cutoff <= current <= limit:
-                return True
+            try:
+                if cutoff <= current <= limit:
+                    return True
+            except AwesomeVersionCompareException:
+                _LOGGER.debug("Non-semver firmware version detected.")
             return False
-        if current >= cutoff:
-            return True
+
+        try:
+            if current >= cutoff:
+                return True
+        except AwesomeVersionCompareException:
+            _LOGGER.debug("Non-semver firmware version detected.")
         return False
 
     @property
