@@ -7,6 +7,8 @@ import json
 import logging
 from unittest import mock
 
+from awesomeversion.exceptions import AwesomeVersionCompareException
+
 import pytest
 from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
 
@@ -1006,10 +1008,12 @@ async def test_firmware_check(
         status=200,
         body=load_fixture("github_v4.json"),
     )
-    with caplog.at_level(logging.DEBUG):
-        firmware = await test_charger_broken.firmware_check()
-    assert "Unable to find firmware version." in caplog.text
-    assert firmware is None
+    firmware = await test_charger_broken_semver.firmware_check()
+    assert firmware["latest_version"] == "4.1.4"
+
+    test_charger_broken_semver._config["version"] = "random"
+    with pytest.raises(AwesomeVersionCompareException):
+        await test_charger_broken_semver.firmware_check()
 
 
 async def test_evse_restart(test_charger_v2, mock_aioclient, caplog):
