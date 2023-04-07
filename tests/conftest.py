@@ -122,6 +122,7 @@ def test_charger_broken_semver(mock_aioclient):
     )
     return main.OpenEVSE(TEST_TLD)
 
+
 @pytest.fixture(name="test_charger_unknown_semver")
 def test_charger_unknown_semver(mock_aioclient):
     """Load the charger data."""
