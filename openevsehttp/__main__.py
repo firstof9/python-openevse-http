@@ -496,16 +496,16 @@ class OpenEVSE:
             value = self._config["version"]
 
         _LOGGER.debug("Using version: %s", value)
-        try:
-            current = AwesomeVersion(value)
-        except AwesomeVersionCompareException as err:
-            _LOGGER.error(err)
-            return None
+        current = AwesomeVersion(value)
 
-        if current >= cutoff:
-            url = f"{base_url}ESP32_WiFi_V4.x/releases/latest"
-        else:
-            url = f"{base_url}ESP8266_WiFi_v2.x/releases/latest"
+        try:
+            if current >= cutoff:
+                url = f"{base_url}ESP32_WiFi_V4.x/releases/latest"
+            else:
+                url = f"{base_url}ESP8266_WiFi_v2.x/releases/latest"
+        except AwesomeVersionCompareException:
+            _LOGGER.warning("Non-semver firmware version detected.")
+            return None
 
         try:
             async with aiohttp.ClientSession() as session:
@@ -564,19 +564,23 @@ class OpenEVSE:
         else:
             value = self._config["version"]
 
-        try:
-            current = AwesomeVersion(value)
-        except AwesomeVersionCompareException as err:
-            _LOGGER.debug(err)
-            return False
+        current = AwesomeVersion(value)
 
         if limit:
-            if cutoff <= current <= limit:
+            try:
+                if cutoff <= current <= limit:
+                    return True
+                return False
+            except AwesomeVersionCompareException:
+                _LOGGER.debug("Non-semver firmware version detected.")
+                return False
+        try:
+            if current >= cutoff:
                 return True
             return False
-        if current >= cutoff:
-            return True
-        return False
+        except AwesomeVersionCompareException:
+            _LOGGER.debug("Non-semver firmware version detected.")
+            return False
 
     @property
     def hostname(self) -> str:

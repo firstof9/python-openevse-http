@@ -935,6 +935,7 @@ async def test_firmware_check(
     test_charger_v2,
     test_charger_broken,
     test_charger_broken_semver,
+    test_charger_unknown_semver,
     mock_aioclient,
     caplog,
 ):
@@ -1011,9 +1012,18 @@ async def test_firmware_check(
     firmware = await test_charger_broken_semver.firmware_check()
     assert firmware["latest_version"] == "4.1.4"
 
-    test_charger_broken_semver._config["version"] = "random"
-    with pytest.raises(AwesomeVersionCompareException):
-        await test_charger_broken_semver.firmware_check()
+    await test_charger_unknown_semver.update()
+    assert test_charger_unknown_semver.wifi_firmware == "random_a4f11e"
+    mock_aioclient.get(
+        TEST_URL_GITHUB_v4,
+        status=200,
+        body=load_fixture("github_v4.json"),
+    )
+    with caplog.at_level(logging.DEBUG):
+        firmware = await test_charger_unknown_semver.firmware_check()
+        assert "Using version: random_a4f11e" in caplog.text
+        assert "Non-semver firmware version detected." in caplog.text
+        assert firmware is None
 
 
 async def test_evse_restart(test_charger_v2, mock_aioclient, caplog):
