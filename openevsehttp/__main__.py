@@ -570,17 +570,16 @@ class OpenEVSE:
             try:
                 if cutoff <= current <= limit:
                     return True
-                return False
             except AwesomeVersionCompareException:
                 _LOGGER.debug("Non-semver firmware version detected.")
-                return False
+            return False
+
         try:
             if current >= cutoff:
                 return True
-            return False
         except AwesomeVersionCompareException:
             _LOGGER.debug("Non-semver firmware version detected.")
-            return False
+        return False
 
     @property
     def hostname(self) -> str:
