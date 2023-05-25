@@ -1,7 +1,7 @@
 -r requirements.txt
 pre-commit==3.3.2
 pytest==7.3.1
-pytest-cov==4.0.0
+pytest-cov==4.1.0
 pytest-timeout==2.1.0
 pytest-asyncio
 requests_mock
