@@ -1489,7 +1489,11 @@ async def test_get_state_raw(fixture, expected, request):
 
 @pytest.mark.parametrize(
     "fixture, expected",
-    [("test_charger", True), ("test_charger_v2", False)],
+    [
+        ("test_charger", True),
+        ("test_charger_v2", False),
+        ("test_charger_broken", False),
+    ],
 )
 async def test_get_state_raw(fixture, expected, request):
     """Test v4 Status reply."""

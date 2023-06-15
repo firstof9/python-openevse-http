@@ -1026,3 +1026,4 @@ class OpenEVSE:
         """Return the status of the mqtt connection."""
         if self._status is not None and "mqtt_connected" in self._status:
             return self._status["mqtt_connected"]
+        return False
