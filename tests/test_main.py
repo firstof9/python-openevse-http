@@ -1485,3 +1485,15 @@ async def test_get_state_raw(fixture, expected, request):
     await charger.update()
     status = charger.state_raw
     assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected",
+    [("test_charger", True), ("test_charger_v2", False)],
+)
+async def test_get_state_raw(fixture, expected, request):
+    """Test v4 Status reply."""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    status = charger.mqtt_connected
+    assert status == expected
