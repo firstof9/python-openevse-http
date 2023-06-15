@@ -7,7 +7,6 @@
     "emoncms_connected": 0,
     "packets_sent": 0,
     "packets_success": 0,
-    "mqtt_connected": 1,
     "ohm_hour": "NotConnected",
     "free_heap": 223464,
     "comm_sent": 345660,
