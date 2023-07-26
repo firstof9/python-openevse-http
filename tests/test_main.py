@@ -1519,6 +1519,5 @@ async def test_self_production(test_charger, test_charger_v2, mock_aioclient, ca
 
     with pytest.raises(UnsupportedFeature):
         with caplog.at_level(logging.DEBUG):
-            await test_charger_v2.update()
-            await test_charger_v2.clear_override()
+            await test_charger_v2.self_production(-3000, 1000)
             assert "Feature not supported for older firmware." in caplog.text
