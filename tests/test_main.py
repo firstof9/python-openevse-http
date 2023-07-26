@@ -1501,3 +1501,24 @@ async def test_get_state_raw(fixture, expected, request):
     await charger.update()
     status = charger.mqtt_connected
     assert status == expected
+
+
+async def test_self_production(test_charger, test_charger_v2, mock_aioclient, caplog):
+    """Test self_production function."""
+    await test_charger.update()
+    mock_aioclient.post(
+        TEST_URL_STATUS,
+        status=200,
+        body='{"grid_ie": 3000, "solar": 1000}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.self_production(-3000, 1000)
+        assert (
+            "Self-production response: {'grid_ie': 3000, 'solar': 1000}" in caplog.text
+        )
+
+    with pytest.raises(UnsupportedFeature):
+        with caplog.at_level(logging.DEBUG):
+            await test_charger_v2.update()
+            await test_charger_v2.clear_override()
+            assert "Feature not supported for older firmware." in caplog.text
