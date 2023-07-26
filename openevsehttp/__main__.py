@@ -581,6 +581,25 @@ class OpenEVSE:
             _LOGGER.debug("Non-semver firmware version detected.")
         return False
 
+    # Self production HTTP Posting
+
+    async def self_production(self, grid: int, solar: int, invert: bool = True) -> None:
+        """Send pushed sensor data to self-prodcution."""
+        if not self._version_check("4.0.0"):
+            _LOGGER.debug("Feature not supported for older firmware.")
+            raise UnsupportedFeature
+
+        # Invert the sensor -import/+export
+        if invert:
+            grid = grid * -1
+
+        url = f"{self.url}status"
+        data = {"solar": solar, "grid": grid}
+
+        _LOGGER.debug("Posting self-production: %s", data)
+        response = await self.process_request(url=url, method="post", data=data)
+        _LOGGER.debug("Self-production response: %s", response)
+
     @property
     def hostname(self) -> str:
         """Return charger hostname."""
