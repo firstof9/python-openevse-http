@@ -594,7 +594,7 @@ class OpenEVSE:
             grid = grid * -1
 
         url = f"{self.url}status"
-        data = {"solar": solar, "grid": grid}
+        data = {"solar": solar, "grid_ie": grid}
 
         _LOGGER.debug("Posting self-production: %s", data)
         response = await self.process_request(url=url, method="post", data=data)
