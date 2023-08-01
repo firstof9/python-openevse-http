@@ -605,7 +605,7 @@ class OpenEVSE:
             data = {"solar": solar}
 
         if not data:
-            _LOGGER.error("No sensor data to send to device.")
+            _LOGGER.info("No sensor data to send to device.")
         else:
             _LOGGER.debug("Posting self-production: %s", data)
             response = await self.process_request(url=url, method="post", data=data)
