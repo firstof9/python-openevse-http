@@ -1510,15 +1510,20 @@ async def test_self_production(test_charger, test_charger_v2, mock_aioclient, ca
         TEST_URL_STATUS,
         status=200,
         body='{"grid_ie": 3000, "solar": 1000}',
+        repeat=True,
     )
     with caplog.at_level(logging.DEBUG):
         await test_charger.self_production(-3000, 1000)
-        assert (
-            "Posting self-production: {'solar': 1000, 'grid_ie': 3000}" in caplog.text
-        )
+        assert "Posting self-production: {'grid_ie': 3000}" in caplog.text
         assert (
             "Self-production response: {'grid_ie': 3000, 'solar': 1000}" in caplog.text
         )
+
+        await test_charger.self_production(None, 1000)
+        assert "Posting self-production: {'solar': 1000}" in caplog.text
+
+        await test_charger.self_production(None, None)
+        assert "No sensor data to send to device." in caplog.text
 
     with pytest.raises(UnsupportedFeature):
         with caplog.at_level(logging.DEBUG):

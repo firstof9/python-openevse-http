@@ -583,22 +583,33 @@ class OpenEVSE:
 
     # Self production HTTP Posting
 
-    async def self_production(self, grid: int, solar: int, invert: bool = True) -> None:
+    async def self_production(
+        self, grid: int | None = None, solar: int | None = None, invert: bool = True
+    ) -> None:
         """Send pushed sensor data to self-prodcution."""
         if not self._version_check("4.0.0"):
             _LOGGER.debug("Feature not supported for older firmware.")
             raise UnsupportedFeature
 
         # Invert the sensor -import/+export
-        if invert:
+        if invert and grid is not None:
             grid = grid * -1
 
         url = f"{self.url}status"
-        data = {"solar": solar, "grid_ie": grid}
+        data = {}
 
-        _LOGGER.debug("Posting self-production: %s", data)
-        response = await self.process_request(url=url, method="post", data=data)
-        _LOGGER.debug("Self-production response: %s", response)
+        # Prefer grid sensor data
+        if grid is not None:
+            data = {"grid_ie": grid}
+        elif solar is not None:
+            data = {"solar": solar}
+
+        if not data:
+            _LOGGER.error("No sensor data to send to device.")
+        else:
+            _LOGGER.debug("Posting self-production: %s", data)
+            response = await self.process_request(url=url, method="post", data=data)
+            _LOGGER.debug("Self-production response: %s", response)
 
     @property
     def hostname(self) -> str:
