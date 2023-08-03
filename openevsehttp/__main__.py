@@ -619,7 +619,7 @@ class OpenEVSE:
         time_to_full: int | None = None,
     ) -> None:
         """Send pushed sensor data to self-prodcution."""
-        if not self._version_check("4.0.0"):
+        if not self._version_check("4.1.0"):
             _LOGGER.debug("Feature not supported for older firmware.")
             raise UnsupportedFeature
 
