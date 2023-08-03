@@ -617,6 +617,7 @@ class OpenEVSE:
         battery_level: int | None = None,
         battery_range: int | None = None,
         time_to_full: int | None = None,
+        voltage: int | None = None,
     ) -> None:
         """Send pushed sensor data to self-prodcution."""
         if not self._version_check("4.1.0"):
@@ -633,6 +634,8 @@ class OpenEVSE:
             data[BAT_RANGE] = battery_range
         if time_to_full is not None:
             data[TTF] = time_to_full
+        if voltage is not None:
+            data[VOLTAGE] = voltage
 
         if not data:
             _LOGGER.info("No SOC data to send to device.")
