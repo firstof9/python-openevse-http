@@ -613,7 +613,10 @@ class OpenEVSE:
 
     # State of charge HTTP posting
     async def soc(
-        self, battery_level: int | None = None, battery_range: int | None = None, time_to_full: int | None = None
+        self,
+        battery_level: int | None = None,
+        battery_range: int | None = None,
+        time_to_full: int | None = None,
     ) -> None:
         """Send pushed sensor data to self-prodcution."""
         if not self._version_check("4.0.0"):
@@ -636,7 +639,7 @@ class OpenEVSE:
         else:
             _LOGGER.debug("Posting SOC data: %s", data)
             response = await self.process_request(url=url, method="post", data=data)
-            _LOGGER.debug("SOC response: %s", response)                
+            _LOGGER.debug("SOC response: %s", response)
 
     @property
     def hostname(self) -> str:
