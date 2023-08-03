@@ -1529,3 +1529,35 @@ async def test_self_production(test_charger, test_charger_v2, mock_aioclient, ca
         with caplog.at_level(logging.DEBUG):
             await test_charger_v2.self_production(-3000, 1000)
             assert "Feature not supported for older firmware." in caplog.text
+
+
+async def test_soc(test_charger, test_charger_v2, mock_aioclient, caplog):
+    """Test soc function."""
+    await test_charger.update()
+    mock_aioclient.post(
+        TEST_URL_STATUS,
+        status=200,
+        body='{"battery_level": 85, "battery_range": 230, "time_to_full_charge": 1590}',
+        repeat=True,
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.soc(85, 230, 1590)
+        assert (
+            "Posting SOC data: {'battery_level': 85, 'battery_range': 230, 'time_to_full_charge': 1590}"
+            in caplog.text
+        )
+        assert (
+            "SOC response: {'battery_level': 85, 'battery_range': 230, 'time_to_full_charge': 1590}"
+            in caplog.text
+        )
+
+        await test_charger.soc(voltage=220)
+        assert "Posting SOC data: {'voltage': 220}" in caplog.text
+
+        await test_charger.soc(None)
+        assert "No SOC data to send to device." in caplog.text
+
+    with pytest.raises(UnsupportedFeature):
+        with caplog.at_level(logging.DEBUG):
+            await test_charger_v2.soc(50, 90, 3100)
+            assert "Feature not supported for older firmware." in caplog.text
