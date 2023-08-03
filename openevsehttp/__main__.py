@@ -12,7 +12,7 @@ from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
 from awesomeversion import AwesomeVersion
 from awesomeversion.exceptions import AwesomeVersionCompareException
 
-from .const import MAX_AMPS, MIN_AMPS
+from .const import MAX_AMPS, MIN_AMPS, SOLAR, GRID, BAT_LVL, BAT_RANGE, TTF, VOLTAGE
 from .exceptions import (
     AlreadyListening,
     AuthenticationError,
@@ -600,9 +600,9 @@ class OpenEVSE:
 
         # Prefer grid sensor data
         if grid is not None:
-            data = {"grid_ie": grid}
+            data[GRID] = grid
         elif solar is not None:
-            data = {"solar": solar}
+            data[SOLAR] = solar
 
         if not data:
             _LOGGER.info("No sensor data to send to device.")
@@ -610,6 +610,33 @@ class OpenEVSE:
             _LOGGER.debug("Posting self-production: %s", data)
             response = await self.process_request(url=url, method="post", data=data)
             _LOGGER.debug("Self-production response: %s", response)
+
+    # State of charge HTTP posting
+    async def soc(
+        self, battery_level: int | None = None, battery_range: int | None = None, time_to_full: int | None = None
+    ) -> None:
+        """Send pushed sensor data to self-prodcution."""
+        if not self._version_check("4.0.0"):
+            _LOGGER.debug("Feature not supported for older firmware.")
+            raise UnsupportedFeature
+
+        url = f"{self.url}status"
+        data = {}
+
+        # Build post data
+        if battery_level is not None:
+            data[BAT_LVL] = battery_level
+        if battery_range is not None:
+            data[BAT_RANGE] = battery_range
+        if time_to_full is not None:
+            data[TTF] = time_to_full
+
+        if not data:
+            _LOGGER.info("No SOC data to send to device.")
+        else:
+            _LOGGER.debug("Posting SOC data: %s", data)
+            response = await self.process_request(url=url, method="post", data=data)
+            _LOGGER.debug("SOC response: %s", response)                
 
     @property
     def hostname(self) -> str:
