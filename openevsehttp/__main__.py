@@ -324,6 +324,61 @@ class OpenEVSE:
         )  # noqa: E501
         _LOGGER.debug("divert_mode response: %s", response)
         return response
+    
+    async def get_limit(self) -> Union[Dict[str, str], Dict[str, Any]]:
+        """Get the charging limit."""
+        if not self._version_check("4.0.0"):
+            _LOGGER.debug("Feature not supported for older firmware.")
+            raise UnsupportedFeature
+        url = f"{self.url}limit"
+
+        _LOGGER.debug("Getting limit data from %s", url)
+        response = await self.process_request(url=url, method="get")
+        return response
+
+    async def set_limit(
+            self,
+            type: str,
+            value: int,
+            auto_release: bool = True
+    ) -> Any:
+        """Set the charging limit."""
+        if not self._version_check("4.0.0"):
+            _LOGGER.debug("Feature not supported for older firmware.")
+            raise UnsupportedFeature
+        url = f"{self.url}limit"
+
+        data: dict[str, Any] = {}
+
+        if type not in {"time","energy","soc","range"}:
+            _LOGGER.error("Invalid limit type: %s", type)
+            raise ValueError
+        
+        if type(value) is not int:
+            _LOGGER.error("Invalid limit value: %s", str(value))
+            raise ValueError
+        
+        data["auto_release"] = auto_release
+        data["type"] = type
+        data["value"] = value
+
+        _LOGGER.debug("Limit data: %s", data)
+        _LOGGER.debug("Setting limit on %s", url)
+        response = await self.process_request(
+            url=url, method="post", data=data
+        )
+        return response
+    
+    async def clear_limit(self):
+        """Clear the charging limit."""
+        if not self._version_check("4.0.0"):
+            _LOGGER.debug("Feature not supported for older firmware.")
+            raise UnsupportedFeature
+        url = f"{self.url}limit"
+
+        _LOGGER.debug("Clearing charging limit %s", url)
+        response = await self.process_request(url=url, method="delete")
+        _LOGGER.debug("Clear response: %s", response["msg"])
 
     async def get_override(self) -> Union[Dict[str, str], Dict[str, Any]]:
         """Get the manual override status."""
@@ -586,7 +641,7 @@ class OpenEVSE:
     async def self_production(
         self, grid: int | None = None, solar: int | None = None, invert: bool = True
     ) -> None:
-        """Send pushed sensor data to self-prodcution."""
+        """Send pushed sensor data to self-production."""
         if not self._version_check("4.0.0"):
             _LOGGER.debug("Feature not supported for older firmware.")
             raise UnsupportedFeature
