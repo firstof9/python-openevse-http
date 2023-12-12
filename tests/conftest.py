@@ -139,6 +139,22 @@ def test_charger_unknown_semver(mock_aioclient):
     return main.OpenEVSE(TEST_TLD)
 
 
+@pytest.fixture(name="test_charger_modified_ver")
+def test_charger_modified_ver(mock_aioclient):
+    """Load the charger data."""
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=200,
+        body=load_fixture("v4_json/status.json"),
+    )
+    mock_aioclient.get(
+        TEST_URL_CONFIG,
+        status=200,
+        body=load_fixture("v4_json/config-extra-version.json"),
+    )
+    return main.OpenEVSE(TEST_TLD)
+
+
 @pytest.fixture(name="test_charger_v2")
 def test_charger_v2(mock_aioclient):
     """Load the charger data."""

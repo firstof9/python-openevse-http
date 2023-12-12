@@ -647,7 +647,7 @@ async def test_toggle_override(
     test_charger,
     test_charger_dev,
     test_charger_new,
-    test_charger_unknown_semver,
+    test_charger_modified_ver,
     mock_aioclient,
     caplog,
 ):
@@ -657,17 +657,19 @@ async def test_toggle_override(
         TEST_URL_OVERRIDE,
         status=200,
         body="OK",
+        repeat=True,
     )
+    mock_aioclient.post(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body='{"msg": "OK"}',
+        repeat=True,
+    )    
     with caplog.at_level(logging.DEBUG):
         await test_charger.toggle_override()
     assert "Toggling manual override http" in caplog.text
 
     await test_charger_dev.update()
-    mock_aioclient.patch(
-        TEST_URL_OVERRIDE,
-        status=200,
-        body="OK",
-    )
     with caplog.at_level(logging.DEBUG):
         await test_charger_dev.toggle_override()
     assert "Stripping 'dev' from version." in caplog.text
@@ -687,18 +689,7 @@ async def test_toggle_override(
         body=json.dumps(value),
     )
 
-    mock_aioclient.post(
-        TEST_URL_OVERRIDE,
-        status=200,
-        body='{"msg": "OK"}',
-    )
-
     await test_charger_new.update()
-    mock_aioclient.patch(
-        TEST_URL_OVERRIDE,
-        status=200,
-        body="OK",
-    )
     with caplog.at_level(logging.DEBUG):
         await test_charger_new.toggle_override()
     assert "Toggling manual override http" in caplog.text
@@ -716,19 +707,31 @@ async def test_toggle_override(
         status=200,
         body=json.dumps(value),
     )
-    mock_aioclient.post(
-        TEST_URL_OVERRIDE,
-        status=200,
-        body='{"msg": "OK"}',
-    )
-    mock_aioclient.patch(
-        TEST_URL_OVERRIDE,
-        status=200,
-        body="OK",
-    )
+
     with caplog.at_level(logging.DEBUG):
         await test_charger_new.toggle_override()
     assert "Toggling manual override http" in caplog.text
+
+    await test_charger_modified_ver.update()
+
+    value = {
+        "state": "disabled",
+        "charge_current": 0,
+        "max_current": 0,
+        "energy_limit": 0,
+        "time_limit": 0,
+        "auto_release": True,
+    }
+    mock_aioclient.get(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body=json.dumps(value),
+    )
+
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_modified_ver.toggle_override()
+        assert "Detected firmware: v5.0.1_modified" in caplog.text
+        assert "Filtered firmware: 5.0.1" in caplog.text   
 
 
 async def test_toggle_override_v2(test_charger_v2, mock_aioclient, caplog):
