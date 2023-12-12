@@ -557,6 +557,8 @@ class OpenEVSE:
         if max_version != "":
             limit = AwesomeVersion(max_version)
 
+        firmware_filtered = None
+
         try:
             firmware_search = re.search("\\d\\.\\d\\.\\d", self._config["version"])
             if firmware_search is not None:
