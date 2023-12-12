@@ -664,7 +664,7 @@ async def test_toggle_override(
         status=200,
         body='{"msg": "OK"}',
         repeat=True,
-    )    
+    )
     with caplog.at_level(logging.DEBUG):
         await test_charger.toggle_override()
     assert "Toggling manual override http" in caplog.text
@@ -731,7 +731,7 @@ async def test_toggle_override(
     with caplog.at_level(logging.DEBUG):
         await test_charger_modified_ver.toggle_override()
         assert "Detected firmware: v5.0.1_modified" in caplog.text
-        assert "Filtered firmware: 5.0.1" in caplog.text   
+        assert "Filtered firmware: 5.0.1" in caplog.text
 
 
 async def test_toggle_override_v2(test_charger_v2, mock_aioclient, caplog):
