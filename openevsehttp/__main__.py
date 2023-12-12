@@ -562,7 +562,7 @@ class OpenEVSE:
         try:
             firmware_search = re.search("\\d\\.\\d\\.\\d", self._config["version"])
             if firmware_search is not None:
-                firmware_filtered: Any = firmware_search[0]
+                firmware_filtered = firmware_search[0]
         except Exception:  # pylint: disable=broad-exception-caught
             _LOGGER.warning("Non-standard versioning string.")
         _LOGGER.debug("Detected firmware: %s", self._config["version"])
