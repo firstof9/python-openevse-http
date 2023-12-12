@@ -5,6 +5,7 @@ import asyncio
 import datetime
 import json
 import logging
+import re
 from typing import Any, Callable, Dict, Union
 
 import aiohttp  # type: ignore
@@ -120,7 +121,11 @@ class OpenEVSE:
                         _LOGGER.warning("Non JSON response: %s", message)
 
                     if resp.status == 400:
-                        _LOGGER.error("Error 400: %s", message["msg"])
+                        if "msg" in message.keys():
+                            index = "msg"
+                        elif "error" in message.keys():
+                            index = "error"
+                        _LOGGER.error("Error 400: %s", message[index])
                         raise ParseJSONError
                     if resp.status == 401:
                         _LOGGER.error("Authentication error: %s", message)
@@ -552,7 +557,9 @@ class OpenEVSE:
         if max_version != "":
             limit = AwesomeVersion(max_version)
 
+        firmware_filtered = re.search("\d\.\d\.\d", self._config["version"])
         _LOGGER.debug("Detected firmware: %s", self._config["version"])
+        _LOGGER.debug("Filtered firmware: %s", firmware_filtered)
 
         if "dev" in self._config["version"]:
             value = self._config["version"]
@@ -562,7 +569,7 @@ class OpenEVSE:
         elif "master" in self._config["version"]:
             value = "dev"
         else:
-            value = self._config["version"]
+            value = firmware_filtered
 
         current = AwesomeVersion(value)
 
