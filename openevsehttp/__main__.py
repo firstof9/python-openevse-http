@@ -557,7 +557,7 @@ class OpenEVSE:
         if max_version != "":
             limit = AwesomeVersion(max_version)
 
-        firmware_filtered = re.search("\d\.\d\.\d", self._config["version"])
+        firmware_filtered = re.search("\d\.\d\.\d", self._config["version"])[0]
         _LOGGER.debug("Detected firmware: %s", self._config["version"])
         _LOGGER.debug("Filtered firmware: %s", firmware_filtered)
 
