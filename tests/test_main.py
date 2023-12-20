@@ -1652,5 +1652,5 @@ async def test_clear_limit(
 
     with pytest.raises(UnsupportedFeature):
         with caplog.at_level(logging.DEBUG):
-            await test_charger.set_limit("energy", 15)
+            await test_charger.clear_limit()
             assert "Feature not supported for older firmware." in caplog.text
