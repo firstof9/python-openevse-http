@@ -1583,8 +1583,8 @@ async def test_set_limit(
         repeat=True,
     )
     with caplog.at_level(logging.DEBUG):
-        await test_charger_modified_ver.set_limit("energy", 15)
-        assert "Limit data: {'type': 'energy', 'value': 15}" in caplog.text
+        await test_charger_modified_ver.set_limit("energy", 15, True)
+        assert "Limit data: {'type': 'energy', 'value': 15, 'release': True}" in caplog.text
         assert "Setting limit config on http://openevse.test.tld/limit" in caplog.text
 
     with pytest.raises(InvalidType):
