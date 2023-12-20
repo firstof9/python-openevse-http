@@ -681,7 +681,7 @@ class OpenEVSE:
             raise UnsupportedFeature
 
         url = f"{self.url}limit"
-        data = {}
+        data: Dict[str, Any] = {}
         valid_types = ["time", "energy", "soc", "range"]
 
         if limit_type not in valid_types:
@@ -706,7 +706,7 @@ class OpenEVSE:
             raise UnsupportedFeature
 
         url = f"{self.url}limit"
-        data = {}
+        data: Dict[str, Any] = {}
 
         _LOGGER.debug("Clearing limit config on %s", url)
         response = await self.process_request(
@@ -721,7 +721,7 @@ class OpenEVSE:
             raise UnsupportedFeature
 
         url = f"{self.url}limit"
-        data = {}
+        data: Dict[str, Any] = {}
 
         _LOGGER.debug("Getting limit config on %s", url)
         response = await self.process_request(
