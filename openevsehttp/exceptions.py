@@ -27,3 +27,7 @@ class MissingSerial(Exception):
 
 class UnsupportedFeature(Exception):
     """Exception for firmware that is too old."""
+
+
+class InvalidType(Exception):
+    """Exception for invalid types."""
