@@ -13,10 +13,23 @@ from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
 from awesomeversion import AwesomeVersion
 from awesomeversion.exceptions import AwesomeVersionCompareException
 
-from .const import MAX_AMPS, MIN_AMPS, SOLAR, GRID, BAT_LVL, BAT_RANGE, TTF, VOLTAGE
+from .const import (
+    BAT_LVL,
+    BAT_RANGE,
+    GRID,
+    MAX_AMPS,
+    MIN_AMPS,
+    RELEASE,
+    SOLAR,
+    TTF,
+    TYPE,
+    VALUE,
+    VOLTAGE,
+)
 from .exceptions import (
     AlreadyListening,
     AuthenticationError,
+    InvalidType,
     MissingMethod,
     MissingSerial,
     ParseJSONError,
@@ -131,7 +144,7 @@ class OpenEVSE:
                         _LOGGER.error("Authentication error: %s", message)
                         raise AuthenticationError
                     if resp.status in [404, 405, 500]:
-                        _LOGGER.error("%s", message)
+                        _LOGGER.warning("%s", message)
 
                     if method == "post" and "config_version" in message:
                         await self.update()
@@ -657,6 +670,64 @@ class OpenEVSE:
             _LOGGER.debug("Posting SOC data: %s", data)
             response = await self.process_request(url=url, method="post", data=data)
             _LOGGER.debug("SOC response: %s", response)
+
+    # Limit endpoint
+    async def set_limit(
+        self, limit_type: str, value: int, release: bool | None = None
+    ) -> Any:
+        """Set charge limit."""
+        if not self._version_check("5.0.0"):
+            _LOGGER.debug("Feature not supported for older firmware.")
+            raise UnsupportedFeature
+
+        url = f"{self.url}limit"
+        data: Dict[str, Any] = {}
+        valid_types = ["time", "energy", "soc", "range"]
+
+        if limit_type not in valid_types:
+            raise InvalidType
+
+        data[TYPE] = limit_type
+        data[VALUE] = value
+        if release is not None:
+            data[RELEASE] = release
+
+        _LOGGER.debug("Limit data: %s", data)
+        _LOGGER.debug("Setting limit config on %s", url)
+        response = await self.process_request(
+            url=url, method="post", data=data
+        )  # noqa: E501
+        return response
+
+    async def clear_limit(self) -> Any:
+        """Clear charge limit."""
+        if not self._version_check("5.0.0"):
+            _LOGGER.debug("Feature not supported for older firmware.")
+            raise UnsupportedFeature
+
+        url = f"{self.url}limit"
+        data: Dict[str, Any] = {}
+
+        _LOGGER.debug("Clearing limit config on %s", url)
+        response = await self.process_request(
+            url=url, method="delete", data=data
+        )  # noqa: E501
+        return response
+
+    async def get_limit(self) -> Any:
+        """Get charge limit."""
+        if not self._version_check("5.0.0"):
+            _LOGGER.debug("Feature not supported for older firmware.")
+            raise UnsupportedFeature
+
+        url = f"{self.url}limit"
+        data: Dict[str, Any] = {}
+
+        _LOGGER.debug("Getting limit config on %s", url)
+        response = await self.process_request(
+            url=url, method="get", data=data
+        )  # noqa: E501
+        return response
 
     @property
     def hostname(self) -> str:
