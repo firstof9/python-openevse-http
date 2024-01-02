@@ -1526,8 +1526,7 @@ async def test_self_production(test_charger, test_charger_v2, mock_aioclient, ca
             "Posting self-production: {'grid_ie': 3000, 'voltage': 210}" in caplog.text
         )
         assert (
-            "Self-production response: {'grid_ie': 3000, 'solar': 1000}"
-            in caplog.text
+            "Self-production response: {'grid_ie': 3000, 'solar': 1000}" in caplog.text
         )
 
         await test_charger.self_production(None, 1000)
