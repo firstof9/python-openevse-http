@@ -608,10 +608,35 @@ class OpenEVSE:
             _LOGGER.debug("Non-semver firmware version detected.")
         return False
 
+    # HTTP Posting of grid voltage
+
+    async def grid_voltage(self, voltage: int | None = None) -> None:
+        """Send pushed sensor data to grid voltage."""
+        if not self._version_check("4.0.0"):
+            _LOGGER.debug("Feature not supported for older firmware.")
+            raise UnsupportedFeature
+
+        url = f"{self.url}status"
+        data = {}
+
+        if voltage is not None:
+            data[VOLTAGE] = voltage
+
+        if not data:
+            _LOGGER.info("No sensor data to send to device.")
+        else:
+            _LOGGER.debug("Posting voltage: %s", data)
+            response = await self.process_request(url=url, method="post", data=data)
+            _LOGGER.debug("Voltage posting response: %s", response)
+
     # Self production HTTP Posting
 
     async def self_production(
-        self, grid: int | None = None, solar: int | None = None, invert: bool = True
+        self,
+        grid: int | None = None,
+        solar: int | None = None,
+        invert: bool = True,
+        voltage: int | None = None,
     ) -> None:
         """Send pushed sensor data to self-prodcution."""
         if not self._version_check("4.0.0"):
@@ -630,6 +655,8 @@ class OpenEVSE:
             data[GRID] = grid
         elif solar is not None:
             data[SOLAR] = solar
+        if voltage is not None:
+            data[VOLTAGE] = voltage
 
         if not data:
             _LOGGER.info("No sensor data to send to device.")

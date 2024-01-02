@@ -1521,10 +1521,13 @@ async def test_self_production(test_charger, test_charger_v2, mock_aioclient, ca
         repeat=True,
     )
     with caplog.at_level(logging.DEBUG):
-        await test_charger.self_production(-3000, 1000)
-        assert "Posting self-production: {'grid_ie': 3000}" in caplog.text
+        await test_charger.self_production(-3000, 1000, True, 210)
         assert (
-            "Self-production response: {'grid_ie': 3000, 'solar': 1000}" in caplog.text
+            "Posting self-production: {'grid_ie': 3000, 'voltage': 210}" in caplog.text
+        )
+        assert (
+            "Self-production response: {'grid_ie': 3000, 'solar': 1000}"
+            in caplog.text
         )
 
         await test_charger.self_production(None, 1000)
@@ -1656,4 +1659,27 @@ async def test_clear_limit(
     with pytest.raises(UnsupportedFeature):
         with caplog.at_level(logging.DEBUG):
             await test_charger.clear_limit()
+            assert "Feature not supported for older firmware." in caplog.text
+
+
+async def test_voltage(test_charger, test_charger_v2, mock_aioclient, caplog):
+    """Test voltage function."""
+    await test_charger.update()
+    mock_aioclient.post(
+        TEST_URL_STATUS,
+        status=200,
+        body='{"voltage": 210}',
+        repeat=True,
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.grid_voltage(210)
+        assert "Posting voltage: {'voltage': 210}" in caplog.text
+        assert "Voltage posting response: {'voltage': 210}" in caplog.text
+
+        await test_charger.grid_voltage(None)
+        assert "No sensor data to send to device." in caplog.text
+
+    with pytest.raises(UnsupportedFeature):
+        with caplog.at_level(logging.DEBUG):
+            await test_charger_v2.grid_voltage(210)
             assert "Feature not supported for older firmware." in caplog.text
