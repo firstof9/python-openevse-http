@@ -1,4 +1,5 @@
 """Main librbary functions for python-openevse-http."""
+
 from __future__ import annotations
 
 import asyncio

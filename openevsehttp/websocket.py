@@ -1,4 +1,5 @@
 """Websocket class for OpenEVSE HTTP."""
+
 import asyncio
 import logging
 
