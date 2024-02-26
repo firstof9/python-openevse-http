@@ -815,7 +815,7 @@ class OpenEVSE:
 
         url = f"{self.url}claims"
 
-        _LOGGER.debug("Releasing claim on %s", url)
+        _LOGGER.debug("Getting claims on %s", url)
         response = await self.process_request(url=url, method="get")  # noqa: E501
         return response
 
