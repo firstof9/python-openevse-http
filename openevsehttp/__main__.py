@@ -757,15 +757,15 @@ class OpenEVSE:
             url=url, method="get", data=data
         )  # noqa: E501
         return response
-    
+
     async def make_claim(
-            self,
-            state: str | None = None,
-            charge_current: int | None = None,
-            max_current: int | None = None,
-            auto_release: bool = True,
-            client: int = CLIENT
-        ) -> Any:
+        self,
+        state: str | None = None,
+        charge_current: int | None = None,
+        max_current: int | None = None,
+        auto_release: bool = True,
+        client: int = CLIENT,
+    ) -> Any:
         """Make a claim."""
         if not self._version_check("4.1.0"):
             _LOGGER.debug("Feature not supported for older firmware.")
@@ -774,9 +774,9 @@ class OpenEVSE:
         if state not in ["active", "disabled", None]:
             _LOGGER.error("Invalid override state: %s", state)
             raise ValueError
-        
+
         url = f"{self.url}claims/{client}"
-        
+
         data: dict[str, Any] = {}
 
         data["auto_release"] = auto_release
@@ -794,7 +794,7 @@ class OpenEVSE:
             url=url, method="post", data=data
         )  # noqa: E501
         return response
-    
+
     async def release_claim(self, client: int = CLIENT) -> Any:
         """Delete a claim."""
         if not self._version_check("4.1.0"):
@@ -805,8 +805,7 @@ class OpenEVSE:
 
         _LOGGER.debug("Releasing claim on %s", url)
         response = await self.process_request(url=url, method="delete")  # noqa: E501
-        return response        
-
+        return response
 
     async def list_claims(self) -> Any:
         """List all claims."""
@@ -818,8 +817,7 @@ class OpenEVSE:
 
         _LOGGER.debug("Releasing claim on %s", url)
         response = await self.process_request(url=url, method="get")  # noqa: E501
-        return response     
-
+        return response
 
     @property
     def hostname(self) -> str:
