@@ -1703,6 +1703,7 @@ async def test_list_claims(test_charger, test_charger_v2, mock_aioclient, caplog
             await test_charger_v2.list_claims()
             assert "Feature not supported for older firmware." in caplog.text
 
+
 async def test_release_claim(test_charger, test_charger_v2, mock_aioclient, caplog):
     """Test release_claim function."""
     await test_charger.update()
@@ -1719,7 +1720,8 @@ async def test_release_claim(test_charger, test_charger_v2, mock_aioclient, capl
     with pytest.raises(UnsupportedFeature):
         with caplog.at_level(logging.DEBUG):
             await test_charger_v2.release_claim()
-            assert "Feature not supported for older firmware." in caplog.text            
+            assert "Feature not supported for older firmware." in caplog.text
+
 
 async def test_make_claim(test_charger, test_charger_v2, mock_aioclient, caplog):
     """Test make_claim function."""
@@ -1738,4 +1740,4 @@ async def test_make_claim(test_charger, test_charger_v2, mock_aioclient, caplog)
     with pytest.raises(UnsupportedFeature):
         with caplog.at_level(logging.DEBUG):
             await test_charger_v2.make_claim()
-            assert "Feature not supported for older firmware." in caplog.text                
+            assert "Feature not supported for older firmware." in caplog.text
