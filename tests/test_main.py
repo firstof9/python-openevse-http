@@ -1733,9 +1733,19 @@ async def test_make_claim(test_charger, test_charger_v2, mock_aioclient, caplog)
         repeat=True,
     )
     with caplog.at_level(logging.DEBUG):
-        await test_charger.make_claim(state="disabled")
-        assert "Claim data: {'auto_release': True, 'state': 'disabled'}" in caplog.text
+        await test_charger.make_claim(
+            state="disabled", charge_current=20, max_current=20
+        )
+        assert (
+            "Claim data: {'auto_release': True, 'state': 'disabled', 'charge_current': 20, 'max_current': 20}"
+            in caplog.text
+        )
         assert f"Setting up claim on {TEST_URL_CLAIMS}/4" in caplog.text
+
+    with pytest.raises(ValueError):
+        with caplog.at_level(logging.DEBUG):
+            await test_charger.make_claim("invalid")
+            assert "Invalid claim state: invalid" in caplog.text
 
     with pytest.raises(UnsupportedFeature):
         with caplog.at_level(logging.DEBUG):

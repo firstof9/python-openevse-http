@@ -374,7 +374,7 @@ class OpenEVSE:
         data: dict[str, Any] = {}
 
         if state not in ["active", "disabled", None]:
-            _LOGGER.error("Invalid override state: %s", state)
+            _LOGGER.error("Invalid claim state: %s", state)
             raise ValueError
 
         data["auto_release"] = auto_release
