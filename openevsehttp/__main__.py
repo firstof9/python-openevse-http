@@ -17,6 +17,7 @@ from awesomeversion.exceptions import AwesomeVersionCompareException
 from .const import (
     BAT_LVL,
     BAT_RANGE,
+    CLIENT,
     GRID,
     MAX_AMPS,
     MIN_AMPS,
@@ -755,6 +756,67 @@ class OpenEVSE:
         response = await self.process_request(
             url=url, method="get", data=data
         )  # noqa: E501
+        return response
+
+    async def make_claim(
+        self,
+        state: str | None = None,
+        charge_current: int | None = None,
+        max_current: int | None = None,
+        auto_release: bool = True,
+        client: int = CLIENT,
+    ) -> Any:
+        """Make a claim."""
+        if not self._version_check("4.1.0"):
+            _LOGGER.debug("Feature not supported for older firmware.")
+            raise UnsupportedFeature
+
+        if state not in ["active", "disabled", None]:
+            _LOGGER.error("Invalid claim state: %s", state)
+            raise ValueError
+
+        url = f"{self.url}claims/{client}"
+
+        data: dict[str, Any] = {}
+
+        data["auto_release"] = auto_release
+
+        if state is not None:
+            data["state"] = state
+        if charge_current is not None:
+            data["charge_current"] = charge_current
+        if max_current is not None:
+            data["max_current"] = max_current
+
+        _LOGGER.debug("Claim data: %s", data)
+        _LOGGER.debug("Setting up claim on %s", url)
+        response = await self.process_request(
+            url=url, method="post", data=data
+        )  # noqa: E501
+        return response
+
+    async def release_claim(self, client: int = CLIENT) -> Any:
+        """Delete a claim."""
+        if not self._version_check("4.1.0"):
+            _LOGGER.debug("Feature not supported for older firmware.")
+            raise UnsupportedFeature
+
+        url = f"{self.url}claims/{client}"
+
+        _LOGGER.debug("Releasing claim on %s", url)
+        response = await self.process_request(url=url, method="delete")  # noqa: E501
+        return response
+
+    async def list_claims(self) -> Any:
+        """List all claims."""
+        if not self._version_check("4.1.0"):
+            _LOGGER.debug("Feature not supported for older firmware.")
+            raise UnsupportedFeature
+
+        url = f"{self.url}claims"
+
+        _LOGGER.debug("Getting claims on %s", url)
+        response = await self.process_request(url=url, method="get")  # noqa: E501
         return response
 
     @property

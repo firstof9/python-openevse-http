@@ -14,3 +14,4 @@ SHAPER_LIVE = "shaper_live_pwr"
 TYPE = "type"
 VALUE = "value"
 RELEASE = "release"
+CLIENT = 4

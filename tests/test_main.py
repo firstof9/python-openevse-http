@@ -30,6 +30,7 @@ TEST_URL_DIVERT = "http://openevse.test.tld/divertmode"
 TEST_URL_RESTART = "http://openevse.test.tld/restart"
 TEST_URL_LIMIT = "http://openevse.test.tld/limit"
 TEST_URL_WS = "ws://openevse.test.tld/ws"
+TEST_URL_CLAIMS = "http://openevse.test.tld/claims"
 TEST_URL_GITHUB_v4 = (
     "https://api.github.com/repos/OpenEVSE/ESP32_WiFi_V4.x/releases/latest"
 )
@@ -1681,4 +1682,72 @@ async def test_voltage(test_charger, test_charger_v2, mock_aioclient, caplog):
     with pytest.raises(UnsupportedFeature):
         with caplog.at_level(logging.DEBUG):
             await test_charger_v2.grid_voltage(210)
+            assert "Feature not supported for older firmware." in caplog.text
+
+
+async def test_list_claims(test_charger, test_charger_v2, mock_aioclient, caplog):
+    """Test list_claims function."""
+    await test_charger.update()
+    mock_aioclient.get(
+        TEST_URL_CLAIMS,
+        status=200,
+        body='[{"client":65540,"priority":10,"state":"disabled","auto_release":false}]',
+        repeat=True,
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.list_claims()
+        assert f"Getting claims on {TEST_URL_CLAIMS}" in caplog.text
+
+    with pytest.raises(UnsupportedFeature):
+        with caplog.at_level(logging.DEBUG):
+            await test_charger_v2.list_claims()
+            assert "Feature not supported for older firmware." in caplog.text
+
+
+async def test_release_claim(test_charger, test_charger_v2, mock_aioclient, caplog):
+    """Test release_claim function."""
+    await test_charger.update()
+    mock_aioclient.delete(
+        f"{TEST_URL_CLAIMS}/4",
+        status=200,
+        body='[{"msg":"done"}]',
+        repeat=True,
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.release_claim()
+        assert f"Releasing claim on {TEST_URL_CLAIMS}/4" in caplog.text
+
+    with pytest.raises(UnsupportedFeature):
+        with caplog.at_level(logging.DEBUG):
+            await test_charger_v2.release_claim()
+            assert "Feature not supported for older firmware." in caplog.text
+
+
+async def test_make_claim(test_charger, test_charger_v2, mock_aioclient, caplog):
+    """Test make_claim function."""
+    await test_charger.update()
+    mock_aioclient.post(
+        f"{TEST_URL_CLAIMS}/4",
+        status=200,
+        body='[{"msg":"done"}]',
+        repeat=True,
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.make_claim(
+            state="disabled", charge_current=20, max_current=20
+        )
+        assert (
+            "Claim data: {'auto_release': True, 'state': 'disabled', 'charge_current': 20, 'max_current': 20}"
+            in caplog.text
+        )
+        assert f"Setting up claim on {TEST_URL_CLAIMS}/4" in caplog.text
+
+    with pytest.raises(ValueError):
+        with caplog.at_level(logging.DEBUG):
+            await test_charger.make_claim("invalid")
+            assert "Invalid claim state: invalid" in caplog.text
+
+    with pytest.raises(UnsupportedFeature):
+        with caplog.at_level(logging.DEBUG):
+            await test_charger_v2.make_claim()
             assert "Feature not supported for older firmware." in caplog.text
