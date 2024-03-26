@@ -949,14 +949,14 @@ async def test_test_and_get(test_charger, test_charger_v2, mock_aioclient, caplo
 
 async def test_restart(test_charger_v2, mock_aioclient, caplog):
     """Test v4 set divert mode."""
-    mock_aioclient.get(
+    mock_aioclient.post(
         TEST_URL_RESTART,
         status=200,
-        body="1",
+        body="{'msg': 'restart gateway'}",
     )
     with caplog.at_level(logging.DEBUG):
         await test_charger_v2.restart_wifi()
-    assert "Restart response: 1" in caplog.text
+    assert "Restart response: restart gateway" in caplog.text
 
 
 async def test_firmware_check(
