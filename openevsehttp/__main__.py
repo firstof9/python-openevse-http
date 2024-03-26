@@ -474,8 +474,9 @@ class OpenEVSE:
     async def restart_wifi(self) -> None:
         """Restart OpenEVSE WiFi module."""
         url = f"{self.url}restart"
+        data = { "device": "gateway" }
 
-        response = await self.process_request(url=url, method="get")
+        response = await self.process_request(url=url, method="post", data=data)
         _LOGGER.debug("WiFi Restart response: %s", response)
 
     # Restart EVSE module
