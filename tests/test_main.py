@@ -947,16 +947,17 @@ async def test_test_and_get(test_charger, test_charger_v2, mock_aioclient, caplo
     assert "Older firmware detected, missing serial." in caplog.text
 
 
-async def test_restart(test_charger_v2, mock_aioclient, caplog):
+async def test_restart(test_charger_modified_ver, mock_aioclient, caplog):
     """Test v4 set divert mode."""
+    response = '{"msg": "restart gateway"}'
     mock_aioclient.post(
         TEST_URL_RESTART,
         status=200,
-        body="{'msg': 'restart gateway'}",
+        body='{"msg": "restart gateway"}',
     )
     with caplog.at_level(logging.DEBUG):
-        await test_charger_v2.restart_wifi()
-    assert "Restart response: restart gateway" in caplog.text
+        await test_charger_modified_ver.restart_wifi()
+    assert "Restart response: {'msg': 'restart gateway'}" in caplog.text
 
 
 async def test_firmware_check(
