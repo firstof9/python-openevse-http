@@ -481,12 +481,19 @@ class OpenEVSE:
     # Restart EVSE module
     async def restart_evse(self) -> None:
         """Restart EVSE module."""
-        _LOGGER.debug("Restarting EVSE module via RAPI")
-        command = "$FR"
+        if not self._version_check("5.0.0"):
+            _LOGGER.debug("Restarting EVSE module via RAPI")
+            command = "$FR"
+            response = await self.send_command(command)
+            if isinstance(response, tuple):
+                response = response[1]
 
-        response = await self.send_command(command)
-        if isinstance(response, tuple):
-            response = response[1]
+        else:
+             _LOGGER.debug("Restarting EVSE module via HTTP")
+             url = f"{self.url}restart"
+             data = { "device": "evse" }
+             response = await self.process_request(url=url, method="post", data=data)
+
         _LOGGER.debug("EVSE Restart response: %s", response)
 
     # Firmwave version
