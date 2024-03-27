@@ -6,7 +6,7 @@ from setuptools import find_packages, setup
 
 PROJECT_DIR = Path(__file__).parent.resolve()
 README_FILE = PROJECT_DIR / "README.md"
-VERSION = "0.1.59"
+VERSION = "0.1.60"
 
 setup(
     name="python-openevse-http",
