@@ -482,7 +482,6 @@ class OpenEVSE:
     # Restart EVSE module
     async def restart_evse(self) -> None:
         """Restart EVSE module."""
-
         if self._version_check("5.0.0"):
             _LOGGER.debug("Restarting EVSE module via HTTP")
             url = f"{self.url}restart"
