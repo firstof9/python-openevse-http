@@ -171,8 +171,8 @@ class OpenEVSE:
         value = await self.process_request(url=url, method="post", rapi=data)
         if "ret" not in value:
             if "msg" in value:
-                return False, value["msg"]
-            return False, ""
+                return (False, value["msg"])
+            return (False, "")
         return (value["cmd"], value["ret"])
 
     async def update(self) -> None:
@@ -487,15 +487,13 @@ class OpenEVSE:
             _LOGGER.debug("Restarting EVSE module via HTTP")
             url = f"{self.url}restart"
             data = {"device": "evse"}
-            response = await self.process_request(url=url, method="post", data=data)  # type: ignore[assignment]
-            response = response["msg"]  # type: ignore[assignment]
+            reply = await self.process_request(url=url, method="post", data=data)
+            response = reply["msg"]
 
         else:
             _LOGGER.debug("Restarting EVSE module via RAPI")
             command = "$FR"
-            response = await self.send_command(command)  # type: ignore[assignment]
-            if isinstance(response, tuple):
-                response = response[1]  # type: ignore[assignment]
+            reply, response = await self.send_command(command)
 
         _LOGGER.debug("EVSE Restart response: %s", response)
 
