@@ -477,23 +477,26 @@ class OpenEVSE:
         data = {"device": "gateway"}
 
         response = await self.process_request(url=url, method="post", data=data)
-        _LOGGER.debug("WiFi Restart response: %s", response)
+        _LOGGER.debug("WiFi Restart response: %s", response['msg'])
 
     # Restart EVSE module
     async def restart_evse(self) -> None:
         """Restart EVSE module."""
-        if not self._version_check("5.0.0"):
-            _LOGGER.debug("Restarting EVSE module via RAPI")
-            command = "$FR"
-            response = await self.send_command(command)
-            if isinstance(response, tuple):
-                response = response[1]
-
-        else:
+        
+        if self._version_check("5.0.0"):
             _LOGGER.debug("Restarting EVSE module via HTTP")
             url = f"{self.url}restart"
             data = {"device": "evse"}
-            response = await self.process_request(url=url, method="post", data=data)
+            response = await self.process_request(url=url, method="post", data=data) # type: ignore[assignment]
+            response = response['msg'] # type: ignore[assignment]
+
+        else:
+            _LOGGER.debug("Restarting EVSE module via RAPI")
+            command = "$FR"
+            response = await self.send_command(command) # type: ignore[assignment]
+            if isinstance(response, tuple):
+                response = response[1] # type: ignore[assignment]
+
 
         _LOGGER.debug("EVSE Restart response: %s", response)
 
