@@ -171,8 +171,8 @@ class OpenEVSE:
         value = await self.process_request(url=url, method="post", rapi=data)
         if "ret" not in value:
             if "msg" in value:
-                return False, value["msg"]
-            return False, ""
+                return (False, value["msg"])
+            return (False, "")
         return (value["cmd"], value["ret"])
 
     async def update(self) -> None:
@@ -474,19 +474,26 @@ class OpenEVSE:
     async def restart_wifi(self) -> None:
         """Restart OpenEVSE WiFi module."""
         url = f"{self.url}restart"
+        data = {"device": "gateway"}
 
-        response = await self.process_request(url=url, method="get")
-        _LOGGER.debug("WiFi Restart response: %s", response)
+        response = await self.process_request(url=url, method="post", data=data)
+        _LOGGER.debug("WiFi Restart response: %s", response["msg"])
 
     # Restart EVSE module
     async def restart_evse(self) -> None:
         """Restart EVSE module."""
-        _LOGGER.debug("Restarting EVSE module via RAPI")
-        command = "$FR"
+        if self._version_check("5.0.0"):
+            _LOGGER.debug("Restarting EVSE module via HTTP")
+            url = f"{self.url}restart"
+            data = {"device": "evse"}
+            reply = await self.process_request(url=url, method="post", data=data)
+            response = reply["msg"]
 
-        response = await self.send_command(command)
-        if isinstance(response, tuple):
-            response = response[1]
+        else:
+            _LOGGER.debug("Restarting EVSE module via RAPI")
+            command = "$FR"
+            reply, response = await self.send_command(command)
+
         _LOGGER.debug("EVSE Restart response: %s", response)
 
     # Firmwave version
