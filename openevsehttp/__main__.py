@@ -10,7 +10,7 @@ import re
 from typing import Any, Callable, Dict, Union
 
 import aiohttp  # type: ignore
-from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
+from aiohttp.client_exceptions import ClientConnectorError, ContentTypeError, ServerTimeoutError
 from awesomeversion import AwesomeVersion
 from awesomeversion.exceptions import AwesomeVersionCompareException
 
@@ -65,6 +65,7 @@ states = {
 }
 
 ERROR_TIMEOUT = "Timeout while updating"
+ERROR_CLIENT_CONNECT = "Problem connecting to charger"
 INFO_LOOP_RUNNING = "Event loop already running, not creating new one."
 UPDATE_TRIGGERS = [
     "config_version",
@@ -155,6 +156,9 @@ class OpenEVSE:
             except (TimeoutError, ServerTimeoutError):
                 _LOGGER.error("%s: %s", ERROR_TIMEOUT, url)
                 message = {"msg": ERROR_TIMEOUT}
+            except ClientConnectorError as err:
+                    _LOGGER.error("%s: %s (%s)", ERROR_CLIENT_CONNECT, url, err)
+                    message = {"msg": ERROR_CLIENT_CONNECT}
             except ContentTypeError as err:
                 _LOGGER.error("%s", err)
                 message = {"msg": err}
