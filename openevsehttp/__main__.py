@@ -136,6 +136,7 @@ class OpenEVSE:
                         _LOGGER.warning("Non JSON response: %s", message)
 
                     if resp.status == 400:
+                        index = ""
                         if "msg" in message.keys():
                             index = "msg"
                         elif "error" in message.keys():
