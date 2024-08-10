@@ -1235,6 +1235,8 @@ class OpenEVSE:
         """Return battery level."""
         if self._status is not None and "vehicle_soc" in self._status:
             return self._status["vehicle_soc"]
+        if self._status is not None and "battery_level" in self._status:
+            return self._status["battery_level"]
         return None
 
     @property
@@ -1242,6 +1244,8 @@ class OpenEVSE:
         """Return battery range."""
         if self._status is not None and "vehicle_range" in self._status:
             return self._status["vehicle_range"]
+        if self._status is not None and "battery_range" in self._status:
+            return self._status["battery_range"]
         return None
 
     @property
@@ -1249,6 +1253,8 @@ class OpenEVSE:
         """Return time to full charge."""
         if self._status is not None and "vehicle_eta" in self._status:
             return self._status["vehicle_eta"]
+        if self._status is not None and "time_to_full_charge" in self._status:
+            return self._status["time_to_full_charge"]
         return None
 
     # There is currently no min/max amps JSON data
