@@ -899,7 +899,7 @@ class OpenEVSE:
         if self._config is not None and "max_current_soft" in self._config:
             return self._config["max_current_soft"]
         return self._status["pilot"]
-    
+
     @property
     def max_current(self) -> int | None:
         """Return the max current."""
