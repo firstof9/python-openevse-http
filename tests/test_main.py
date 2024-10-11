@@ -1752,3 +1752,14 @@ async def test_make_claim(test_charger, test_charger_v2, mock_aioclient, caplog)
         with caplog.at_level(logging.DEBUG):
             await test_charger_v2.make_claim()
             assert "Feature not supported for older firmware." in caplog.text
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger_new", 48), ("test_charger_v2", None)]
+)
+async def test_max_current(fixture, expected, request):
+    """Test max_current reply."""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    status = charger.max_current
+    assert status == expected
