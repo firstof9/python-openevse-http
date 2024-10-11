@@ -895,10 +895,17 @@ class OpenEVSE:
 
     @property
     def max_current_soft(self) -> int | None:
-        """Return the firmware version."""
+        """Return the max current soft."""
         if self._config is not None and "max_current_soft" in self._config:
             return self._config["max_current_soft"]
         return self._status["pilot"]
+
+    @property
+    def max_current(self) -> int | None:
+        """Return the max current."""
+        if self._status is not None and "max_current" in self._status:
+            return self._status["max_current"]
+        return None
 
     @property
     def wifi_firmware(self) -> str:

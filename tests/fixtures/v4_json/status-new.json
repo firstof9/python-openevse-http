@@ -55,5 +55,6 @@
     "total_week": 12345,
     "total_month": 123456,
     "total_year": 1234567,
-    "total_energy": 12345678
+    "total_energy": 12345678,
+    "max_current": 48
   }
