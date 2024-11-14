@@ -376,7 +376,7 @@ async def test_get_current_capacity(fixture, expected, request):
     [
         ("test_charger", 64582),
         ("test_charger_v2", 1585443),
-        ("test_charger_new", 12345678),
+        ("test_charger_new", 20127.22817),
     ],
 )
 async def test_get_usage_total(fixture, expected, request):
@@ -448,7 +448,7 @@ async def test_get_time(fixture, expected, request):
     [
         ("test_charger", 275.71),
         ("test_charger_v2", 7003.41),
-        ("test_charger_new", 7004),
+        ("test_charger_new", 0),
     ],
 )
 async def test_get_usage_session(fixture, expected, request):
@@ -1427,7 +1427,7 @@ async def test_get_has_limit(fixture, expected, request):
 
 @pytest.mark.parametrize(
     "fixture, expected",
-    [("test_charger", None), ("test_charger_v2", None), ("test_charger_new", 1234)],
+    [("test_charger", None), ("test_charger_v2", None), ("test_charger_new", 0)],
 )
 async def test_get_total_day(fixture, expected, request):
     """Test total_day reply."""
@@ -1439,7 +1439,11 @@ async def test_get_total_day(fixture, expected, request):
 
 @pytest.mark.parametrize(
     "fixture, expected",
-    [("test_charger", None), ("test_charger_v2", None), ("test_charger_new", 12345)],
+    [
+        ("test_charger", None),
+        ("test_charger_v2", None),
+        ("test_charger_new", 1.567628635),
+    ],
 )
 async def test_get_total_week(fixture, expected, request):
     """Test total_week reply."""
@@ -1451,7 +1455,11 @@ async def test_get_total_week(fixture, expected, request):
 
 @pytest.mark.parametrize(
     "fixture, expected",
-    [("test_charger", None), ("test_charger_v2", None), ("test_charger_new", 123456)],
+    [
+        ("test_charger", None),
+        ("test_charger_v2", None),
+        ("test_charger_new", 37.21857071),
+    ],
 )
 async def test_get_total_month(fixture, expected, request):
     """Test total_month reply."""
@@ -1463,7 +1471,11 @@ async def test_get_total_month(fixture, expected, request):
 
 @pytest.mark.parametrize(
     "fixture, expected",
-    [("test_charger", None), ("test_charger_v2", None), ("test_charger_new", 1234567)],
+    [
+        ("test_charger", None),
+        ("test_charger_v2", None),
+        ("test_charger_new", 2155.219982),
+    ],
 )
 async def test_get_total_year(fixture, expected, request):
     """Test total_year reply."""
@@ -1762,4 +1774,63 @@ async def test_max_current(fixture, expected, request):
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.max_current
+    assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger_new", 0), ("test_charger_v2", 0)]
+)
+async def test_emoncms_connected(fixture, expected, request):
+    """Test emoncms_connected reply."""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    status = charger.emoncms_connected
+    assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger_new", 0), ("test_charger_v2", None)]
+)
+async def test_ocpp_connected(fixture, expected, request):
+    """Test ocpp_connected reply."""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    status = charger.ocpp_connected
+    assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger_new", 1208725), ("test_charger_v2", None)]
+)
+async def test_uptime(fixture, expected, request):
+    """Test uptime reply."""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    status = charger.uptime
+    assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected", [("test_charger_new", 167436), ("test_charger_v2", None)]
+)
+async def test_freeram(fixture, expected, request):
+    """Test freeram reply."""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    status = charger.freeram
+    assert status == expected
+
+
+@pytest.mark.parametrize(
+    "fixture, expected",
+    [
+        ("test_charger_new", {"gfcicount": 1, "nogndcount": 0, "stuckcount": 0}),
+        ("test_charger_v2", {"gfcicount": 0, "nogndcount": 0, "stuckcount": 0}),
+    ],
+)
+async def test_checks_count(fixture, expected, request):
+    """Test checks_count reply."""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    status = charger.checks_count
     assert status == expected
