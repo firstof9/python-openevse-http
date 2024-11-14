@@ -838,9 +838,7 @@ class OpenEVSE:
 
         data["led_brightness"] = level
         _LOGGER.debug("Setting LED brightness to %s", level)
-        await self.process_request(
-            url=url, method="post", data=data
-        )  # noqa: E501
+        await self.process_request(url=url, method="post", data=data)  # noqa: E501
 
     @property
     def led_brightness(self) -> str:
