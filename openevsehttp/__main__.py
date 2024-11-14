@@ -832,7 +832,7 @@ class OpenEVSE:
         if not self._version_check("4.1.0"):
             _LOGGER.debug("Feature not supported for older firmware.")
             raise UnsupportedFeature
-        
+
         url = f"{self.url}config"
         data: dict[str, Any] = {}
 
@@ -842,13 +842,12 @@ class OpenEVSE:
             url=url, method="post", data=data
         )  # noqa: E501
         return response
-    
+
     @property
     def led_brightness(self) -> str:
         """Return charger led_brightness."""
         assert self._config is not None
-        return self._config["led_brightness"]    
-
+        return self._config["led_brightness"]
 
     @property
     def hostname(self) -> str:
@@ -1303,48 +1302,49 @@ class OpenEVSE:
             return self._config["max_current_hard"]
         return MAX_AMPS
 
-
     @property
     def mqtt_connected(self) -> bool:
         """Return the status of the mqtt connection."""
         if self._status is not None and "mqtt_connected" in self._status:
             return self._status["mqtt_connected"]
         return False
-    
 
     @property
     def emoncms_connected(self) -> bool:
         """Return the status of the emoncms connection."""
         if self._status is not None and "emoncms_connected" in self._status:
             return self._status["emoncms_connected"]
-        return False    
-    
+        return False
+
     @property
     def ocpp_connected(self) -> bool:
         """Return the status of the ocpp connection."""
         if self._status is not None and "ocpp_connected" in self._status:
             return self._status["ocpp_connected"]
-        return False        
-    
+        return False
+
     @property
     def uptime(self) -> int | None:
         """Return the unit uptime."""
         if self._status is not None and "uptime" in self._status:
             return self._status["uptime"]
-        return None         
-    
+        return None
+
     @property
     def freeram(self) -> int | None:
         """Return the unit uptime."""
         if self._status is not None and "freeram" in self._status:
             return self._status["freeram"]
-        return None        
+        return None
 
     # Safety counts
     @property
     def checks_count(self) -> dict | None:
         """Return the saftey checks counts."""
-        if self._status is not None and ["gfcicount", "nogndcount", "stuckcount"] in self._status:
+        if (
+            self._status is not None
+            and ["gfcicount", "nogndcount", "stuckcount"] in self._status
+        ):
             counts = {}
             counts["gfcicount"] = self._status["gfcicount"]
             counts["nogndcount"] = self._status["nogndcount"]
