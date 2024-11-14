@@ -1290,14 +1290,14 @@ class OpenEVSE:
         return False
 
     @property
-    def emoncms_connected(self) -> bool:
+    def emoncms_connected(self) -> bool | None:
         """Return the status of the emoncms connection."""
         if self._status is not None and "emoncms_connected" in self._status:
             return self._status["emoncms_connected"]
         return None
 
     @property
-    def ocpp_connected(self) -> bool:
+    def ocpp_connected(self) -> bool | None:
         """Return the status of the ocpp connection."""
         if self._status is not None and "ocpp_connected" in self._status:
             return self._status["ocpp_connected"]
