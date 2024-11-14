@@ -1834,3 +1834,38 @@ async def test_checks_count(fixture, expected, request):
     await charger.update()
     status = charger.checks_count
     assert status == expected
+
+
+async def test_led_brightness(test_charger_new, test_charger_v2, caplog):
+    """Test led_brightness reply."""
+    await test_charger_new.update()
+    status = test_charger_new.led_brightness
+    assert status == 125
+
+    await test_charger_v2.update()
+    with pytest.raises(UnsupportedFeature):
+        with caplog.at_level(logging.DEBUG):
+            status = await test_charger_v2.led_brightness
+    assert "Feature not supported for older firmware." in caplog.text
+
+
+async def test_set_led_brightness(
+    test_charger_new, test_charger_v2, mock_aioclient, caplog
+):
+    """Test set_led_brightness reply."""
+    await test_charger_new.update()
+    value = '{"msg": "OK"}'
+    mock_aioclient.post(
+        TEST_URL_CONFIG,
+        status=200,
+        body=value,
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_new.set_led_brightness(255)
+    assert "Setting LED brightness to 255" in caplog.text
+
+    await test_charger_v2.update()
+    with pytest.raises(UnsupportedFeature):
+        with caplog.at_level(logging.DEBUG):
+            await test_charger_v2.set_led_brightness(255)
+    assert "Feature not supported for older firmware." in caplog.text

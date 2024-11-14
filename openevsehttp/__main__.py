@@ -827,6 +827,28 @@ class OpenEVSE:
         response = await self.process_request(url=url, method="get")  # noqa: E501
         return response
 
+    async def set_led_brightness(self, level: int) -> None:
+        """Set LED brightness level."""
+        if not self._version_check("4.1.0"):
+            _LOGGER.debug("Feature not supported for older firmware.")
+            raise UnsupportedFeature
+
+        url = f"{self.url}config"
+        data: dict[str, Any] = {}
+
+        data["led_brightness"] = level
+        _LOGGER.debug("Setting LED brightness to %s", level)
+        await self.process_request(url=url, method="post", data=data)  # noqa: E501
+
+    @property
+    def led_brightness(self) -> str:
+        """Return charger led_brightness."""
+        if not self._version_check("4.1.0"):
+            _LOGGER.debug("Feature not supported for older firmware.")
+            raise UnsupportedFeature
+        assert self._config is not None
+        return self._config["led_brightness"]
+
     @property
     def hostname(self) -> str:
         """Return charger hostname."""
