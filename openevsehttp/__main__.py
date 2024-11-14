@@ -845,7 +845,7 @@ class OpenEVSE:
         """Return charger led_brightness."""
         if not self._version_check("4.1.0"):
             _LOGGER.debug("Feature not supported for older firmware.")
-            raise UnsupportedFeature        
+            raise UnsupportedFeature
         assert self._config is not None
         return self._config["led_brightness"]
 
