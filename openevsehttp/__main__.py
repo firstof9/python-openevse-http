@@ -1138,6 +1138,8 @@ class OpenEVSE:
         assert self._status is not None
         if "has_limit" in self._status:
             return self._status["has_limit"]
+        if "limit" in self._status:
+            return self._status["limit"]
         return None
 
     @property
@@ -1307,18 +1309,18 @@ class OpenEVSE:
         return False
 
     @property
-    def emoncms_connected(self) -> bool:
+    def emoncms_connected(self) -> bool | None:
         """Return the status of the emoncms connection."""
         if self._status is not None and "emoncms_connected" in self._status:
             return self._status["emoncms_connected"]
-        return False
+        return None
 
     @property
-    def ocpp_connected(self) -> bool:
+    def ocpp_connected(self) -> bool | None:
         """Return the status of the ocpp connection."""
         if self._status is not None and "ocpp_connected" in self._status:
             return self._status["ocpp_connected"]
-        return False
+        return None
 
     @property
     def uptime(self) -> int | None:
@@ -1329,7 +1331,7 @@ class OpenEVSE:
 
     @property
     def freeram(self) -> int | None:
-        """Return the unit uptime."""
+        """Return the unit freeram."""
         if self._status is not None and "freeram" in self._status:
             return self._status["freeram"]
         return None
@@ -1338,10 +1340,8 @@ class OpenEVSE:
     @property
     def checks_count(self) -> dict | None:
         """Return the saftey checks counts."""
-        if (
-            self._status is not None
-            and ["gfcicount", "nogndcount", "stuckcount"] in self._status
-        ):
+        attributes = ("gfcicount", "nogndcount", "stuckcount")
+        if self._status is not None and set(attributes).issubset(self._status.keys()):
             counts = {}
             counts["gfcicount"] = self._status["gfcicount"]
             counts["nogndcount"] = self._status["nogndcount"]
