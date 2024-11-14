@@ -841,7 +841,6 @@ class OpenEVSE:
         response = await self.process_request(
             url=url, method="post", data=data
         )  # noqa: E501
-        return response
 
     @property
     def led_brightness(self) -> str:
