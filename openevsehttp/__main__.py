@@ -923,6 +923,20 @@ class OpenEVSE:
         return self._status["pilot"]
 
     @property
+    async def async_charge_current(self) -> int | None:
+        """Return the charge current."""
+        try:
+            claims = None
+            claims = await self.list_claims()
+        except UnsupportedFeature:
+            pass
+        if claims is not None and "charge_current" in claims[0].keys():
+            return claims[0]["charge_current"]
+        if self._config is not None and "max_current_soft" in self._config:
+            return self._config["max_current_soft"]
+        return self._status["pilot"]
+
+    @property
     def max_current(self) -> int | None:
         """Return the max current."""
         if self._status is not None and "max_current" in self._status:

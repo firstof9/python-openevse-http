@@ -1869,3 +1869,33 @@ async def test_set_led_brightness(
         with caplog.at_level(logging.DEBUG):
             await test_charger_v2.set_led_brightness(255)
     assert "Feature not supported for older firmware." in caplog.text
+
+
+async def test_async_charge_current(
+    test_charger, test_charger_v2, mock_aioclient, caplog
+):
+    """Test list_claims function."""
+    await test_charger.update()
+    mock_aioclient.get(
+        TEST_URL_CLAIMS,
+        status=200,
+        body='[{"client":65540,"priority":10,"state":"enabled","auto_release":true,"charge_current":20}]',
+        repeat=False,
+    )
+
+    value = await test_charger.async_charge_current
+    assert value == 20
+
+    mock_aioclient.get(
+        TEST_URL_CLAIMS,
+        status=200,
+        body='[{"client":65540,"priority":10,"state":"disabled","auto_release":false}]',
+        repeat=False,
+    )
+
+    value = await test_charger.async_charge_current
+    assert value == 48
+
+    await test_charger_v2.update()
+    value = await test_charger_v2.async_charge_current
+    assert value == 25
