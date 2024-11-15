@@ -969,7 +969,7 @@ async def test_test_and_get(test_charger, test_charger_v2, mock_aioclient, caplo
     assert "Older firmware detected, missing serial." in caplog.text
 
 
-async def test_restart(test_charger_modified_ver, mock_aioclient, caplog):
+async def test_restart_wifi(test_charger_modified_ver, mock_aioclient, caplog):
     """Test v4 set divert mode."""
     await test_charger_modified_ver.update()
     mock_aioclient.post(
@@ -1079,7 +1079,9 @@ async def test_firmware_check(
         assert firmware is None
 
 
-async def test_evse_restart(test_charger_v2, mock_aioclient, caplog):
+async def test_evse_restart(
+    test_charger_v2, test_charger_modified_ver, mock_aioclient, caplog
+):
     """Test EVSE module restart."""
     await test_charger_v2.update()
     value = {"cmd": "OK", "ret": "$OK^20"}
@@ -1091,6 +1093,16 @@ async def test_evse_restart(test_charger_v2, mock_aioclient, caplog):
     with caplog.at_level(logging.DEBUG):
         await test_charger_v2.restart_evse()
     assert "EVSE Restart response: $OK^20" in caplog.text
+
+    await test_charger_modified_ver.update()
+    mock_aioclient.post(
+        TEST_URL_RESTART,
+        status=200,
+        body='{"msg": "restart evse"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_modified_ver.restart_evse()
+    assert "Restarting EVSE module via HTTP" in caplog.text
 
 
 @pytest.mark.parametrize(
