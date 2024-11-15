@@ -33,7 +33,7 @@ def test_charger_auth(mock_aioclient):
         status=200,
         body=load_fixture("v4_json/status.json"),
         repeat=True,
-    )    
+    )
     return main.OpenEVSE(TEST_TLD, user="testuser", pwd="fakepassword")
 
 
@@ -69,7 +69,7 @@ def test_charger(mock_aioclient):
         status=200,
         body=load_fixture("v4_json/status.json"),
         repeat=True,
-    )        
+    )
     return main.OpenEVSE(TEST_TLD)
 
 
@@ -91,7 +91,7 @@ def test_charger_dev(mock_aioclient):
         status=200,
         body=load_fixture("v4_json/status.json"),
         repeat=True,
-    )        
+    )
     return main.OpenEVSE(TEST_TLD)
 
 
@@ -113,7 +113,7 @@ def test_charger_new(mock_aioclient):
         status=200,
         body=load_fixture("v4_json/status-new.json"),
         repeat=True,
-    )        
+    )
     return main.OpenEVSE(TEST_TLD)
 
 

@@ -53,6 +53,7 @@ async def test_ws_state(test_charger):
     value = test_charger.ws_state
     assert value == None
 
+
 async def test_update_status(test_charger):
     """Test v4 Status reply."""
     data = json.loads(load_fixture("v4_json/status.json"))
