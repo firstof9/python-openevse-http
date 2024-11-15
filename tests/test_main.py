@@ -19,6 +19,7 @@ from openevsehttp.exceptions import (
     UnsupportedFeature,
 )
 from tests.common import load_fixture
+from openevsehttp.websocket import SIGNAL_CONNECTION_STATE, STATE_CONNECTED
 
 pytestmark = pytest.mark.asyncio
 
@@ -44,6 +45,19 @@ async def test_get_status_auth(test_charger_auth):
     await test_charger_auth.update()
     status = test_charger_auth.status
     assert status == "sleeping"
+
+
+async def test_ws_state(test_charger):
+    """Test v4 Status reply."""
+    await test_charger.update()
+    value = test_charger.ws_state
+    assert value == None
+
+async def test_update_status(test_charger):
+    """Test v4 Status reply."""
+    data = json.loads(load_fixture("v4_json/status.json"))
+    await test_charger._update_status("data", data, None)
+    assert test_charger._status == data
 
 
 async def test_get_status_auth_err(test_charger_auth_err):
