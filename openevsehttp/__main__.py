@@ -291,11 +291,9 @@ class OpenEVSE:
         await self.websocket.close()
         self._ws_listening = False
 
-
     def is_coroutine_function(callback):
         """Check if a callback is a coroutine function."""
         return asyncio.iscoroutinefunction(callback)
-
 
     @property
     def ws_state(self) -> Any:
