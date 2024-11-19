@@ -280,13 +280,20 @@ class OpenEVSE:
             self._status.update(data)
 
             if self.callback is not None:
-                self.callback()  # pylint: disable=not-callable
+                if self.is_coroutine_function(self.callback):
+                    await self.callback()  # pylint: disable=not-callable
+                else:
+                    self.callback()  # pylint: disable=not-callable
 
     async def ws_disconnect(self) -> None:
         """Disconnect the websocket listener."""
         assert self.websocket
         await self.websocket.close()
         self._ws_listening = False
+
+    def is_coroutine_function(self, callback):
+        """Check if a callback is a coroutine function."""
+        return asyncio.iscoroutinefunction(callback)
 
     @property
     def ws_state(self) -> Any:
