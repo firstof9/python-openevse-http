@@ -9,7 +9,7 @@ README_FILE = PROJECT_DIR / "README.md"
 VERSION = "0.1.65"
 
 setup(
-    name="python-openevse-http",
+    name="python_openevse_http",
     version=VERSION,
     url="https://github.com/firstof9/python-openevse-http",
     download_url="https://github.com/firstof9/python-openevse-http",
