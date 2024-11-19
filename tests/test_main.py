@@ -32,6 +32,7 @@ TEST_URL_RESTART = "http://openevse.test.tld/restart"
 TEST_URL_LIMIT = "http://openevse.test.tld/limit"
 TEST_URL_WS = "ws://openevse.test.tld/ws"
 TEST_URL_CLAIMS = "http://openevse.test.tld/claims"
+TEST_URL_CLAIMS_TARGET = "http://openevse.test.tld/claims/target"
 TEST_URL_GITHUB_v4 = (
     "https://api.github.com/repos/OpenEVSE/ESP32_WiFi_V4.x/releases/latest"
 )
@@ -1908,22 +1909,22 @@ async def test_set_led_brightness(
 async def test_async_charge_current(
     test_charger, test_charger_v2, mock_aioclient, caplog
 ):
-    """Test list_claims function."""
+    """Test async_charge_current function."""
     await test_charger.update()
     mock_aioclient.get(
-        TEST_URL_CLAIMS,
+        TEST_URL_CLAIMS_TARGET,
         status=200,
-        body='[{"client":65540,"priority":10,"state":"enabled","auto_release":true,"charge_current":20}]',
+        body='{"properties":{"state":"disabled","charge_current":28,"max_current":23,"auto_release":false},"claims":{"state":65540,"charge_current":65537,"max_current":65548}}',
         repeat=False,
     )
 
     value = await test_charger.async_charge_current
-    assert value == 20
+    assert value == 28
 
     mock_aioclient.get(
-        TEST_URL_CLAIMS,
+        TEST_URL_CLAIMS_TARGET,
         status=200,
-        body='[{"client":65540,"priority":10,"state":"disabled","auto_release":false}]',
+        body='{"properties":{"state":"disabled","max_current":23,"auto_release":false},"claims":{"state":65540,"charge_current":65537,"max_current":65548}}',
         repeat=False,
     )
 
