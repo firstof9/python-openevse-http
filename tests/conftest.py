@@ -11,6 +11,7 @@ from tests.common import load_fixture
 TEST_URL_STATUS = "http://openevse.test.tld/status"
 TEST_URL_CONFIG = "http://openevse.test.tld/config"
 TEST_URL_RAPI = "http://openevse.test.tld/r"
+TEST_URL_WS = "ws://openevse.test.tld/ws"
 TEST_TLD = "openevse.test.tld"
 
 
@@ -26,6 +27,12 @@ def test_charger_auth(mock_aioclient):
         TEST_URL_CONFIG,
         status=200,
         body=load_fixture("v4_json/config.json"),
+    )
+    mock_aioclient.get(
+        TEST_URL_WS,
+        status=200,
+        body=load_fixture("v4_json/status.json"),
+        repeat=True,
     )
     return main.OpenEVSE(TEST_TLD, user="testuser", pwd="fakepassword")
 
@@ -57,6 +64,12 @@ def test_charger(mock_aioclient):
         status=200,
         body=load_fixture("v4_json/config.json"),
     )
+    mock_aioclient.get(
+        TEST_URL_WS,
+        status=200,
+        body=load_fixture("v4_json/status.json"),
+        repeat=True,
+    )
     return main.OpenEVSE(TEST_TLD)
 
 
@@ -73,6 +86,12 @@ def test_charger_dev(mock_aioclient):
         status=200,
         body=load_fixture("v4_json/config-dev.json"),
     )
+    mock_aioclient.get(
+        TEST_URL_WS,
+        status=200,
+        body=load_fixture("v4_json/status.json"),
+        repeat=True,
+    )
     return main.OpenEVSE(TEST_TLD)
 
 
@@ -88,6 +107,12 @@ def test_charger_new(mock_aioclient):
         TEST_URL_CONFIG,
         status=200,
         body=load_fixture("v4_json/config-new.json"),
+    )
+    mock_aioclient.get(
+        TEST_URL_WS,
+        status=200,
+        body=load_fixture("v4_json/status-new.json"),
+        repeat=True,
     )
     return main.OpenEVSE(TEST_TLD)
 

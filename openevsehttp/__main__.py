@@ -815,13 +815,17 @@ class OpenEVSE:
         response = await self.process_request(url=url, method="delete")  # noqa: E501
         return response
 
-    async def list_claims(self) -> Any:
+    async def list_claims(self, target: bool | None = None) -> Any:
         """List all claims."""
         if not self._version_check("4.1.0"):
             _LOGGER.debug("Feature not supported for older firmware.")
             raise UnsupportedFeature
 
-        url = f"{self.url}claims"
+        target_check = ""
+        if target:
+            target_check = "/target"
+
+        url = f"{self.url}claims{target_check}"
 
         _LOGGER.debug("Getting claims on %s", url)
         response = await self.process_request(url=url, method="get")  # noqa: E501
@@ -918,6 +922,20 @@ class OpenEVSE:
     @property
     def max_current_soft(self) -> int | None:
         """Return the max current soft."""
+        if self._config is not None and "max_current_soft" in self._config:
+            return self._config["max_current_soft"]
+        return self._status["pilot"]
+
+    @property
+    async def async_charge_current(self) -> int | None:
+        """Return the charge current."""
+        try:
+            claims = None
+            claims = await self.list_claims(target=True)
+        except UnsupportedFeature:
+            pass
+        if claims is not None and "charge_current" in claims["properties"].keys():
+            return claims["properties"]["charge_current"]
         if self._config is not None and "max_current_soft" in self._config:
             return self._config["max_current_soft"]
         return self._status["pilot"]

@@ -19,6 +19,7 @@ from openevsehttp.exceptions import (
     UnsupportedFeature,
 )
 from tests.common import load_fixture
+from openevsehttp.websocket import SIGNAL_CONNECTION_STATE, STATE_CONNECTED
 
 pytestmark = pytest.mark.asyncio
 
@@ -31,6 +32,7 @@ TEST_URL_RESTART = "http://openevse.test.tld/restart"
 TEST_URL_LIMIT = "http://openevse.test.tld/limit"
 TEST_URL_WS = "ws://openevse.test.tld/ws"
 TEST_URL_CLAIMS = "http://openevse.test.tld/claims"
+TEST_URL_CLAIMS_TARGET = "http://openevse.test.tld/claims/target"
 TEST_URL_GITHUB_v4 = (
     "https://api.github.com/repos/OpenEVSE/ESP32_WiFi_V4.x/releases/latest"
 )
@@ -44,6 +46,20 @@ async def test_get_status_auth(test_charger_auth):
     await test_charger_auth.update()
     status = test_charger_auth.status
     assert status == "sleeping"
+
+
+async def test_ws_state(test_charger):
+    """Test v4 Status reply."""
+    await test_charger.update()
+    value = test_charger.ws_state
+    assert value == None
+
+
+async def test_update_status(test_charger):
+    """Test v4 Status reply."""
+    data = json.loads(load_fixture("v4_json/status.json"))
+    await test_charger._update_status("data", data, None)
+    assert test_charger._status == data
 
 
 async def test_get_status_auth_err(test_charger_auth_err):
@@ -105,6 +121,13 @@ async def test_send_command_parse_err(test_charger_auth, mock_aioclient):
     """Test v4 Status reply."""
     mock_aioclient.post(
         TEST_URL_RAPI, status=400, body='{"msg": "Could not parse JSON"}'
+    )
+    with pytest.raises(main.ParseJSONError):
+        status = await test_charger_auth.send_command("test")
+        assert status is None
+
+    mock_aioclient.post(
+        TEST_URL_RAPI, status=400, body='{"error": "Could not parse JSON"}'
     )
     with pytest.raises(main.ParseJSONError):
         status = await test_charger_auth.send_command("test")
@@ -947,7 +970,7 @@ async def test_test_and_get(test_charger, test_charger_v2, mock_aioclient, caplo
     assert "Older firmware detected, missing serial." in caplog.text
 
 
-async def test_restart(test_charger_modified_ver, mock_aioclient, caplog):
+async def test_restart_wifi(test_charger_modified_ver, mock_aioclient, caplog):
     """Test v4 set divert mode."""
     await test_charger_modified_ver.update()
     mock_aioclient.post(
@@ -1057,7 +1080,9 @@ async def test_firmware_check(
         assert firmware is None
 
 
-async def test_evse_restart(test_charger_v2, mock_aioclient, caplog):
+async def test_evse_restart(
+    test_charger_v2, test_charger_modified_ver, mock_aioclient, caplog
+):
     """Test EVSE module restart."""
     await test_charger_v2.update()
     value = {"cmd": "OK", "ret": "$OK^20"}
@@ -1069,6 +1094,16 @@ async def test_evse_restart(test_charger_v2, mock_aioclient, caplog):
     with caplog.at_level(logging.DEBUG):
         await test_charger_v2.restart_evse()
     assert "EVSE Restart response: $OK^20" in caplog.text
+
+    await test_charger_modified_ver.update()
+    mock_aioclient.post(
+        TEST_URL_RESTART,
+        status=200,
+        body='{"msg": "restart evse"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_modified_ver.restart_evse()
+    assert "Restarting EVSE module via HTTP" in caplog.text
 
 
 @pytest.mark.parametrize(
@@ -1869,3 +1904,33 @@ async def test_set_led_brightness(
         with caplog.at_level(logging.DEBUG):
             await test_charger_v2.set_led_brightness(255)
     assert "Feature not supported for older firmware." in caplog.text
+
+
+async def test_async_charge_current(
+    test_charger, test_charger_v2, mock_aioclient, caplog
+):
+    """Test async_charge_current function."""
+    await test_charger.update()
+    mock_aioclient.get(
+        TEST_URL_CLAIMS_TARGET,
+        status=200,
+        body='{"properties":{"state":"disabled","charge_current":28,"max_current":23,"auto_release":false},"claims":{"state":65540,"charge_current":65537,"max_current":65548}}',
+        repeat=False,
+    )
+
+    value = await test_charger.async_charge_current
+    assert value == 28
+
+    mock_aioclient.get(
+        TEST_URL_CLAIMS_TARGET,
+        status=200,
+        body='{"properties":{"state":"disabled","max_current":23,"auto_release":false},"claims":{"state":65540,"charge_current":65537,"max_current":65548}}',
+        repeat=False,
+    )
+
+    value = await test_charger.async_charge_current
+    assert value == 48
+
+    await test_charger_v2.update()
+    value = await test_charger_v2.async_charge_current
+    assert value == 25
