@@ -1756,14 +1756,14 @@ async def test_release_claim(test_charger, test_charger_v2, mock_aioclient, capl
     """Test release_claim function."""
     await test_charger.update()
     mock_aioclient.delete(
-        f"{TEST_URL_CLAIMS}/4",
+        f"{TEST_URL_CLAIMS}/20",
         status=200,
         body='[{"msg":"done"}]',
         repeat=True,
     )
     with caplog.at_level(logging.DEBUG):
         await test_charger.release_claim()
-        assert f"Releasing claim on {TEST_URL_CLAIMS}/4" in caplog.text
+        assert f"Releasing claim on {TEST_URL_CLAIMS}/20" in caplog.text
 
     with pytest.raises(UnsupportedFeature):
         with caplog.at_level(logging.DEBUG):
@@ -1775,7 +1775,7 @@ async def test_make_claim(test_charger, test_charger_v2, mock_aioclient, caplog)
     """Test make_claim function."""
     await test_charger.update()
     mock_aioclient.post(
-        f"{TEST_URL_CLAIMS}/4",
+        f"{TEST_URL_CLAIMS}/20",
         status=200,
         body='[{"msg":"done"}]',
         repeat=True,
@@ -1788,7 +1788,7 @@ async def test_make_claim(test_charger, test_charger_v2, mock_aioclient, caplog)
             "Claim data: {'auto_release': True, 'state': 'disabled', 'charge_current': 20, 'max_current': 20}"
             in caplog.text
         )
-        assert f"Setting up claim on {TEST_URL_CLAIMS}/4" in caplog.text
+        assert f"Setting up claim on {TEST_URL_CLAIMS}/20" in caplog.text
 
     with pytest.raises(ValueError):
         with caplog.at_level(logging.DEBUG):
