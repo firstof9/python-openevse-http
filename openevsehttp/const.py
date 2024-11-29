@@ -14,4 +14,5 @@ SHAPER_LIVE = "shaper_live_pwr"
 TYPE = "type"
 VALUE = "value"
 RELEASE = "release"
-CLIENT = 4
+# https://github.com/OpenEVSE/openevse_esp32_firmware/blob/master/src/evse_man.h#L28
+CLIENT = 20
