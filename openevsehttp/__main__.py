@@ -240,6 +240,7 @@ class OpenEVSE:
 
         if not self._ws_listening:
             self._loop.create_task(self.websocket.listen())
+            self._loop.create_task(self.repeat(300, self.websocket.keepalive()))
             pending = asyncio.all_tasks()
             self._ws_listening = True
             try:
@@ -300,6 +301,20 @@ class OpenEVSE:
         """Return the status of the websocket listener."""
         assert self.websocket
         return self.websocket.state
+
+    async def repeat(self, interval, func, *args, **kwargs):
+        """Run func every interval seconds.
+
+        If func has not finished before *interval*, will run again
+        immediately when the previous iteration finished.
+
+        *args and **kwargs are passed as the arguments to func.
+        """
+        while True:
+            await asyncio.gather(
+                func(*args, **kwargs),
+                asyncio.sleep(interval),
+            )
 
     async def get_schedule(self) -> Union[Dict[str, str], Dict[str, Any]]:
         """Return the current schedule."""

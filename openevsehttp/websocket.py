@@ -1,6 +1,7 @@
 """Websocket class for OpenEVSE HTTP."""
 
 import asyncio
+import json
 import logging
 
 import aiohttp  # type: ignore
@@ -39,6 +40,7 @@ class OpenEVSEWebsocket:
         self._state = None
         self.failed_attempts = 0
         self._error_reason = None
+        self._client = None
 
     @property
     def state(self):
@@ -74,6 +76,7 @@ class OpenEVSEWebsocket:
             ) as ws_client:
                 await OpenEVSEWebsocket.state.fset(self, STATE_CONNECTED)
                 self.failed_attempts = 0
+                self._client = ws_client
 
                 async for message in ws_client:
                     if self.state == STATE_STOPPED:
@@ -133,3 +136,16 @@ class OpenEVSEWebsocket:
     async def close(self):
         """Close the listening websocket."""
         await OpenEVSEWebsocket.state.fset(self, STATE_STOPPED)
+
+    async def keepalive(self):
+        """Send ping requests to websocket."""
+        data = json.dumps({"ping": 1})
+        _LOGGER.debug("Sending message: %s to websocket.", data)
+        try:
+            await self._client.send_str(data)
+            _LOGGER.debug("Ping message sent.")
+        except TypeError as err:
+            _LOGGER.error("Attempt to send ping data failed: %s", err)
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            _LOGGER.error("Problem sending ping request: %s", err)
+            await OpenEVSEWebsocket.state.fset(self, STATE_STOPPED)
