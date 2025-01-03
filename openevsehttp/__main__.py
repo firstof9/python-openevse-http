@@ -26,7 +26,6 @@ from .const import (
     TTF,
     TYPE,
     VALUE,
-    VERSION,
     VOLTAGE,
 )
 from .exceptions import (
