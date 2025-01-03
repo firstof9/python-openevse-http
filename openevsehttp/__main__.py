@@ -26,6 +26,7 @@ from .const import (
     TTF,
     TYPE,
     VALUE,
+    VERSION,
     VOLTAGE,
 )
 from .exceptions import (
@@ -239,8 +240,9 @@ class OpenEVSE:
             _LOGGER.debug("Using new event loop...")
 
         if not self._ws_listening:
+            _LOGGER.debug("Setting up websocket ping...")
+            self._loop.create_task(self.repeat(300, self.websocket.keepalive))
             self._loop.create_task(self.websocket.listen())
-            self._loop.create_task(self.repeat(300, self.websocket.keepalive()))
             pending = asyncio.all_tasks()
             self._ws_listening = True
             try:
@@ -311,10 +313,9 @@ class OpenEVSE:
         *args and **kwargs are passed as the arguments to func.
         """
         while True:
-            await asyncio.gather(
-                func(*args, **kwargs),
-                asyncio.sleep(interval),
-            )
+            await asyncio.sleep(interval)
+            await func(*args, **kwargs)
+
 
     async def get_schedule(self) -> Union[Dict[str, str], Dict[str, Any]]:
         """Return the current schedule."""
