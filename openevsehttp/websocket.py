@@ -146,6 +146,6 @@ class OpenEVSEWebsocket:
             _LOGGER.debug("Ping message sent.")
         except TypeError as err:
             _LOGGER.error("Attempt to send ping data failed: %s", err)
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-exception-caught
             _LOGGER.error("Problem sending ping request: %s", err)
             await OpenEVSEWebsocket.state.fset(self, STATE_STOPPED)
