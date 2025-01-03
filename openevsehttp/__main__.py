@@ -302,7 +302,7 @@ class OpenEVSE:
         assert self.websocket
         return self.websocket.state
 
-    async def repeat(interval, func, *args, **kwargs):
+    async def repeat(self, interval, func, *args, **kwargs):
         """Run func every interval seconds.
 
         If func has not finished before *interval*, will run again
