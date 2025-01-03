@@ -316,7 +316,6 @@ class OpenEVSE:
             await asyncio.sleep(interval)
             await func(*args, **kwargs)
 
-
     async def get_schedule(self) -> Union[Dict[str, str], Dict[str, Any]]:
         """Return the current schedule."""
         url = f"{self.url}schedule"
