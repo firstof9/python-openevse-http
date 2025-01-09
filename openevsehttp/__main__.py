@@ -271,7 +271,7 @@ class OpenEVSE:
                     error,
                 )
                 self._ws_listening = False
-                self.ws_disconnect()
+                await self.ws_disconnect()
 
         elif msgtype == "data":
             _LOGGER.debug("Websocket data: %s", data)
