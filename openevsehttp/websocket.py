@@ -1,6 +1,7 @@
 """Websocket class for OpenEVSE HTTP."""
 
 import asyncio
+import datetime
 import json
 import logging
 
@@ -13,6 +14,7 @@ MAX_FAILED_ATTEMPTS = 5
 ERROR_AUTH_FAILURE = "Authorization failure"
 ERROR_TOO_MANY_RETRIES = "Too many retries"
 ERROR_UNKNOWN = "Unknown"
+ERROR_PING_TIMEOUT = "No pong reply"
 
 SIGNAL_CONNECTION_STATE = "websocket_state"
 STATE_CONNECTED = "connected"
@@ -41,6 +43,8 @@ class OpenEVSEWebsocket:
         self.failed_attempts = 0
         self._error_reason = None
         self._client = None
+        self._ping = None
+        self._pong = None
 
     @property
     def state(self):
@@ -86,6 +90,8 @@ class OpenEVSEWebsocket:
                         msg = message.json()
                         msgtype = "data"
                         await self.callback(msgtype, msg, None)
+                        if "pong" in msg.keys:
+                            self._pong = datetime.datetime.now()
 
                     elif message.type == aiohttp.WSMsgType.CLOSED:
                         _LOGGER.warning("Websocket connection closed")
@@ -139,13 +145,22 @@ class OpenEVSEWebsocket:
 
     async def keepalive(self):
         """Send ping requests to websocket."""
+        if self._ping and self._pong:
+            time_delta = self._pong - self._ping
+            if time_delta < 0:
+                # Negitive time should indicate no pong reply so consider the
+                # websocket disconnected.
+                await OpenEVSEWebsocket.state.fset(self, STATE_DISCONNECTED)
+                self._error_reason = ERROR_PING_TIMEOUT
+
         data = json.dumps({"ping": 1})
         _LOGGER.debug("Sending message: %s to websocket.", data)
         try:
             await self._client.send_str(data)
+            self._ping = datetime.datetime.now()
             _LOGGER.debug("Ping message sent.")
         except TypeError as err:
             _LOGGER.error("Attempt to send ping data failed: %s", err)
         except Exception as err:  # pylint: disable=broad-exception-caught
             _LOGGER.error("Problem sending ping request: %s", err)
-            await OpenEVSEWebsocket.state.fset(self, STATE_STOPPED)
+            await OpenEVSEWebsocket.state.fset(self, STATE_DISCONNECTED)

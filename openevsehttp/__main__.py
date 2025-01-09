@@ -261,6 +261,7 @@ class OpenEVSE:
                     self.websocket.uri,
                 )
                 self._ws_listening = False
+                self.ws_start()
             # Stopped websockets without errors are expected during shutdown
             # and ignored
             elif data == STATE_STOPPED and error:
@@ -270,6 +271,7 @@ class OpenEVSE:
                     error,
                 )
                 self._ws_listening = False
+                self.ws_disconnect()
 
         elif msgtype == "data":
             _LOGGER.debug("Websocket data: %s", data)
