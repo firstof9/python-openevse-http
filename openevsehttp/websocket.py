@@ -90,7 +90,7 @@ class OpenEVSEWebsocket:
                         msg = message.json()
                         msgtype = "data"
                         await self.callback(msgtype, msg, None)
-                        if "pong" in msg.keys:
+                        if "pong" in msg.keys():
                             self._pong = datetime.datetime.now()
 
                     elif message.type == aiohttp.WSMsgType.CLOSED:
