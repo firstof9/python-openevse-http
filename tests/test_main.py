@@ -809,6 +809,7 @@ async def test_toggle_override(
         assert "Filtered firmware: 5.0.1" in caplog.text
     await test_charger_modified_ver.ws_disconnect()
 
+
 async def test_toggle_override_v2(test_charger_v2, mock_aioclient, caplog):
     """Test v4 Status reply."""
     await test_charger_v2.update()
@@ -1506,6 +1507,7 @@ async def test_set_service_level(test_charger, mock_aioclient, caplog):
         await test_charger.set_service_level("A")
     await test_charger.ws_disconnect()
 
+
 @pytest.mark.parametrize(
     "fixture, expected",
     [("test_charger", None), ("test_charger_v2", None), ("test_charger_new", False)],
@@ -1653,7 +1655,7 @@ async def test_self_production(test_charger, test_charger_v2, mock_aioclient, ca
         with caplog.at_level(logging.DEBUG):
             await test_charger_v2.self_production(-3000, 1000)
             assert "Feature not supported for older firmware." in caplog.text
-        await test_charger.ws_disconnect()            
+        await test_charger.ws_disconnect()
 
 
 async def test_soc(test_charger, test_charger_v2, mock_aioclient, caplog):
@@ -1681,14 +1683,13 @@ async def test_soc(test_charger, test_charger_v2, mock_aioclient, caplog):
 
         await test_charger.soc(None)
         assert "No SOC data to send to device." in caplog.text
-        await test_charger.ws_disconnect()        
+        await test_charger.ws_disconnect()
 
     with pytest.raises(UnsupportedFeature):
         with caplog.at_level(logging.DEBUG):
             await test_charger_v2.soc(50, 90, 3100)
             assert "Feature not supported for older firmware." in caplog.text
         await test_charger_v2.ws_disconnect()
-
 
 
 async def test_set_limit(
