@@ -231,12 +231,13 @@ class OpenEVSE:
 
     def _start_listening(self):
         """Start the websocket listener."""
-        try:
-            _LOGGER.debug("Attempting to find running loop...")
-            self._loop = asyncio.get_running_loop()
-        except RuntimeError:
-            self._loop = asyncio.get_event_loop()
-            _LOGGER.debug("Using new event loop...")
+        if not self._loop:
+            try:
+                _LOGGER.debug("Attempting to find running loop...")
+                self._loop = asyncio.get_running_loop()
+            except RuntimeError:
+                self._loop = asyncio.get_event_loop()
+                _LOGGER.debug("Using new event loop...")
 
         if not self._ws_listening:
             _LOGGER.debug("Setting up websocket ping...")
@@ -260,6 +261,7 @@ class OpenEVSE:
                     "Websocket to %s disconnected, retrying",
                     self.websocket.uri,
                 )
+                _LOGGER.debug("Disconnect message: %s", error)
                 self._ws_listening = False
                 self.ws_start()
             # Stopped websockets without errors are expected during shutdown
@@ -291,9 +293,9 @@ class OpenEVSE:
 
     async def ws_disconnect(self) -> None:
         """Disconnect the websocket listener."""
+        self._ws_listening = False
         assert self.websocket
         await self.websocket.close()
-        self._ws_listening = False
 
     def is_coroutine_function(self, callback):
         """Check if a callback is a coroutine function."""
