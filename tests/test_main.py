@@ -46,6 +46,7 @@ async def test_get_status_auth(test_charger_auth):
     await test_charger_auth.update()
     status = test_charger_auth.status
     assert status == "sleeping"
+    await test_charger_auth.ws_disconnect()
 
 
 async def test_ws_state(test_charger):
@@ -53,6 +54,7 @@ async def test_ws_state(test_charger):
     await test_charger.update()
     value = test_charger.ws_state
     assert value == None
+    await test_charger.ws_disconnect()
 
 
 async def test_update_status(test_charger):
@@ -177,6 +179,7 @@ async def test_get_status(fixture, expected, request):
     await charger.update()
     status = charger.status
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -189,6 +192,7 @@ async def test_get_ssid(fixture, expected, request):
     await charger.update()
     status = charger.wifi_ssid
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -200,6 +204,7 @@ async def test_get_firmware(fixture, expected, request):
     await charger.update()
     status = charger.openevse_firmware
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -212,6 +217,7 @@ async def test_get_hostname(fixture, expected, request):
     await charger.update()
     status = charger.hostname
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -235,6 +241,7 @@ async def test_get_ammeter_scale_factor(fixture, expected, request):
     await charger.update()
     status = charger.ammeter_scale_factor
     assert status == expected
+    await charger.ws_disconnect()
 
 
 # Checks don't seem to be working
@@ -253,6 +260,7 @@ async def test_get_service_level(fixture, expected, request):
     await charger.update()
     status = charger.service_level
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -270,6 +278,7 @@ async def test_get_wifi_firmware(fixture, expected, request):
     await charger.update()
     status = charger.wifi_firmware
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -282,6 +291,7 @@ async def test_get_ip_address(fixture, expected, request):
     await charger.update()
     status = charger.ip_address
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -304,6 +314,7 @@ async def test_get_mode(fixture, expected, request):
     await charger.update()
     status = charger.mode
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -315,6 +326,7 @@ async def test_get_using_ethernet(fixture, expected, request):
     await charger.update()
     status = charger.using_ethernet
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -326,6 +338,7 @@ async def test_get_stuck_relay_trip_count(fixture, expected, request):
     await charger.update()
     status = charger.stuck_relay_trip_count
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -337,6 +350,7 @@ async def test_get_no_gnd_trip_count(fixture, expected, request):
     await charger.update()
     status = charger.no_gnd_trip_count
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -348,6 +362,7 @@ async def test_get_gfi_trip_count(fixture, expected, request):
     await charger.update()
     status = charger.gfi_trip_count
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -359,6 +374,7 @@ async def test_get_charge_time_elapsed(fixture, expected, request):
     await charger.update()
     status = charger.charge_time_elapsed
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -370,6 +386,7 @@ async def test_get_wifi_signal(fixture, expected, request):
     await charger.update()
     status = charger.wifi_signal
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -381,6 +398,7 @@ async def test_get_charging_current(fixture, expected, request):
     await charger.update()
     status = charger.charging_current
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -392,6 +410,7 @@ async def test_get_current_capacity(fixture, expected, request):
     await charger.update()
     status = charger.current_capacity
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -408,6 +427,7 @@ async def test_get_usage_total(fixture, expected, request):
     await charger.update()
     status = charger.usage_total
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -419,6 +439,7 @@ async def test_get_ambient_temperature(fixture, expected, request):
     await charger.update()
     status = charger.ambient_temperature
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -430,6 +451,7 @@ async def test_get_rtc_temperature(fixture, expected, request):
     await charger.update()
     status = charger.rtc_temperature
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -441,6 +463,7 @@ async def test_get_ir_temperature(fixture, expected, request):
     await charger.update()
     status = charger.ir_temperature
     assert status is None
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -452,6 +475,7 @@ async def test_get_esp_temperature(fixture, expected, request):
     await charger.update()
     status = charger.esp_temperature
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -464,6 +488,7 @@ async def test_get_time(fixture, expected, request):
     await charger.update()
     status = charger.time
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -480,6 +505,7 @@ async def test_get_usage_session(fixture, expected, request):
     await charger.update()
     status = charger.usage_session
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -491,6 +517,7 @@ async def test_get_protocol_version(fixture, expected, request):
     await charger.update()
     status = charger.protocol_version
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -502,6 +529,7 @@ async def test_get_min_amps(fixture, expected, request):
     await charger.update()
     status = charger.min_amps
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -513,6 +541,7 @@ async def test_get_max_amps(fixture, expected, request):
     await charger.update()
     status = charger.max_amps
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -524,6 +553,7 @@ async def test_get_ota_update(fixture, expected, request):
     await charger.update()
     status = charger.ota_update
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize("fixture, expected", [("test_charger", 1)])
@@ -533,6 +563,7 @@ async def test_get_vehicle(fixture, expected, request):
     await charger.update()
     status = charger.vehicle
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -545,6 +576,7 @@ async def test_get_state(fixture, expected, request):
     await charger.update()
     status = charger.state
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -556,6 +588,7 @@ async def test_get_tempt(fixture, expected, request):
     await charger.update()
     status = charger.temp_check_enabled
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -567,6 +600,7 @@ async def test_get_diodet(fixture, expected, request):
     await charger.update()
     status = charger.diode_check_enabled
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -578,6 +612,7 @@ async def test_get_ventt(fixture, expected, request):
     await charger.update()
     status = charger.vent_required_enabled
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -589,6 +624,7 @@ async def test_get_groundt(fixture, expected, request):
     await charger.update()
     status = charger.ground_check_enabled
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -600,6 +636,7 @@ async def test_get_relayt(fixture, expected, request):
     await charger.update()
     status = charger.stuck_relay_check_enabled
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -611,6 +648,7 @@ async def test_get_divertmode(fixture, expected, request):
     await charger.update()
     status = charger.divertmode
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -622,6 +660,7 @@ async def test_get_charge_rate(fixture, expected, request):
     await charger.update()
     status = charger.charge_rate
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -634,6 +673,7 @@ async def test_get_available_current(fixture, expected, request):
     with pytest.raises(KeyError):
         status = charger.available_current
         # assert status == expected
+        await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -646,6 +686,7 @@ async def test_get_smoothed_available_current(fixture, expected, request):
     with pytest.raises(KeyError):
         status = charger.smoothed_available_current
         # assert status == expected
+        await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -658,6 +699,7 @@ async def test_get_divert_active(fixture, expected, request):
     await charger.update()
     status = charger.divert_active
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -670,6 +712,7 @@ async def test_get_manual_override(fixture, expected, request):
     with pytest.raises(KeyError):
         status = charger.manual_override
         # assert status == expected
+        await charger.ws_disconnect()
 
 
 async def test_toggle_override(
@@ -697,12 +740,14 @@ async def test_toggle_override(
     with caplog.at_level(logging.DEBUG):
         await test_charger.toggle_override()
     assert "Toggling manual override http" in caplog.text
+    await test_charger.ws_disconnect()
 
     await test_charger_dev.update()
     with caplog.at_level(logging.DEBUG):
         await test_charger_dev.toggle_override()
     assert "Stripping 'dev' from version." in caplog.text
     assert "Toggling manual override http" in caplog.text
+    await test_charger_dev.ws_disconnect()
 
     value = {
         "state": "active",
@@ -722,6 +767,7 @@ async def test_toggle_override(
     with caplog.at_level(logging.DEBUG):
         await test_charger_new.toggle_override()
     assert "Toggling manual override http" in caplog.text
+    await test_charger_new.ws_disconnect()
 
     value = {
         "state": "disabled",
@@ -761,6 +807,7 @@ async def test_toggle_override(
         await test_charger_modified_ver.toggle_override()
         assert "Detected firmware: v5.0.1_modified" in caplog.text
         assert "Filtered firmware: 5.0.1" in caplog.text
+    await test_charger_modified_ver.ws_disconnect()
 
 
 async def test_toggle_override_v2(test_charger_v2, mock_aioclient, caplog):
@@ -807,6 +854,7 @@ async def test_wifi_serial(fixture, expected, request):
     await charger.update()
     status = charger.wifi_serial
     assert status == expected
+    await charger.ws_disconnect()
 
 
 async def test_set_current(test_charger, mock_aioclient, caplog):
@@ -885,6 +933,7 @@ async def test_get_charging_power(fixture, expected, request):
     await charger.update()
     status = charger.charging_power
     assert status == expected
+    await charger.ws_disconnect()
 
 
 async def test_set_divertmode(
@@ -1115,6 +1164,7 @@ async def test_shaper_active(fixture, expected, request):
     await charger.update()
     status = charger.shaper_active
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -1126,6 +1176,7 @@ async def test_shaper_live_power(fixture, expected, request):
     await charger.update()
     status = charger.shaper_live_power
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -1138,6 +1189,7 @@ async def test_shaper_current_power(fixture, expected, request):
     await charger.update()
     status = charger.shaper_current_power
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -1149,6 +1201,7 @@ async def test_shaper_max_power(fixture, expected, request):
     await charger.update()
     status = charger.shaper_max_power
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -1160,6 +1213,7 @@ async def test_vehicle_soc(fixture, expected, request):
     await charger.update()
     status = charger.vehicle_soc
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -1171,6 +1225,7 @@ async def test_vehicle_range(fixture, expected, request):
     await charger.update()
     status = charger.vehicle_range
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -1182,6 +1237,7 @@ async def test_vehicle_eta(fixture, expected, request):
     await charger.update()
     status = charger.vehicle_eta
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -1193,6 +1249,7 @@ async def test_max_current_soft(fixture, expected, request):
     await charger.update()
     status = charger.max_current_soft
     assert status == expected
+    await charger.ws_disconnect()
 
 
 async def test_set_override(
@@ -1383,6 +1440,7 @@ async def test_set_charge_mode(test_charger, mock_aioclient, caplog):
     )
     with pytest.raises(ValueError):
         await test_charger.set_charge_mode("test")
+    await test_charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -1394,6 +1452,7 @@ async def test_charge_mode(fixture, expected, request):
     await charger.update()
     status = charger.charge_mode
     assert status == expected
+    await charger.ws_disconnect()
 
 
 async def test_set_service_level(test_charger, mock_aioclient, caplog):
@@ -1446,6 +1505,7 @@ async def test_set_service_level(test_charger, mock_aioclient, caplog):
     )
     with pytest.raises(ValueError):
         await test_charger.set_service_level("A")
+    await test_charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -1458,6 +1518,7 @@ async def test_get_has_limit(fixture, expected, request):
     await charger.update()
     status = charger.has_limit
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -1470,6 +1531,7 @@ async def test_get_total_day(fixture, expected, request):
     await charger.update()
     status = charger.total_day
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -1486,6 +1548,7 @@ async def test_get_total_week(fixture, expected, request):
     await charger.update()
     status = charger.total_week
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -1502,6 +1565,7 @@ async def test_get_total_month(fixture, expected, request):
     await charger.update()
     status = charger.total_month
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -1518,6 +1582,7 @@ async def test_get_total_year(fixture, expected, request):
     await charger.update()
     status = charger.total_year
     assert status == expected
+    await charger.ws_disconnect()
 
 
 async def test_websocket_functions(test_charger, mock_aioclient, caplog):
@@ -1542,6 +1607,7 @@ async def test_get_state_raw(fixture, expected, request):
     await charger.update()
     status = charger.state_raw
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -1558,6 +1624,7 @@ async def test_get_state_raw(fixture, expected, request):
     await charger.update()
     status = charger.mqtt_connected
     assert status == expected
+    await charger.ws_disconnect()
 
 
 async def test_self_production(test_charger, test_charger_v2, mock_aioclient, caplog):
@@ -1588,6 +1655,7 @@ async def test_self_production(test_charger, test_charger_v2, mock_aioclient, ca
         with caplog.at_level(logging.DEBUG):
             await test_charger_v2.self_production(-3000, 1000)
             assert "Feature not supported for older firmware." in caplog.text
+        await test_charger.ws_disconnect()
 
 
 async def test_soc(test_charger, test_charger_v2, mock_aioclient, caplog):
@@ -1615,11 +1683,13 @@ async def test_soc(test_charger, test_charger_v2, mock_aioclient, caplog):
 
         await test_charger.soc(None)
         assert "No SOC data to send to device." in caplog.text
+        await test_charger.ws_disconnect()
 
     with pytest.raises(UnsupportedFeature):
         with caplog.at_level(logging.DEBUG):
             await test_charger_v2.soc(50, 90, 3100)
             assert "Feature not supported for older firmware." in caplog.text
+        await test_charger_v2.ws_disconnect()
 
 
 async def test_set_limit(
@@ -1810,6 +1880,7 @@ async def test_max_current(fixture, expected, request):
     await charger.update()
     status = charger.max_current
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -1821,6 +1892,7 @@ async def test_emoncms_connected(fixture, expected, request):
     await charger.update()
     status = charger.emoncms_connected
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -1832,6 +1904,7 @@ async def test_ocpp_connected(fixture, expected, request):
     await charger.update()
     status = charger.ocpp_connected
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -1843,6 +1916,7 @@ async def test_uptime(fixture, expected, request):
     await charger.update()
     status = charger.uptime
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -1854,6 +1928,7 @@ async def test_freeram(fixture, expected, request):
     await charger.update()
     status = charger.freeram
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -1869,6 +1944,7 @@ async def test_checks_count(fixture, expected, request):
     await charger.update()
     status = charger.checks_count
     assert status == expected
+    await charger.ws_disconnect()
 
 
 async def test_led_brightness(test_charger_new, test_charger_v2, caplog):
@@ -1930,7 +2006,9 @@ async def test_async_charge_current(
 
     value = await test_charger.async_charge_current
     assert value == 48
+    await test_charger.ws_disconnect()
 
     await test_charger_v2.update()
     value = await test_charger_v2.async_charge_current
     assert value == 25
+    await test_charger_v2.ws_disconnect()

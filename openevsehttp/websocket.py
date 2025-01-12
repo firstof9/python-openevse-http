@@ -107,7 +107,7 @@ class OpenEVSEWebsocket:
                 self._error_reason = ERROR_AUTH_FAILURE
             else:
                 _LOGGER.error("Unexpected response received: %s", error)
-                self._error_reason = ERROR_UNKNOWN
+                self._error_reason = error
             await OpenEVSEWebsocket.state.fset(self, STATE_STOPPED)
         except (aiohttp.ClientConnectionError, asyncio.TimeoutError) as error:
             if self.failed_attempts >= MAX_FAILED_ATTEMPTS:
@@ -126,7 +126,7 @@ class OpenEVSEWebsocket:
         except Exception as error:  # pylint: disable=broad-except
             if self.state != STATE_STOPPED:
                 _LOGGER.exception("Unexpected exception occurred: %s", error)
-                self._error_reason = ERROR_UNKNOWN
+                self._error_reason = error
                 await OpenEVSEWebsocket.state.fset(self, STATE_STOPPED)
         else:
             if self.state != STATE_STOPPED:
