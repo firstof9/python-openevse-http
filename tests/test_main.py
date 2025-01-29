@@ -2012,3 +2012,50 @@ async def test_async_charge_current(
     value = await test_charger_v2.async_charge_current
     assert value == 25
     await test_charger_v2.ws_disconnect()
+
+async def test_async_override_state(test_charger, test_charger_v2, mock_aioclient, caplog):
+    """Test get override function."""
+    await test_charger.update()
+    value = {
+        "state": "active",
+        "charge_current": 0,
+        "max_current": 0,
+        "energy_limit": 0,
+        "time_limit": 0,
+        "auto_release": True,
+    }
+    mock_aioclient.get(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body=json.dumps(value),
+    )
+    with caplog.at_level(logging.DEBUG):
+        status = await test_charger.async_override_state
+        assert status == "active"
+
+    value = {
+        "state": "disabled",
+    }
+    mock_aioclient.get(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body=json.dumps(value),
+    )   
+    with caplog.at_level(logging.DEBUG):
+        status = await test_charger.async_override_state
+        assert status == "disabled"        
+
+    value = {}
+    mock_aioclient.get(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body=json.dumps(value),
+    )   
+    with caplog.at_level(logging.DEBUG):
+        status = await test_charger.async_override_state
+        assert status == "auto"            
+
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_v2.update()
+        await test_charger_v2.async_override_state
+        assert "Override state unavailable on older firmware." in caplog.text

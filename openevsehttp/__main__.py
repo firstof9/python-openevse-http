@@ -1394,3 +1394,15 @@ class OpenEVSE:
             counts["stuckcount"] = self._status["stuckcount"]
             return counts
         return None
+
+    @property
+    async def async_override_state(self) -> str | None:
+        """Return the unit override state."""
+        try:
+            override = await self.get_override()
+        except UnsupportedFeature:
+            _LOGGER.debug("Override state unavailable on older firmware.")
+            return None
+        if "state" in override.keys():
+            return override["state"]
+        return "auto"
