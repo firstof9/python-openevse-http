@@ -1393,7 +1393,6 @@ class OpenEVSE:
             counts["nogndcount"] = self._status["nogndcount"]
             counts["stuckcount"] = self._status["stuckcount"]
             return counts
-        return None
 
     @property
     async def async_override_state(self) -> str | None:
