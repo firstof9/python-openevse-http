@@ -397,7 +397,7 @@ class OpenEVSE:
             raise UnsupportedFeature
         url = f"{self.url}override"
 
-        data: dict[str, Any] = {}
+        data: dict[str, Any] = await self.get_override()
 
         if state not in ["active", "disabled", None]:
             _LOGGER.error("Invalid override state: %s", state)
@@ -644,7 +644,6 @@ class OpenEVSE:
         return False
 
     # HTTP Posting of grid voltage
-
     async def grid_voltage(self, voltage: int | None = None) -> None:
         """Send pushed sensor data to grid voltage."""
         if not self._version_check("4.0.0"):
@@ -665,7 +664,6 @@ class OpenEVSE:
             _LOGGER.debug("Voltage posting response: %s", response)
 
     # Self production HTTP Posting
-
     async def self_production(
         self,
         grid: int | None = None,
@@ -743,7 +741,7 @@ class OpenEVSE:
             raise UnsupportedFeature
 
         url = f"{self.url}limit"
-        data: Dict[str, Any] = {}
+        data: Dict[str, Any] = await self.get_limit()
         valid_types = ["time", "energy", "soc", "range"]
 
         if limit_type not in valid_types:
