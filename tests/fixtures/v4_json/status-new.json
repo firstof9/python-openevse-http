@@ -63,7 +63,7 @@
   "shaper": 0,
   "shaper_live_pwr": 0,
   "shaper_cur": 0,
-  "shaper_updated": false,
+  "shaper_updated": true,
   "service_level": 2,
   "limit": false,
   "ota_update": 0,
