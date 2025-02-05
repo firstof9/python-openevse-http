@@ -1676,7 +1676,7 @@ async def test_get_state_raw(fixture, expected, request):
         ("test_charger_broken", False),
     ],
 )
-async def test_get_state_raw(fixture, expected, request):
+async def test_get_mqtt_connected(fixture, expected, request):
     """Test v4 Status reply."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
@@ -2126,3 +2126,21 @@ async def test_async_override_state(
         await test_charger_v2.update()
         await test_charger_v2.async_override_state
         assert "Override state unavailable on older firmware." in caplog.text
+
+
+@pytest.mark.parametrize(
+    "fixture, expected",
+    [
+        ("test_charger", False),
+        ("test_charger_v2", False),
+        ("test_charger_broken", False),
+        ("test_charger_new", True),
+    ],
+)
+async def test_get_shaper_updated(fixture, expected, request):
+    """Test v4 Status reply."""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    status = charger.shaper_updated
+    assert status == expected
+    await charger.ws_disconnect()

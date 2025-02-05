@@ -1272,6 +1272,7 @@ class OpenEVSE:
             return round(self._status["voltage"] * self._status["amp"], 2)
         return None
 
+    # Shaper values
     @property
     def shaper_active(self) -> bool | None:
         """Return if shper is active."""
@@ -1302,6 +1303,14 @@ class OpenEVSE:
             return self._status["shaper_max_pwr"]
         return None
 
+    @property
+    def shaper_updated(self) -> bool:
+        """Return shaper updated boolean."""
+        if self._status is not None and "shaper_updated" in self._status:
+            return self._status["shaper_updated"]
+        return False
+
+    # Vehicle values
     @property
     def vehicle_soc(self) -> int | None:
         """Return battery level."""
