@@ -1288,8 +1288,8 @@ class OpenEVSE:
         return None
 
     @property
-    def shaper_current_power(self) -> int | None:
-        """Return shaper live power reading."""
+    def shaper_available_current(self) -> float | None:
+        """Return shaper available current."""
         if self._status is not None and "shaper_cur" in self._status:
             if self._status["shaper_cur"] == 255:
                 return self._status["pilot"]

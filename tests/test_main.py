@@ -1224,10 +1224,10 @@ async def test_shaper_live_power(fixture, expected, request):
     [("test_charger", 21), ("test_charger_v2", None), ("test_charger_broken", 48)],
 )
 async def test_shaper_current_power(fixture, expected, request):
-    """Test shaper_current_power reply."""
+    """Test shaper_available_current reply."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
-    status = charger.shaper_current_power
+    status = charger.shaper_available_current
     assert status == expected
     await charger.ws_disconnect()
 
