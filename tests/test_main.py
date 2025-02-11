@@ -2152,7 +2152,7 @@ async def test_get_shaper_updated(fixture, expected, request):
 async def test_get_status(test_charger_timeout, caplog):
     """Test v4 Status reply."""
     with caplog.at_level(logging.DEBUG):
-        with pytest.raises(TimeoutError):    
+        with pytest.raises(TimeoutError):
             await test_charger_timeout.update()
         assert test_charger_timeout.websocket is None
         assert not test_charger_timeout._ws_listening
