@@ -153,12 +153,12 @@ class OpenEVSE:
                         await self.update()
                     return message
 
-            except (TimeoutError, ServerTimeoutError):
+            except (TimeoutError, ServerTimeoutError) as err:
                 _LOGGER.error("%s: %s", ERROR_TIMEOUT, url)
-                message = {"msg": ERROR_TIMEOUT}
+                raise err
             except ContentTypeError as err:
-                _LOGGER.error("%s", err)
-                message = {"msg": err}
+                _LOGGER.error("Content error: %s", err.message)
+                raise err
 
             await session.close()
             return message
@@ -263,7 +263,7 @@ class OpenEVSE:
                 )
                 _LOGGER.debug("Disconnect message: %s", error)
                 self._ws_listening = False
-                self.ws_start()
+
             # Stopped websockets without errors are expected during shutdown
             # and ignored
             elif data == STATE_STOPPED and error:
@@ -273,7 +273,6 @@ class OpenEVSE:
                     error,
                 )
                 self._ws_listening = False
-                await self.ws_disconnect()
 
         elif msgtype == "data":
             _LOGGER.debug("Websocket data: %s", data)
@@ -428,6 +427,7 @@ class OpenEVSE:
         #   3.x: use RAPI commands $FE (enable) and $FS (sleep)
         #   4.x: use HTTP API call
         lower = "4.0.0"
+        msg = ""
         if self._version_check(lower):
             url = f"{self.url}override"
 

@@ -110,7 +110,7 @@ class OpenEVSEWebsocket:
                 self._error_reason = error
             await OpenEVSEWebsocket.state.fset(self, STATE_STOPPED)
         except (aiohttp.ClientConnectionError, asyncio.TimeoutError) as error:
-            if self.failed_attempts >= MAX_FAILED_ATTEMPTS:
+            if self.failed_attempts > MAX_FAILED_ATTEMPTS:
                 self._error_reason = ERROR_TOO_MANY_RETRIES
                 await OpenEVSEWebsocket.state.fset(self, STATE_STOPPED)
             elif self.state != STATE_STOPPED:
@@ -150,8 +150,8 @@ class OpenEVSEWebsocket:
             if time_delta < 0:
                 # Negitive time should indicate no pong reply so consider the
                 # websocket disconnected.
-                await OpenEVSEWebsocket.state.fset(self, STATE_DISCONNECTED)
                 self._error_reason = ERROR_PING_TIMEOUT
+                await OpenEVSEWebsocket.state.fset(self, STATE_DISCONNECTED)
 
         data = json.dumps({"ping": 1})
         _LOGGER.debug("Sending message: %s to websocket.", data)
