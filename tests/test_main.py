@@ -154,7 +154,8 @@ async def test_send_command_async_timeout(test_charger_auth, mock_aioclient, cap
         exception=TimeoutError,
     )
     with caplog.at_level(logging.DEBUG):
-        await test_charger_auth.send_command("test")
+        with pytest.raises(TimeoutError):
+            await test_charger_auth.send_command("test")
     assert main.ERROR_TIMEOUT in caplog.text
 
 
@@ -165,7 +166,8 @@ async def test_send_command_server_timeout(test_charger_auth, mock_aioclient, ca
         exception=ServerTimeoutError,
     )
     with caplog.at_level(logging.DEBUG):
-        await test_charger_auth.send_command("test")
+        with pytest.raises(main.ServerTimeoutError):
+            await test_charger_auth.send_command("test")
     assert f"{main.ERROR_TIMEOUT}: {TEST_URL_RAPI}" in caplog.text
 
 
@@ -838,9 +840,10 @@ async def test_toggle_override_v2_err(test_charger_v2, mock_aioclient, caplog):
         ),
     )
     with caplog.at_level(logging.DEBUG):
-        await test_charger_v2.toggle_override()
+        with pytest.raises(main.ContentTypeError):
+            await test_charger_v2.toggle_override()
     assert (
-        "Toggle response: 0, message='Attempt to decode JSON with unexpected mimetype: text/html', url='http://openevse.test.tld/r'"
+        "Content error: Attempt to decode JSON with unexpected mimetype: text/html"
         in caplog.text
     )
 
@@ -2144,3 +2147,15 @@ async def test_get_shaper_updated(fixture, expected, request):
     status = charger.shaper_updated
     assert status == expected
     await charger.ws_disconnect()
+
+
+async def test_get_status(test_charger_timeout, caplog):
+    """Test v4 Status reply."""
+    with caplog.at_level(logging.DEBUG):
+        with pytest.raises(TimeoutError):    
+            await test_charger_timeout.update()
+        assert test_charger_timeout.websocket is None
+        assert not test_charger_timeout._ws_listening
+    assert "Updating data from http://openevse.test.tld/status" in caplog.text
+    assert "Status update:" not in caplog.text
+    assert "Config update:" not in caplog.text
