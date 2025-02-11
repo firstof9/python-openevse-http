@@ -242,8 +242,8 @@ class OpenEVSE:
 
         if not self._ws_listening:
             _LOGGER.debug("Setting up websocket ping...")
-            self._loop.create_task(self.repeat(300, self.websocket.keepalive))
             self._loop.create_task(self.websocket.listen())
+            self._loop.create_task(self.repeat(300, self.websocket.keepalive))
             pending = asyncio.all_tasks()
             self._ws_listening = True
             try:
@@ -296,11 +296,6 @@ class OpenEVSE:
         self._ws_listening = False
         assert self.websocket
         await self.websocket.close()
-        if self._loop:
-            try:
-                self._loop.cancel()
-            except AttributeError:
-                pass
 
     def is_coroutine_function(self, callback):
         """Check if a callback is a coroutine function."""
@@ -320,7 +315,7 @@ class OpenEVSE:
 
         *args and **kwargs are passed as the arguments to func.
         """
-        while True:
+        while self.ws_state != "stopped":
             await asyncio.sleep(interval)
             await func(*args, **kwargs)
 
