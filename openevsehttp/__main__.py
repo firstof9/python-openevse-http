@@ -91,6 +91,7 @@ class OpenEVSE:
         self.websocket: OpenEVSEWebsocket | None = None
         self.callback: Callable | None = None
         self._loop = None
+        self.tasks = None
 
     async def process_request(
         self,
@@ -295,6 +296,11 @@ class OpenEVSE:
         self._ws_listening = False
         assert self.websocket
         await self.websocket.close()
+        if self._loop:
+            try:
+                self._loop.cancel()
+            except AttributeError:
+                pass
 
     def is_coroutine_function(self, callback):
         """Check if a callback is a coroutine function."""

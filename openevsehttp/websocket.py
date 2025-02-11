@@ -142,6 +142,7 @@ class OpenEVSEWebsocket:
     async def close(self):
         """Close the listening websocket."""
         await OpenEVSEWebsocket.state.fset(self, STATE_STOPPED)
+        await self.session.close()
 
     async def keepalive(self):
         """Send ping requests to websocket."""
