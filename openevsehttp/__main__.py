@@ -268,7 +268,7 @@ class OpenEVSE:
             # Stopped websockets without errors are expected during shutdown
             # and ignored
             elif data == STATE_STOPPED and error:
-                _LOGGER.error(
+                _LOGGER.debug(
                     "Websocket to %s failed, aborting [Error: %s]",
                     self.websocket.uri,
                     error,
