@@ -959,6 +959,11 @@ class OpenEVSE:
         except UnsupportedFeature:
             pass
         if claims is not None and "charge_current" in claims["properties"].keys():
+            if (
+                claims["properties"]["charge_current"]
+                > self._config["max_current_hard"]
+            ):
+                return self._config["max_current_hard"]
             return claims["properties"]["charge_current"]
         if self._config is not None and "max_current_soft" in self._config:
             return self._config["max_current_soft"]
