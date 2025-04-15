@@ -64,6 +64,11 @@ states = {
     255: "disabled",
 }
 
+divert_mode = {
+    "fast": 1,
+    "eco": 2,
+}
+
 ERROR_TIMEOUT = "Timeout while updating"
 INFO_LOOP_RUNNING = "Event loop already running, not creating new one."
 UPDATE_TRIGGERS = [
@@ -328,7 +333,7 @@ class OpenEVSE:
         return response
 
     async def set_charge_mode(self, mode: str = "fast") -> None:
-        """Set the charge mode."""
+        """Set the charge mode at startup setting."""
         url = f"{self.url}config"
 
         if mode not in ["fast", "eco"]:
@@ -868,6 +873,26 @@ class OpenEVSE:
         _LOGGER.debug("Setting LED brightness to %s", level)
         await self.process_request(url=url, method="post", data=data)  # noqa: E501
 
+    async def set_divert_mode(self, mode: str = "fast") -> None:
+        """Set the divert mode."""
+        url = f"{self.url}divertmode"
+
+        if mode not in ["fast", "eco"]:
+            _LOGGER.error("Invalid value for charge_mode: %s", mode)
+            raise ValueError
+
+        _LOGGER.debug("Setting divert mode to %s", mode)
+
+        # convert text to int
+        new_mode = divert_mode[mode]
+        data = {"divertmode": new_mode}
+        response = await self.process_request(
+            url=url, method="get", data=data
+        )  # noqa: E501
+        if response != "Divert Mode changed":
+            _LOGGER.error("Problem issuing command: %s", response)
+            raise UnknownError
+
     @property
     def led_brightness(self) -> str:
         """Return charger led_brightness."""
@@ -1221,7 +1246,7 @@ class OpenEVSE:
         assert self._status is not None
         mode = self._status["divertmode"]
         if mode == 1:
-            return "normal"
+            return "fast"
         return "eco"
 
     @property
