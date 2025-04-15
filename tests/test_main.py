@@ -2205,4 +2205,4 @@ async def test_set_divert_mode(
     with pytest.raises(UnknownError):
         with caplog.at_level(logging.DEBUG):
             await test_charger_new.set_divert_mode("fast")
-    assert "Problem issuing command: error" in caplog.text    
+    assert "Problem issuing command: error" in caplog.text
