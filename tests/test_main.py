@@ -2177,13 +2177,32 @@ async def test_set_divert_mode(
         TEST_URL_DIVERT,
         status=200,
         body=value,
-        repeat=True,
     )
     with caplog.at_level(logging.DEBUG):
         await test_charger_new.set_divert_mode("fast")
     assert "Setting divert mode to fast" in caplog.text
 
+    mock_aioclient.get(
+        TEST_URL_DIVERT,
+        status=200,
+        body=value,
+    )
     await test_charger_v2.update()
     with caplog.at_level(logging.DEBUG):
-        await test_charger_new.set_divert_mode("eco")
+        await test_charger_v2.set_divert_mode("eco")
     assert "Setting divert mode to eco" in caplog.text
+
+    with pytest.raises(ValueError):
+        with caplog.at_level(logging.DEBUG):
+            await test_charger_new.set_divert_mode("test")
+    assert "Invalid value for charge_mode: test" in caplog.text
+
+    mock_aioclient.get(
+        TEST_URL_DIVERT,
+        status=200,
+        body="error",
+    )
+    with pytest.raises(UnknownError):
+        with caplog.at_level(logging.DEBUG):
+            await test_charger_new.set_divert_mode("fast")
+    assert "Problem issuing command: error" in caplog.text    
