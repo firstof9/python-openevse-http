@@ -2148,6 +2148,7 @@ async def test_get_status(test_charger_timeout, caplog):
     assert "Status update:" not in caplog.text
     assert "Config update:" not in caplog.text
 
+
 @pytest.mark.parametrize(
     "fixture, expected",
     [
@@ -2165,12 +2166,13 @@ async def test_divertmode(fixture, expected, request):
     assert status == expected
     await charger.ws_disconnect()
 
+
 async def test_set_divert_mode(
     test_charger_new, test_charger_v2, mock_aioclient, caplog
 ):
     """Test set_divert_mode reply."""
     await test_charger_new.update()
-    value = 'Divert Mode changed'
+    value = "Divert Mode changed"
     mock_aioclient.get(
         TEST_URL_DIVERT,
         status=200,
@@ -2184,5 +2186,4 @@ async def test_set_divert_mode(
     await test_charger_v2.update()
     with caplog.at_level(logging.DEBUG):
         await test_charger_new.set_divert_mode("eco")
-    assert "Setting divert mode to eco" in caplog.text    
- 
+    assert "Setting divert mode to eco" in caplog.text

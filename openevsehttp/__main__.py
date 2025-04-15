@@ -884,14 +884,14 @@ class OpenEVSE:
         _LOGGER.debug("Setting divert mode to %s", mode)
 
         # convert text to int
-        mode = divert_mode[mode]
-        data = {"divertmode": mode}
+        new_mode = divert_mode[mode]
+        data = {"divertmode": new_mode}
         response = await self.process_request(
             url=url, method="get", data=data
         )  # noqa: E501
         if response != "Divert Mode changed":
             _LOGGER.error("Problem issuing command: %s", response)
-            raise UnknownError               
+            raise UnknownError
 
     @property
     def led_brightness(self) -> str:
