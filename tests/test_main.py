@@ -642,18 +642,6 @@ async def test_get_relayt(fixture, expected, request):
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", "eco"), ("test_charger_v2", "normal")]
-)
-async def test_get_divertmode(fixture, expected, request):
-    """Test v4 Status reply."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.divertmode
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
     "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
 )
 async def test_get_charge_rate(fixture, expected, request):
@@ -2159,3 +2147,42 @@ async def test_get_status(test_charger_timeout, caplog):
     assert "Updating data from http://openevse.test.tld/status" in caplog.text
     assert "Status update:" not in caplog.text
     assert "Config update:" not in caplog.text
+
+@pytest.mark.parametrize(
+    "fixture, expected",
+    [
+        ("test_charger", "eco"),
+        ("test_charger_v2", "fast"),
+        ("test_charger_broken", "eco"),
+        ("test_charger_new", "fast"),
+    ],
+)
+async def test_divertmode(fixture, expected, request):
+    """Test divertmode property."""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+    status = charger.divertmode
+    assert status == expected
+    await charger.ws_disconnect()
+
+async def test_set_divert_mode(
+    test_charger_new, test_charger_v2, mock_aioclient, caplog
+):
+    """Test set_divert_mode reply."""
+    await test_charger_new.update()
+    value = 'Divert Mode changed'
+    mock_aioclient.get(
+        TEST_URL_DIVERT,
+        status=200,
+        body=value,
+        repeat=True,
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_new.set_divert_mode("fast")
+    assert "Setting divert mode to fast" in caplog.text
+
+    await test_charger_v2.update()
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_new.set_divert_mode("eco")
+    assert "Setting divert mode to eco" in caplog.text    
+ 
