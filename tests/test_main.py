@@ -2173,7 +2173,7 @@ async def test_set_divert_mode(
     """Test set_divert_mode reply."""
     await test_charger_new.update()
     value = "Divert Mode changed"
-    mock_aioclient.get(
+    mock_aioclient.post(
         TEST_URL_DIVERT,
         status=200,
         body=value,
@@ -2182,7 +2182,7 @@ async def test_set_divert_mode(
         await test_charger_new.set_divert_mode("fast")
     assert "Setting divert mode to fast" in caplog.text
 
-    mock_aioclient.get(
+    mock_aioclient.post(
         TEST_URL_DIVERT,
         status=200,
         body=value,
@@ -2197,7 +2197,7 @@ async def test_set_divert_mode(
             await test_charger_new.set_divert_mode("test")
     assert "Invalid value for charge_mode: test" in caplog.text
 
-    mock_aioclient.get(
+    mock_aioclient.post(
         TEST_URL_DIVERT,
         status=200,
         body="error",
