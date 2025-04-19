@@ -73,6 +73,16 @@ def test_charger(mock_aioclient):
     return main.OpenEVSE(TEST_TLD)
 
 
+@pytest.fixture(name="test_charger_timeout")
+def test_charger_timeout(mock_aioclient):
+    """Load the charger data."""
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        exception=TimeoutError,
+    )
+    return main.OpenEVSE(TEST_TLD)
+
+
 @pytest.fixture(name="test_charger_dev")
 def test_charger_dev(mock_aioclient):
     """Load the charger data."""

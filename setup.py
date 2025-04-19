@@ -6,7 +6,7 @@ from setuptools import find_packages, setup
 
 PROJECT_DIR = Path(__file__).parent.resolve()
 README_FILE = PROJECT_DIR / "README.md"
-VERSION = "0.1.73"
+VERSION = "0.1.81"
 
 setup(
     name="python_openevse_http",
@@ -32,5 +32,6 @@ setup(
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
     ],
 )

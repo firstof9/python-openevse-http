@@ -64,6 +64,11 @@ states = {
     255: "disabled",
 }
 
+divert_mode = {
+    "fast": 1,
+    "eco": 2,
+}
+
 ERROR_TIMEOUT = "Timeout while updating"
 INFO_LOOP_RUNNING = "Event loop already running, not creating new one."
 UPDATE_TRIGGERS = [
@@ -91,6 +96,7 @@ class OpenEVSE:
         self.websocket: OpenEVSEWebsocket | None = None
         self.callback: Callable | None = None
         self._loop = None
+        self.tasks = None
 
     async def process_request(
         self,
@@ -153,12 +159,12 @@ class OpenEVSE:
                         await self.update()
                     return message
 
-            except (TimeoutError, ServerTimeoutError):
+            except (TimeoutError, ServerTimeoutError) as err:
                 _LOGGER.error("%s: %s", ERROR_TIMEOUT, url)
-                message = {"msg": ERROR_TIMEOUT}
+                raise err
             except ContentTypeError as err:
-                _LOGGER.error("%s", err)
-                message = {"msg": err}
+                _LOGGER.error("Content error: %s", err.message)
+                raise err
 
             await session.close()
             return message
@@ -241,8 +247,8 @@ class OpenEVSE:
 
         if not self._ws_listening:
             _LOGGER.debug("Setting up websocket ping...")
-            self._loop.create_task(self.repeat(300, self.websocket.keepalive))
             self._loop.create_task(self.websocket.listen())
+            self._loop.create_task(self.repeat(300, self.websocket.keepalive))
             pending = asyncio.all_tasks()
             self._ws_listening = True
             try:
@@ -263,17 +269,16 @@ class OpenEVSE:
                 )
                 _LOGGER.debug("Disconnect message: %s", error)
                 self._ws_listening = False
-                self.ws_start()
+
             # Stopped websockets without errors are expected during shutdown
             # and ignored
             elif data == STATE_STOPPED and error:
-                _LOGGER.error(
+                _LOGGER.debug(
                     "Websocket to %s failed, aborting [Error: %s]",
                     self.websocket.uri,
                     error,
                 )
                 self._ws_listening = False
-                await self.ws_disconnect()
 
         elif msgtype == "data":
             _LOGGER.debug("Websocket data: %s", data)
@@ -315,7 +320,7 @@ class OpenEVSE:
 
         *args and **kwargs are passed as the arguments to func.
         """
-        while True:
+        while self.ws_state != "stopped":
             await asyncio.sleep(interval)
             await func(*args, **kwargs)
 
@@ -328,7 +333,7 @@ class OpenEVSE:
         return response
 
     async def set_charge_mode(self, mode: str = "fast") -> None:
-        """Set the charge mode."""
+        """Set the charge mode at startup setting."""
         url = f"{self.url}config"
 
         if mode not in ["fast", "eco"]:
@@ -428,6 +433,7 @@ class OpenEVSE:
         #   3.x: use RAPI commands $FE (enable) and $FS (sleep)
         #   4.x: use HTTP API call
         lower = "4.0.0"
+        msg = ""
         if self._version_check(lower):
             url = f"{self.url}override"
 
@@ -867,6 +873,26 @@ class OpenEVSE:
         _LOGGER.debug("Setting LED brightness to %s", level)
         await self.process_request(url=url, method="post", data=data)  # noqa: E501
 
+    async def set_divert_mode(self, mode: str = "fast") -> None:
+        """Set the divert mode."""
+        url = f"{self.url}divertmode"
+
+        if mode not in ["fast", "eco"]:
+            _LOGGER.error("Invalid value for charge_mode: %s", mode)
+            raise ValueError
+
+        _LOGGER.debug("Setting divert mode to %s", mode)
+
+        # convert text to int
+        new_mode = divert_mode[mode]
+        data = {"divertmode": new_mode}
+        response = await self.process_request(
+            url=url, method="post", data=data
+        )  # noqa: E501
+        if response != "Divert Mode changed":
+            _LOGGER.error("Problem issuing command: %s", response)
+            raise UnknownError
+
     @property
     def led_brightness(self) -> str:
         """Return charger led_brightness."""
@@ -958,7 +984,9 @@ class OpenEVSE:
         except UnsupportedFeature:
             pass
         if claims is not None and "charge_current" in claims["properties"].keys():
-            return claims["properties"]["charge_current"]
+            return min(
+                claims["properties"]["charge_current"], self._config["max_current_hard"]
+            )
         if self._config is not None and "max_current_soft" in self._config:
             return self._config["max_current_soft"]
         return self._status["pilot"]
@@ -1218,7 +1246,7 @@ class OpenEVSE:
         assert self._status is not None
         mode = self._status["divertmode"]
         if mode == 1:
-            return "normal"
+            return "fast"
         return "eco"
 
     @property
