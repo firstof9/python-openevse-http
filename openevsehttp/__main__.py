@@ -885,7 +885,7 @@ class OpenEVSE:
 
         # convert text to int
         new_mode = divert_mode[mode]
-        data = {"divertmode": new_mode}
+        data = "divertmode" + str(new_mode)
         response = await self.process_request(
             url=url, method="post", data=data
         )  # noqa: E501
