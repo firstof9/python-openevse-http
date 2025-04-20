@@ -882,6 +882,7 @@ class OpenEVSE:
         _LOGGER.debug("Setting divert mode to %s", mode)
         # convert text to int
         new_mode = divert_mode[mode]
+
         data = f"divertmode={new_mode}"
         
         # Use text/plain content type for the request
