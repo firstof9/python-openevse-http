@@ -876,19 +876,20 @@ class OpenEVSE:
     async def set_divert_mode(self, mode: str = "fast") -> None:
         """Set the divert mode."""
         url = f"{self.url}divertmode"
-
         if mode not in ["fast", "eco"]:
-            _LOGGER.error("Invalid value for charge_mode: %s", mode)
+            _LOGGER.error("Invalid value for divert mode: %s", mode)
             raise ValueError
-
         _LOGGER.debug("Setting divert mode to %s", mode)
-
         # convert text to int
         new_mode = divert_mode[mode]
-        data = "divertmode=" + str(new_mode)
+        data = f"divertmode={new_mode}"
+        
+        # Use text/plain content type for the request
+        headers = {"Content-Type": "text/plain"}
+        
         response = await self.process_request(
-            url=url, method="post", data=data
-        )  # noqa: E501
+            url=url, method="post", data=data, headers=headers
+        )
         if response != "Divert Mode changed":
             _LOGGER.error("Problem issuing command: %s", response)
             raise UnknownError
