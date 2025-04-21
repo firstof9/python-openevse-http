@@ -885,9 +885,7 @@ class OpenEVSE:
 
         data = f"divertmode={new_mode}"
 
-        response = await self.process_request(
-            url=url, method="post", rapi=data
-        )
+        response = await self.process_request(url=url, method="post", rapi=data)
         if response != "Divert Mode changed":
             _LOGGER.error("Problem issuing command: %s", response)
             raise UnknownError
