@@ -885,9 +885,6 @@ class OpenEVSE:
 
         data = f"divertmode={new_mode}"
         
-        # Use text/plain content type for the request
-        headers = {"Content-Type": "text/plain"}
-        
         response = await self.process_request(
             url=url, method="post", rapi=data
         )
