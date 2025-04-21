@@ -884,7 +884,7 @@ class OpenEVSE:
         new_mode = divert_mode[mode]
 
         data = f"divertmode={new_mode}"
-        
+
         response = await self.process_request(
             url=url, method="post", rapi=data
         )
