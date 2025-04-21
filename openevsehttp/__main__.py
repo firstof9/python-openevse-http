@@ -889,7 +889,7 @@ class OpenEVSE:
         headers = {"Content-Type": "text/plain"}
         
         response = await self.process_request(
-            url=url, method="post", data=data, headers=headers
+            url=url, method="post", rapi=data
         )
         if response != "Divert Mode changed":
             _LOGGER.error("Problem issuing command: %s", response)
