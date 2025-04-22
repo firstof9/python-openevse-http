@@ -2195,7 +2195,7 @@ async def test_set_divert_mode(
     with pytest.raises(ValueError):
         with caplog.at_level(logging.DEBUG):
             await test_charger_new.set_divert_mode("test")
-    assert "Invalid value for charge_mode: test" in caplog.text
+    assert "Invalid value for divert mode: test" in caplog.text
 
     mock_aioclient.post(
         TEST_URL_DIVERT,
