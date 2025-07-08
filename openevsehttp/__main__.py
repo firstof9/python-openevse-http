@@ -378,7 +378,7 @@ class OpenEVSE:
 
     async def get_override(self) -> Union[Dict[str, str], Dict[str, Any]]:
         """Get the manual override status."""
-        if not self._version_check("4.0.0"):
+        if not self._version_check("4.0.1"):
             _LOGGER.debug("Feature not supported for older firmware.")
             raise UnsupportedFeature
         url = f"{self.url}override"
@@ -397,7 +397,7 @@ class OpenEVSE:
         auto_release: bool = True,
     ) -> Any:
         """Set the manual override status."""
-        if not self._version_check("4.0.0"):
+        if not self._version_check("4.0.1"):
             _LOGGER.debug("Feature not supported for older firmware.")
             raise UnsupportedFeature
         url = f"{self.url}override"
@@ -432,7 +432,7 @@ class OpenEVSE:
         """Toggle the manual override status."""
         #   3.x: use RAPI commands $FE (enable) and $FS (sleep)
         #   4.x: use HTTP API call
-        lower = "4.0.0"
+        lower = "4.0.1"
         msg = ""
         if self._version_check(lower):
             url = f"{self.url}override"
@@ -449,7 +449,7 @@ class OpenEVSE:
 
     async def clear_override(self) -> None:
         """Clear the manual override status."""
-        if not self._version_check("4.0.0"):
+        if not self._version_check("4.0.1"):
             _LOGGER.debug("Feature not supported for older firmware.")
             raise UnsupportedFeature
         url = f"{self.url}override"
