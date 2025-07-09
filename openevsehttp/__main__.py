@@ -926,32 +926,27 @@ class OpenEVSE:
     @property
     def temp_check_enabled(self) -> bool:
         """Return True if enabled, False if disabled."""
-        assert self._config is not None
-        return bool(self._config["tempt"])
+        return bool(self._config.get("tempt", False))
 
     @property
     def diode_check_enabled(self) -> bool:
         """Return True if enabled, False if disabled."""
-        assert self._config is not None
-        return bool(self._config["diodet"])
+        return bool(self._config.get("diodet", False))
 
     @property
     def vent_required_enabled(self) -> bool:
         """Return True if enabled, False if disabled."""
-        assert self._config is not None
-        return bool(self._config["ventt"])
+        return bool(self._config.get("ventt", False))
 
     @property
     def ground_check_enabled(self) -> bool:
         """Return True if enabled, False if disabled."""
-        assert self._config is not None
-        return bool(self._config["groundt"])
+        return bool(self._config.get("groundt", False))
 
     @property
     def stuck_relay_check_enabled(self) -> bool:
         """Return True if enabled, False if disabled."""
-        assert self._config is not None
-        return bool(self._config["relayt"])
+        return bool(self._config.get("relayt", False))
 
     @property
     def service_level(self) -> str:
@@ -991,9 +986,7 @@ class OpenEVSE:
     @property
     def max_current(self) -> int | None:
         """Return the max current."""
-        if self._status is not None and "max_current" in self._status:
-            return self._status["max_current"]
-        return None
+        return self._status.get("max_current", None)
 
     @property
     def wifi_firmware(self) -> str:
