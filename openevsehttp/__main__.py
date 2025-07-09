@@ -1273,17 +1273,12 @@ class OpenEVSE:
     @property
     def divert_active(self) -> bool:
         """Return if divert is active."""
-        assert self._config is not None
-        if "divert_enabled" in self._config:
-            return self._config["divert_enabled"]
-        return False
+        return bool(self._config.get("divert_enabled", False))
 
     @property
     def wifi_serial(self) -> str | None:
         """Return wifi serial."""
-        if self._config is not None and "wifi_serial" in self._config:
-            return self._config["wifi_serial"]
-        return None
+        return self._config.get("wifi_serial", None)
 
     @property
     def charging_power(self) -> float | None:
@@ -1324,44 +1319,28 @@ class OpenEVSE:
     @property
     def shaper_max_power(self) -> int | None:
         """Return shaper live power reading."""
-        if self._status is not None and "shaper_max_pwr" in self._status:
-            return self._status["shaper_max_pwr"]
-        return None
+        return self._status.get("shaper_max_pwr", None)
 
     @property
     def shaper_updated(self) -> bool:
         """Return shaper updated boolean."""
-        if self._status is not None and "shaper_updated" in self._status:
-            return self._status["shaper_updated"]
-        return False
+        return bool(self._status.get("shaper_updated", False))
 
     # Vehicle values
     @property
     def vehicle_soc(self) -> int | None:
         """Return battery level."""
-        if self._status is not None and "vehicle_soc" in self._status:
-            return self._status["vehicle_soc"]
-        if self._status is not None and "battery_level" in self._status:
-            return self._status["battery_level"]
-        return None
+        return self._status.get("vehicle_soc", self._status.get("battery_level", None))
 
     @property
     def vehicle_range(self) -> int | None:
         """Return battery range."""
-        if self._status is not None and "vehicle_range" in self._status:
-            return self._status["vehicle_range"]
-        if self._status is not None and "battery_range" in self._status:
-            return self._status["battery_range"]
-        return None
+        return self._status.get("vehicle_range", self._status.get("battery_range", None))
 
     @property
     def vehicle_eta(self) -> int | None:
         """Return time to full charge."""
-        if self._status is not None and "vehicle_eta" in self._status:
-            return self._status["vehicle_eta"]
-        if self._status is not None and "time_to_full_charge" in self._status:
-            return self._status["time_to_full_charge"]
-        return None
+        return self._status.get("vehicle_eta", self._status.get("time_to_full_charge", None))
 
     # There is currently no min/max amps JSON data
     # available via HTTP API methods
@@ -1389,9 +1368,7 @@ class OpenEVSE:
     @property
     def emoncms_connected(self) -> bool | None:
         """Return the status of the emoncms connection."""
-        if self._status is not None and "emoncms_connected" in self._status:
-            return self._status["emoncms_connected"]
-        return None
+        return self._status.get("emoncms_connected", None)
 
     @property
     def ocpp_connected(self) -> bool | None:
