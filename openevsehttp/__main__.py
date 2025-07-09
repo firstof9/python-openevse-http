@@ -1043,7 +1043,7 @@ class OpenEVSE:
     @property
     def status(self) -> str:
         """Return charger's state."""
-        state = self._status.get("status", states[int(self._status.get("state"))])
+        state = self._status.get("status", states[int(self._status.get("state", 0))])
         return state
 
     @property
