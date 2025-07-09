@@ -1027,10 +1027,7 @@ class OpenEVSE:
     @property
     def using_ethernet(self) -> bool:
         """Return True if enabled, False if disabled."""
-        assert self._status is not None
-        if "eth_connected" in self._status:
-            return bool(self._status["eth_connected"])
-        return False
+        return bool(self._status.get("eth_connected", False))
 
     @property
     def stuck_relay_trip_count(self) -> int:
@@ -1053,10 +1050,8 @@ class OpenEVSE:
     @property
     def status(self) -> str:
         """Return charger's state."""
-        assert self._status is not None
-        if "status" in self._status:
-            return self._status["status"]
-        return states[int(self._status["state"])]
+        state = self._status.get("status", states[int(self._status.get("state"))])
+        return state
 
     @property
     def state(self) -> str:
