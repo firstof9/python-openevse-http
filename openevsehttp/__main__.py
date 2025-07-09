@@ -1153,10 +1153,7 @@ class OpenEVSE:
     @property
     def time(self) -> datetime.datetime | None:
         """Get the RTC time."""
-        assert self._status is not None
-        if "time" in self._status:
-            return self._status["time"]
-        return None
+        return self._status.get("time", None)
 
     @property
     def usage_session(self) -> float:
@@ -1172,44 +1169,27 @@ class OpenEVSE:
     @property
     def total_day(self) -> float | None:
         """Get the total day energy usage."""
-        assert self._status is not None
-        if "total_day" in self._status:
-            return self._status["total_day"]
-        return None
+        return self._status.get("total_day", None)
 
     @property
     def total_week(self) -> float | None:
         """Get the total week energy usage."""
-        assert self._status is not None
-        if "total_week" in self._status:
-            return self._status["total_week"]
-        return None
+        return self._status.get("total_week", None)
 
     @property
     def total_month(self) -> float | None:
         """Get the total week energy usage."""
-        assert self._status is not None
-        if "total_month" in self._status:
-            return self._status["total_month"]
-        return None
+        return self._status.get("total_month", None)
 
     @property
     def total_year(self) -> float | None:
         """Get the total year energy usage."""
-        assert self._status is not None
-        if "total_year" in self._status:
-            return self._status["total_year"]
-        return None
+        return self._status.get("total_year", None)
 
     @property
     def has_limit(self) -> bool | None:
         """Return if a limit has been set."""
-        assert self._status is not None
-        if "has_limit" in self._status:
-            return self._status["has_limit"]
-        if "limit" in self._status:
-            return self._status["limit"]
-        return None
+        return self._status.get("has_limit", self._status.get("limit", None))
 
     @property
     def protocol_version(self) -> str | None:
@@ -1366,9 +1346,7 @@ class OpenEVSE:
     @property
     def ocpp_connected(self) -> bool | None:
         """Return the status of the ocpp connection."""
-        if self._status is not None and "ocpp_connected" in self._status:
-            return self._status["ocpp_connected"]
-        return None
+        return self._status.get("ocpp_connected", None)
 
     @property
     def uptime(self) -> int | None:
