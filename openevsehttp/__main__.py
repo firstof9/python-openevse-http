@@ -1296,25 +1296,20 @@ class OpenEVSE:
     @property
     def shaper_active(self) -> bool | None:
         """Return if shper is active."""
-        if self._status is not None and "shaper" in self._status:
-            return bool(self._status["shaper"])
-        return None
+        return self._status.get("shaper", None)
 
     @property
     def shaper_live_power(self) -> int | None:
         """Return shaper live power reading."""
-        if self._status is not None and "shaper_live_pwr" in self._status:
-            return self._status["shaper_live_pwr"]
-        return None
+        return self._status.get("shaper_live_pwr", None)
 
     @property
     def shaper_available_current(self) -> float | None:
         """Return shaper available current."""
-        if self._status is not None and "shaper_cur" in self._status:
-            if self._status["shaper_cur"] == 255:
-                return self._status["pilot"]
-            return self._status["shaper_cur"]
-        return None
+        shaper_cur = self._status.get("shaper_cur")
+        if shaper_cur == 255:
+            return self._status.get("pilot")
+        return shaper_cur
 
     @property
     def shaper_max_power(self) -> int | None:
@@ -1335,35 +1330,33 @@ class OpenEVSE:
     @property
     def vehicle_range(self) -> int | None:
         """Return battery range."""
-        return self._status.get("vehicle_range", self._status.get("battery_range", None))
+        return self._status.get(
+            "vehicle_range", self._status.get("battery_range", None)
+        )
 
     @property
     def vehicle_eta(self) -> int | None:
         """Return time to full charge."""
-        return self._status.get("vehicle_eta", self._status.get("time_to_full_charge", None))
+        return self._status.get(
+            "vehicle_eta", self._status.get("time_to_full_charge", None)
+        )
 
     # There is currently no min/max amps JSON data
     # available via HTTP API methods
     @property
     def min_amps(self) -> int:
         """Return the minimum amps."""
-        if self._config is not None and "min_current_hard" in self._config:
-            return self._config["min_current_hard"]
-        return MIN_AMPS
+        return self._config.get("min_current_hard", MIN_AMPS)
 
     @property
     def max_amps(self) -> int:
         """Return the maximum amps."""
-        if self._config is not None and "max_current_hard" in self._config:
-            return self._config["max_current_hard"]
-        return MAX_AMPS
+        return self._config.get("max_current_hard", MAX_AMPS)
 
     @property
     def mqtt_connected(self) -> bool:
         """Return the status of the mqtt connection."""
-        if self._status is not None and "mqtt_connected" in self._status:
-            return self._status["mqtt_connected"]
-        return False
+        return bool(self._status.get("mqtt_connected", False))
 
     @property
     def emoncms_connected(self) -> bool | None:
@@ -1380,16 +1373,12 @@ class OpenEVSE:
     @property
     def uptime(self) -> int | None:
         """Return the unit uptime."""
-        if self._status is not None and "uptime" in self._status:
-            return self._status["uptime"]
-        return None
+        return self._status.get("uptime", None)
 
     @property
     def freeram(self) -> int | None:
         """Return the unit freeram."""
-        if self._status is not None and "freeram" in self._status:
-            return self._status["freeram"]
-        return None
+        return self._status.get("freeram", None)
 
     # Safety counts
     @property
