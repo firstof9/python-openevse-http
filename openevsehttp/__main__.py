@@ -926,32 +926,27 @@ class OpenEVSE:
     @property
     def temp_check_enabled(self) -> bool:
         """Return True if enabled, False if disabled."""
-        assert self._config is not None
-        return bool(self._config["tempt"])
+        return bool(self._config.get("tempt", False))
 
     @property
     def diode_check_enabled(self) -> bool:
         """Return True if enabled, False if disabled."""
-        assert self._config is not None
-        return bool(self._config["diodet"])
+        return bool(self._config.get("diodet", False))
 
     @property
     def vent_required_enabled(self) -> bool:
         """Return True if enabled, False if disabled."""
-        assert self._config is not None
-        return bool(self._config["ventt"])
+        return bool(self._config.get("ventt", False))
 
     @property
     def ground_check_enabled(self) -> bool:
         """Return True if enabled, False if disabled."""
-        assert self._config is not None
-        return bool(self._config["groundt"])
+        return bool(self._config.get("groundt", False))
 
     @property
     def stuck_relay_check_enabled(self) -> bool:
         """Return True if enabled, False if disabled."""
-        assert self._config is not None
-        return bool(self._config["relayt"])
+        return bool(self._config.get("relayt", False))
 
     @property
     def service_level(self) -> str:
@@ -991,9 +986,7 @@ class OpenEVSE:
     @property
     def max_current(self) -> int | None:
         """Return the max current."""
-        if self._status is not None and "max_current" in self._status:
-            return self._status["max_current"]
-        return None
+        return self._status.get("max_current", None)
 
     @property
     def wifi_firmware(self) -> str:
@@ -1027,10 +1020,7 @@ class OpenEVSE:
     @property
     def using_ethernet(self) -> bool:
         """Return True if enabled, False if disabled."""
-        assert self._status is not None
-        if "eth_connected" in self._status:
-            return bool(self._status["eth_connected"])
-        return False
+        return bool(self._status.get("eth_connected", False))
 
     @property
     def stuck_relay_trip_count(self) -> int:
@@ -1053,10 +1043,8 @@ class OpenEVSE:
     @property
     def status(self) -> str:
         """Return charger's state."""
-        assert self._status is not None
-        if "status" in self._status:
-            return self._status["status"]
-        return states[int(self._status["state"])]
+        state = self._status.get("status", states[int(self._status.get("state", 0))])
+        return state
 
     @property
     def state(self) -> str:
@@ -1153,10 +1141,7 @@ class OpenEVSE:
     @property
     def time(self) -> datetime.datetime | None:
         """Get the RTC time."""
-        assert self._status is not None
-        if "time" in self._status:
-            return self._status["time"]
-        return None
+        return self._status.get("time", None)
 
     @property
     def usage_session(self) -> float:
@@ -1172,44 +1157,27 @@ class OpenEVSE:
     @property
     def total_day(self) -> float | None:
         """Get the total day energy usage."""
-        assert self._status is not None
-        if "total_day" in self._status:
-            return self._status["total_day"]
-        return None
+        return self._status.get("total_day", None)
 
     @property
     def total_week(self) -> float | None:
         """Get the total week energy usage."""
-        assert self._status is not None
-        if "total_week" in self._status:
-            return self._status["total_week"]
-        return None
+        return self._status.get("total_week", None)
 
     @property
     def total_month(self) -> float | None:
         """Get the total week energy usage."""
-        assert self._status is not None
-        if "total_month" in self._status:
-            return self._status["total_month"]
-        return None
+        return self._status.get("total_month", None)
 
     @property
     def total_year(self) -> float | None:
         """Get the total year energy usage."""
-        assert self._status is not None
-        if "total_year" in self._status:
-            return self._status["total_year"]
-        return None
+        return self._status.get("total_year", None)
 
     @property
     def has_limit(self) -> bool | None:
         """Return if a limit has been set."""
-        assert self._status is not None
-        if "has_limit" in self._status:
-            return self._status["has_limit"]
-        if "limit" in self._status:
-            return self._status["limit"]
-        return None
+        return self._status.get("has_limit", self._status.get("limit", None))
 
     @property
     def protocol_version(self) -> str | None:
@@ -1273,17 +1241,12 @@ class OpenEVSE:
     @property
     def divert_active(self) -> bool:
         """Return if divert is active."""
-        assert self._config is not None
-        if "divert_enabled" in self._config:
-            return self._config["divert_enabled"]
-        return False
+        return bool(self._config.get("divert_enabled", False))
 
     @property
     def wifi_serial(self) -> str | None:
         """Return wifi serial."""
-        if self._config is not None and "wifi_serial" in self._config:
-            return self._config["wifi_serial"]
-        return None
+        return self._config.get("wifi_serial", None)
 
     @property
     def charging_power(self) -> float | None:
@@ -1301,118 +1264,87 @@ class OpenEVSE:
     @property
     def shaper_active(self) -> bool | None:
         """Return if shper is active."""
-        if self._status is not None and "shaper" in self._status:
-            return bool(self._status["shaper"])
-        return None
+        return self._status.get("shaper", None)
 
     @property
     def shaper_live_power(self) -> int | None:
         """Return shaper live power reading."""
-        if self._status is not None and "shaper_live_pwr" in self._status:
-            return self._status["shaper_live_pwr"]
-        return None
+        return self._status.get("shaper_live_pwr", None)
 
     @property
     def shaper_available_current(self) -> float | None:
         """Return shaper available current."""
-        if self._status is not None and "shaper_cur" in self._status:
-            if self._status["shaper_cur"] == 255:
-                return self._status["pilot"]
-            return self._status["shaper_cur"]
-        return None
+        shaper_cur = self._status.get("shaper_cur")
+        if shaper_cur == 255:
+            return self._status.get("pilot")
+        return shaper_cur
 
     @property
     def shaper_max_power(self) -> int | None:
         """Return shaper live power reading."""
-        if self._status is not None and "shaper_max_pwr" in self._status:
-            return self._status["shaper_max_pwr"]
-        return None
+        return self._status.get("shaper_max_pwr", None)
 
     @property
     def shaper_updated(self) -> bool:
         """Return shaper updated boolean."""
-        if self._status is not None and "shaper_updated" in self._status:
-            return self._status["shaper_updated"]
-        return False
+        return bool(self._status.get("shaper_updated", False))
 
     # Vehicle values
     @property
     def vehicle_soc(self) -> int | None:
         """Return battery level."""
-        if self._status is not None and "vehicle_soc" in self._status:
-            return self._status["vehicle_soc"]
-        if self._status is not None and "battery_level" in self._status:
-            return self._status["battery_level"]
-        return None
+        return self._status.get("vehicle_soc", self._status.get("battery_level", None))
 
     @property
     def vehicle_range(self) -> int | None:
         """Return battery range."""
-        if self._status is not None and "vehicle_range" in self._status:
-            return self._status["vehicle_range"]
-        if self._status is not None and "battery_range" in self._status:
-            return self._status["battery_range"]
-        return None
+        return self._status.get(
+            "vehicle_range", self._status.get("battery_range", None)
+        )
 
     @property
     def vehicle_eta(self) -> int | None:
         """Return time to full charge."""
-        if self._status is not None and "vehicle_eta" in self._status:
-            return self._status["vehicle_eta"]
-        if self._status is not None and "time_to_full_charge" in self._status:
-            return self._status["time_to_full_charge"]
-        return None
+        return self._status.get(
+            "vehicle_eta", self._status.get("time_to_full_charge", None)
+        )
 
     # There is currently no min/max amps JSON data
     # available via HTTP API methods
     @property
     def min_amps(self) -> int:
         """Return the minimum amps."""
-        if self._config is not None and "min_current_hard" in self._config:
-            return self._config["min_current_hard"]
-        return MIN_AMPS
+        return self._config.get("min_current_hard", MIN_AMPS)
 
     @property
     def max_amps(self) -> int:
         """Return the maximum amps."""
-        if self._config is not None and "max_current_hard" in self._config:
-            return self._config["max_current_hard"]
-        return MAX_AMPS
+        return self._config.get("max_current_hard", MAX_AMPS)
 
     @property
     def mqtt_connected(self) -> bool:
         """Return the status of the mqtt connection."""
-        if self._status is not None and "mqtt_connected" in self._status:
-            return self._status["mqtt_connected"]
-        return False
+        return bool(self._status.get("mqtt_connected", False))
 
     @property
     def emoncms_connected(self) -> bool | None:
         """Return the status of the emoncms connection."""
-        if self._status is not None and "emoncms_connected" in self._status:
-            return self._status["emoncms_connected"]
-        return None
+        return self._status.get("emoncms_connected", None)
 
     @property
     def ocpp_connected(self) -> bool | None:
         """Return the status of the ocpp connection."""
-        if self._status is not None and "ocpp_connected" in self._status:
-            return self._status["ocpp_connected"]
-        return None
+        return self._status.get("ocpp_connected", None)
 
     @property
     def uptime(self) -> int | None:
         """Return the unit uptime."""
-        if self._status is not None and "uptime" in self._status:
-            return self._status["uptime"]
-        return None
+        return self._status.get("uptime", None)
 
     @property
     def freeram(self) -> int | None:
         """Return the unit freeram."""
-        if self._status is not None and "freeram" in self._status:
-            return self._status["freeram"]
-        return None
+        return self._status.get("freeram", None)
 
     # Safety counts
     @property
