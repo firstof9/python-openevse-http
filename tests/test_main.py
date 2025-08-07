@@ -1008,8 +1008,7 @@ async def test_set_divertmode(
         body=value,
     )
     await test_charger_v2.update()
-    with pytest.raises(UnsupportedFeature):
-        await test_charger_v2.divert_mode()
+    await test_charger_v2.divert_mode()
 
     mock_aioclient.post(
         TEST_URL_CONFIG,
