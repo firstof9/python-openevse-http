@@ -648,6 +648,10 @@ class OpenEVSE:
         except AwesomeVersionCompareException:
             _LOGGER.debug("Non-semver firmware version detected.")
         return False
+    
+    def version_check(self, min_version: str, max_version: str = "") -> bool:
+        """Unprotected function call for version checking."""
+        return self._version_check(min_version=min_version, max_version=max_version)
 
     # HTTP Posting of grid voltage
     async def grid_voltage(self, voltage: int | None = None) -> None:
