@@ -353,7 +353,7 @@ class OpenEVSE:
 
     async def divert_mode(self) -> dict[str, str] | dict[str, Any]:
         """Set the divert mode to either Normal or Eco modes."""
-        if not self._version_check("4.0.0"):
+        if not self._version_check("2.9.1"):
             _LOGGER.debug("Feature not supported for older firmware.")
             raise UnsupportedFeature
 
@@ -539,7 +539,7 @@ class OpenEVSE:
         url = None
         method = "get"
 
-        cutoff = AwesomeVersion("4.0.0")
+        cutoff = AwesomeVersion("3.0.0")
         current = ""
 
         _LOGGER.debug("Detected firmware: %s", self._config["version"])
@@ -652,7 +652,7 @@ class OpenEVSE:
     # HTTP Posting of grid voltage
     async def grid_voltage(self, voltage: int | None = None) -> None:
         """Send pushed sensor data to grid voltage."""
-        if not self._version_check("4.0.0"):
+        if not self._version_check("2.9.1"):
             _LOGGER.debug("Feature not supported for older firmware.")
             raise UnsupportedFeature
 
@@ -678,7 +678,7 @@ class OpenEVSE:
         voltage: int | None = None,
     ) -> None:
         """Send pushed sensor data to self-prodcution."""
-        if not self._version_check("4.0.0"):
+        if not self._version_check("2.9.1"):
             _LOGGER.debug("Feature not supported for older firmware.")
             raise UnsupportedFeature
 
