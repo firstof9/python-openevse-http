@@ -480,6 +480,9 @@ class OpenEVSE:
             # RAPI commands
             _LOGGER.debug("Setting current via RAPI")
             command = f"$SC {amps} N"
+            # Different parameters for older firmware
+            if self._version_check("2.9.1"):
+                command = f"$SC {amps} V"
             response, msg = await self.send_command(command)
             _LOGGER.debug("Set current response: %s", msg)
 
