@@ -19,7 +19,11 @@ from openevsehttp.exceptions import (
     UnsupportedFeature,
 )
 from tests.common import load_fixture
-from openevsehttp.websocket import SIGNAL_CONNECTION_STATE, STATE_CONNECTED
+from openevsehttp.websocket import (
+    SIGNAL_CONNECTION_STATE,
+    STATE_CONNECTED,
+    STATE_DISCONNECTED,
+)
 
 pytestmark = pytest.mark.asyncio
 
@@ -53,7 +57,7 @@ async def test_ws_state(test_charger):
     """Test v4 Status reply."""
     await test_charger.update()
     value = test_charger.ws_state
-    assert value == None
+    assert value == STATE_DISCONNECTED
     await test_charger.ws_disconnect()
 
 
