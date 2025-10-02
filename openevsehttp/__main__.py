@@ -231,8 +231,11 @@ class OpenEVSE:
 
     def ws_start(self) -> None:
         """Start the websocket listener."""
-        if self._ws_listening:
-            raise AlreadyListening
+        if self.websocket:
+            if self._ws_listening and self.websocket.state == "connected":
+                raise AlreadyListening
+            if self._ws_listening and self.websocket.state != "connected":
+                self._ws_listening = False
         self._start_listening()
 
     def _start_listening(self):

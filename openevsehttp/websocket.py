@@ -38,7 +38,7 @@ class OpenEVSEWebsocket:
         self._user = user
         self._password = password
         self.callback = callback
-        self._state = None
+        self._state = STATE_DISCONNECTED
         self.failed_attempts = 0
         self._error_reason = None
         self._client = None
