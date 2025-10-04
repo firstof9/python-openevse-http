@@ -147,7 +147,7 @@ class OpenEVSEWebsocket:
         """Send ping requests to websocket."""
         if self._ping and self._pong:
             time_delta = self._pong - self._ping
-            if time_delta < 0:
+            if time_delta < datetime.timedelta(0):
                 # Negitive time should indicate no pong reply so consider the
                 # websocket disconnected.
                 self._error_reason = ERROR_PING_TIMEOUT
@@ -156,9 +156,12 @@ class OpenEVSEWebsocket:
         data = {"ping": 1}
         _LOGGER.debug("Sending message: %s to websocket.", data)
         try:
-            await self._client.send_json(data)
-            self._ping = datetime.datetime.now()
-            _LOGGER.debug("Ping message sent.")
+            if self._client:
+                await self._client.send_json(data)
+                self._ping = datetime.datetime.now()
+                _LOGGER.debug("Ping message sent.")
+            else:
+                _LOGGER.warning("Websocket client not found.")
         except TypeError as err:
             _LOGGER.error("Attempt to send ping data failed: %s", err)
         except ValueError as err:
