@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 from unittest import mock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiohttp
 import pytest
@@ -12,18 +13,19 @@ from aiohttp.client_reqrep import ConnectionKey
 from awesomeversion.exceptions import AwesomeVersionCompareException
 
 import openevsehttp.__main__ as main
+from openevsehttp.__main__ import OpenEVSE
 from openevsehttp.exceptions import (
     InvalidType,
     MissingSerial,
     UnknownError,
     UnsupportedFeature,
 )
-from tests.common import load_fixture
 from openevsehttp.websocket import (
     SIGNAL_CONNECTION_STATE,
     STATE_CONNECTED,
     STATE_DISCONNECTED,
 )
+from tests.common import load_fixture
 
 pytestmark = pytest.mark.asyncio
 
@@ -43,6 +45,7 @@ TEST_URL_GITHUB_v4 = (
 TEST_URL_GITHUB_v2 = (
     "https://api.github.com/repos/OpenEVSE/ESP8266_WiFi_v2.x/releases/latest"
 )
+SERVER_URL = "openevse.test.tld"
 
 
 async def test_get_status_auth(test_charger_auth):
@@ -2209,3 +2212,69 @@ async def test_set_divert_mode(
         with caplog.at_level(logging.DEBUG):
             await test_charger_new.set_divert_mode("fast")
     assert "Problem issuing command: error" in caplog.text
+
+
+async def test_main_auth_instantiation():
+    """Test OpenEVSE auth instantiation (covers __main__.py:111-113)."""
+    charger = OpenEVSE(SERVER_URL, user="user", pwd="password")
+
+    # Setup mock session to be an async context manager
+    mock_session = MagicMock()
+    mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+    mock_session.__aexit__ = AsyncMock(return_value=None)
+
+    # Setup mock response context to be an async context manager
+    mock_resp = AsyncMock()
+    mock_resp.status = 200
+    mock_resp.text.return_value = "{}"
+
+    mock_request_ctx = MagicMock()
+    mock_request_ctx.__aenter__ = AsyncMock(return_value=mock_resp)
+    mock_request_ctx.__aexit__ = AsyncMock(return_value=None)
+
+    # Ensure session.get() returns the request context
+    mock_session.get.return_value = mock_request_ctx
+
+    with patch("aiohttp.ClientSession", return_value=mock_session), patch(
+        "aiohttp.BasicAuth"
+    ) as mock_basic_auth:
+
+        await charger.update()
+
+        # Verify BasicAuth was instantiated
+        # Note: process_request is called multiple times in update(), so we check if called at least once
+        mock_basic_auth.assert_called_with("user", "password")
+
+
+async def test_main_sync_callback():
+    """Test synchronous callback in _update_status (covers __main__.py:293)."""
+    charger = OpenEVSE(SERVER_URL)
+    sync_callback = MagicMock()
+    charger.callback = sync_callback
+
+    # Manually trigger update status
+    await charger._update_status("data", {"key": "value"}, None)
+
+    sync_callback.assert_called_once()
+
+
+async def test_send_command_msg_fallback():
+    """Test send_command return logic fallback (covers __main__.py:181)."""
+    charger = OpenEVSE(SERVER_URL)
+
+    # Mock response with 'msg' but no 'ret'
+    with patch.object(charger, "process_request", return_value={"msg": "ErrorMsg"}):
+        cmd, ret = await charger.send_command("$ST")
+        assert cmd is False
+        assert ret == "ErrorMsg"
+
+
+async def test_send_command_empty_fallback():
+    """Test send_command empty fallback."""
+    charger = OpenEVSE(SERVER_URL)
+
+    # Mock response with neither 'msg' nor 'ret'
+    with patch.object(charger, "process_request", return_value={}):
+        cmd, ret = await charger.send_command("$ST")
+        assert cmd is False
+        assert ret == ""
