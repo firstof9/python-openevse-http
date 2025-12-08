@@ -1379,3 +1379,11 @@ class OpenEVSE:
         if "state" in override.keys():
             return override["state"]
         return "auto"
+
+    @property
+    def current_power(self) -> int:
+        """Return the current power (live) in watts."""
+        if not self._version_check("4.2.2"):
+            _LOGGER.debug("Feature not supported for older firmware.")
+            raise UnsupportedFeature
+        return self._status.get("power", 0)

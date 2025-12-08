@@ -2215,7 +2215,7 @@ async def test_set_divert_mode(
 
 
 async def test_main_auth_instantiation():
-    """Test OpenEVSE auth instantiation (covers __main__.py:111-113)."""
+    """Test OpenEVSE auth instantiation."""
     charger = OpenEVSE(SERVER_URL, user="user", pwd="password")
 
     # Setup mock session to be an async context manager
@@ -2247,7 +2247,7 @@ async def test_main_auth_instantiation():
 
 
 async def test_main_sync_callback():
-    """Test synchronous callback in _update_status (covers __main__.py:293)."""
+    """Test synchronous callback in _update_status."""
     charger = OpenEVSE(SERVER_URL)
     sync_callback = MagicMock()
     charger.callback = sync_callback
@@ -2259,7 +2259,7 @@ async def test_main_sync_callback():
 
 
 async def test_send_command_msg_fallback():
-    """Test send_command return logic fallback (covers __main__.py:181)."""
+    """Test send_command return logic fallback."""
     charger = OpenEVSE(SERVER_URL)
 
     # Mock response with 'msg' but no 'ret'
@@ -2278,3 +2278,28 @@ async def test_send_command_empty_fallback():
         cmd, ret = await charger.send_command("$ST")
         assert cmd is False
         assert ret == ""
+
+
+@pytest.mark.parametrize(
+    "fixture, expected",
+    [
+        ("test_charger", UnsupportedFeature),
+        ("test_charger_v2", UnsupportedFeature),
+        ("test_charger_broken", UnsupportedFeature),
+        ("test_charger_new", 4500),
+    ],
+)
+async def test_power(fixture, expected, request):
+    """Test current_power property."""
+    charger = request.getfixturevalue(fixture)
+    await charger.update()
+
+    # If we expect an exception (UnsupportedFeature), we must use pytest.raises
+    if expected is UnsupportedFeature:
+        with pytest.raises(UnsupportedFeature):
+            _ = charger.current_power
+    else:
+        # Otherwise, we check the returned value
+        assert charger.current_power == expected
+
+    await charger.ws_disconnect()

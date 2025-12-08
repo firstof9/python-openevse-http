@@ -162,7 +162,7 @@ async def ws_client_auth():
 
 @pytest.mark.asyncio
 async def test_websocket_auth(ws_client_auth):
-    """Test WebSocket connection with authentication (covers websocket.py:72-73)."""
+    """Test WebSocket connection with authentication."""
     mock_ws = MagicMock()
     mock_ws.__aenter__ = AsyncMock(return_value=mock_ws)
     mock_ws.__aexit__ = AsyncMock(return_value=None)
@@ -189,7 +189,7 @@ async def test_websocket_auth(ws_client_auth):
 
 @pytest.mark.asyncio
 async def test_websocket_message_types(ws_client_auth):
-    """Test CLOSED and ERROR message types (covers websocket.py:93-101)."""
+    """Test CLOSED and ERROR message types."""
     # 1. Test CLOSED message
     msg_closed = MagicMock()
     msg_closed.type = aiohttp.WSMsgType.CLOSED
@@ -223,7 +223,7 @@ async def test_websocket_message_types(ws_client_auth):
 
 @pytest.mark.asyncio
 async def test_websocket_exceptions_generic(ws_client_auth):
-    """Test generic exception during run (covers websocket.py:125-129)."""
+    """Test generic exception during run."""
     with patch("aiohttp.ClientSession.ws_connect", side_effect=Exception("Boom")):
         await ws_client_auth.running()
         assert ws_client_auth.state == STATE_STOPPED
@@ -231,7 +231,7 @@ async def test_websocket_exceptions_generic(ws_client_auth):
 
 @pytest.mark.asyncio
 async def test_websocket_unexpected_response_error(ws_client_auth):
-    """Test unexpected client response error (covers websocket.py:108-109)."""
+    """Test unexpected client response error."""
     # Status 500 triggers the "else" block in the exception handler
     error = aiohttp.ClientResponseError(
         request_info=MagicMock(), history=MagicMock(), status=500
@@ -249,7 +249,7 @@ async def test_websocket_unexpected_response_error(ws_client_auth):
 
 @pytest.mark.asyncio
 async def test_keepalive_client_missing(ws_client_auth):
-    """Test keepalive when client is None (covers websocket.py:139)."""
+    """Test keepalive when client is None."""
     ws_client_auth._client = None
     # Should log warning but not crash
     await ws_client_auth.keepalive()
@@ -257,7 +257,7 @@ async def test_keepalive_client_missing(ws_client_auth):
 
 @pytest.mark.asyncio
 async def test_keepalive_send_exceptions(ws_client_auth):
-    """Test exceptions during keepalive send (covers websocket.py:164-174)."""
+    """Test exceptions during keepalive send."""
     ws_client_auth._client = AsyncMock()
 
     # TypeError
