@@ -587,12 +587,7 @@ class OpenEVSE:
                     message = json.loads(message)
                     response = {}
                     response["latest_version"] = message["tag_name"]
-                    release_notes = message["body"]
-                    response["release_summary"] = (
-                        (release_notes[:253] + "..")
-                        if len(release_notes) > 255
-                        else release_notes
-                    )
+                    response["release_notes"] = message["body"]
                     response["release_url"] = message["html_url"]
                     return response
 
