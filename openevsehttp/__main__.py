@@ -1146,7 +1146,14 @@ class OpenEVSE:
     @property
     def time(self) -> datetime | None:
         """Get the RTC time."""
-        return self._status.get("time", None)
+        value = self._status.get("time")
+
+        if value:
+            try:
+                return datetime.fromisoformat(value.replace("Z", "+00:00"))
+            except (ValueError, AttributeError):
+                return None
+        return None
 
     @property
     def usage_session(self) -> float:
@@ -1310,7 +1317,9 @@ class OpenEVSE:
     @property
     def vehicle_eta(self) -> datetime | None:
         """Return time to full charge."""
-        value = self._status.get("time_to_full_charge", None)
+        value = self._status.get(
+            "time_to_full_charge", self._status.get("vehicle_eta", None)
+        )
         if value is not None:
             return datetime.now(timezone.utc) + timedelta(seconds=value)
         return value

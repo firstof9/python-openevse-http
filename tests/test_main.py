@@ -490,15 +490,23 @@ async def test_get_esp_temperature(fixture, expected, request):
 
 
 @pytest.mark.parametrize(
-    "fixture, expected",
+    "fixture, expected_str",
     [("test_charger", "2021-08-10T23:00:11Z"), ("test_charger_v2", None)],
 )
-async def test_get_time(fixture, expected, request):
+async def test_get_time(fixture, expected_str, request):
     """Test v4 Status reply."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
-    status = charger.time
-    assert status == expected
+
+    result = charger.time
+
+    if expected_str:
+        expected_dt = datetime(2021, 8, 10, 23, 0, 11, tzinfo=timezone.utc)
+        assert result == expected_dt
+        assert isinstance(result, datetime)
+    else:
+        assert result is None
+
     await charger.ws_disconnect()
 
 
@@ -2248,10 +2256,10 @@ async def test_main_auth_instantiation():
     # Ensure session.get() returns the request context
     mock_session.get.return_value = mock_request_ctx
 
-    with patch("aiohttp.ClientSession", return_value=mock_session), patch(
-        "aiohttp.BasicAuth"
-    ) as mock_basic_auth:
-
+    with (
+        patch("aiohttp.ClientSession", return_value=mock_session),
+        patch("aiohttp.BasicAuth") as mock_basic_auth,
+    ):
         await charger.update()
 
         # Verify BasicAuth was instantiated

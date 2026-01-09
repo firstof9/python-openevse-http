@@ -33,8 +33,9 @@ async def test_process_request_decode_error(charger, caplog):
     mock_resp.__aenter__.return_value = mock_resp
     mock_resp.__aexit__.return_value = None
 
-    with patch("aiohttp.ClientSession.get", return_value=mock_resp), caplog.at_level(
-        logging.DEBUG
+    with (
+        patch("aiohttp.ClientSession.get", return_value=mock_resp),
+        caplog.at_level(logging.DEBUG),
     ):
         data = await charger.process_request("http://url", method="get")
 
@@ -53,8 +54,9 @@ async def test_process_request_http_warnings(charger, caplog):
     mock_resp.__aenter__.return_value = mock_resp
     mock_resp.__aexit__.return_value = None
 
-    with patch("aiohttp.ClientSession.get", return_value=mock_resp), caplog.at_level(
-        logging.WARNING
+    with (
+        patch("aiohttp.ClientSession.get", return_value=mock_resp),
+        caplog.at_level(logging.WARNING),
     ):
         await charger.process_request("http://url", method="get")
         # Verify the 404 response body was logged as a warning

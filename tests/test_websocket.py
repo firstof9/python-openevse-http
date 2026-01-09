@@ -97,9 +97,10 @@ async def test_connection_error_retry(ws_client, mock_callback):
     """Test connection retry logic."""
     error = aiohttp.ClientConnectionError("Connection lost")
 
-    with patch("aiohttp.ClientSession.ws_connect", side_effect=error), patch(
-        "asyncio.sleep", new_callable=AsyncMock
-    ) as mock_sleep:
+    with (
+        patch("aiohttp.ClientSession.ws_connect", side_effect=error),
+        patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep,
+    ):
         # Simulate one run of 'running' which catches the error and triggers sleep
         await ws_client.running()
 
