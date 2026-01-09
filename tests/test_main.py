@@ -511,6 +511,22 @@ async def test_get_time(fixture, expected_str, request):
 
 
 @pytest.mark.parametrize(
+    "bad_value",
+    [
+        "not-a-timestamp",
+        123456789,
+        True,
+        {"some": "dict"},
+    ],
+)
+async def test_time_parsing_errors(test_charger, bad_value):
+    """Test that ValueError and AttributeError are caught and return None."""
+    test_charger._status["time"] = bad_value
+    result = test_charger.time
+    assert result is None
+
+
+@pytest.mark.parametrize(
     "fixture, expected",
     [
         ("test_charger", 275.71),
