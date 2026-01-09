@@ -8,3 +8,4 @@ requests_mock
 aiohttp
 aioresponses
 tox==4.34.0
+freezegun

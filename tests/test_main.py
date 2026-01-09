@@ -8,6 +8,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiohttp
 import pytest
+from datetime import datetime, timezone, timedelta
+from freezegun import freeze_time
 from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
 from aiohttp.client_reqrep import ConnectionKey
 from awesomeversion.exceptions import AwesomeVersionCompareException
@@ -1266,14 +1268,23 @@ async def test_vehicle_range(fixture, expected, request):
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 18000), ("test_charger_v2", None)]
+    "fixture, expected_seconds", [("test_charger", 18000), ("test_charger_v2", None)]
 )
-async def test_vehicle_eta(fixture, expected, request):
+@freeze_time("2026-01-09 12:00:00+00:00")
+async def test_vehicle_eta(fixture, expected_seconds, request):
     """Test vehicle_eta reply."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
-    status = charger.vehicle_eta
-    assert status == expected
+    
+    result = charger.vehicle_eta
+    
+    if expected_seconds is not None:
+        # Calculate what the expected datetime should be based on our frozen time
+        expected_datetime = datetime(2026, 1, 9, 12, 0, 0, tzinfo=timezone.utc) + timedelta(seconds=expected_seconds)
+        assert result == expected_datetime
+    else:
+        assert result is None
+
     await charger.ws_disconnect()
 
 
