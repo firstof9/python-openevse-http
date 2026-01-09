@@ -8,6 +8,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiohttp
 import pytest
+from datetime import datetime, timezone, timedelta
+from freezegun import freeze_time
 from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
 from aiohttp.client_reqrep import ConnectionKey
 from awesomeversion.exceptions import AwesomeVersionCompareException
@@ -488,16 +490,40 @@ async def test_get_esp_temperature(fixture, expected, request):
 
 
 @pytest.mark.parametrize(
-    "fixture, expected",
+    "fixture, expected_str",
     [("test_charger", "2021-08-10T23:00:11Z"), ("test_charger_v2", None)],
 )
-async def test_get_time(fixture, expected, request):
+async def test_get_time(fixture, expected_str, request):
     """Test v4 Status reply."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
-    status = charger.time
-    assert status == expected
+
+    result = charger.time
+
+    if expected_str:
+        expected_dt = datetime(2021, 8, 10, 23, 0, 11, tzinfo=timezone.utc)
+        assert result == expected_dt
+        assert isinstance(result, datetime)
+    else:
+        assert result is None
+
     await charger.ws_disconnect()
+
+
+@pytest.mark.parametrize(
+    "bad_value",
+    [
+        "not-a-timestamp",
+        123456789,
+        True,
+        {"some": "dict"},
+    ],
+)
+async def test_time_parsing_errors(test_charger, bad_value):
+    """Test that ValueError and AttributeError are caught and return None."""
+    test_charger._status["time"] = bad_value
+    result = test_charger.time
+    assert result is None
 
 
 @pytest.mark.parametrize(
@@ -1266,14 +1292,25 @@ async def test_vehicle_range(fixture, expected, request):
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 18000), ("test_charger_v2", None)]
+    "fixture, expected_seconds", [("test_charger", 18000), ("test_charger_v2", None)]
 )
-async def test_vehicle_eta(fixture, expected, request):
+@freeze_time("2026-01-09 12:00:00+00:00")
+async def test_vehicle_eta(fixture, expected_seconds, request):
     """Test vehicle_eta reply."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
-    status = charger.vehicle_eta
-    assert status == expected
+
+    result = charger.vehicle_eta
+
+    if expected_seconds is not None:
+        # Calculate what the expected datetime should be based on our frozen time
+        expected_datetime = datetime(
+            2026, 1, 9, 12, 0, 0, tzinfo=timezone.utc
+        ) + timedelta(seconds=expected_seconds)
+        assert result == expected_datetime
+    else:
+        assert result is None
+
     await charger.ws_disconnect()
 
 
@@ -2235,10 +2272,10 @@ async def test_main_auth_instantiation():
     # Ensure session.get() returns the request context
     mock_session.get.return_value = mock_request_ctx
 
-    with patch("aiohttp.ClientSession", return_value=mock_session), patch(
-        "aiohttp.BasicAuth"
-    ) as mock_basic_auth:
-
+    with (
+        patch("aiohttp.ClientSession", return_value=mock_session),
+        patch("aiohttp.BasicAuth") as mock_basic_auth,
+    ):
         await charger.update()
 
         # Verify BasicAuth was instantiated

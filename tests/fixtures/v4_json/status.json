@@ -48,5 +48,5 @@
     "shaper_cur": 21,
     "vehicle_soc": 75,
     "vehicle_range": 468,
-    "vehicle_eta": 18000
+    "time_to_full_charge": 18000
   }
