@@ -1275,12 +1275,14 @@ async def test_vehicle_eta(fixture, expected_seconds, request):
     """Test vehicle_eta reply."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
-    
+
     result = charger.vehicle_eta
-    
+
     if expected_seconds is not None:
         # Calculate what the expected datetime should be based on our frozen time
-        expected_datetime = datetime(2026, 1, 9, 12, 0, 0, tzinfo=timezone.utc) + timedelta(seconds=expected_seconds)
+        expected_datetime = datetime(
+            2026, 1, 9, 12, 0, 0, tzinfo=timezone.utc
+        ) + timedelta(seconds=expected_seconds)
         assert result == expected_datetime
     else:
         assert result is None
