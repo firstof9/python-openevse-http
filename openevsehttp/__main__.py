@@ -1311,7 +1311,7 @@ class OpenEVSE:
     def vehicle_eta(self) -> datetime | None:
         """Return time to full charge."""
         value = self._status.get("time_to_full_charge", None)
-        if value:
+        if value is not None:
             return datetime.now(timezone.utc) + timedelta(seconds=value)
         return value
 
