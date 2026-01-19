@@ -896,37 +896,32 @@ class OpenEVSE:
             raise UnknownError
 
     @property
-    def led_brightness(self) -> str:
+    def led_brightness(self) -> str | None:
         """Return charger led_brightness."""
         if not self._version_check("4.1.0"):
             _LOGGER.debug("Feature not supported for older firmware.")
             raise UnsupportedFeature
-        assert self._config is not None
-        return self._config["led_brightness"]
+        return self._config.get("led_brightness")
 
     @property
-    def hostname(self) -> str:
+    def hostname(self) -> str | None:
         """Return charger hostname."""
-        assert self._config is not None
-        return self._config["hostname"]
+        return self._config.get("hostname")
 
     @property
-    def wifi_ssid(self) -> str:
+    def wifi_ssid(self) -> str | None:
         """Return charger connected SSID."""
-        assert self._config is not None
-        return self._config["ssid"]
+        return self._config.get("ssid")
 
     @property
-    def ammeter_offset(self) -> int:
+    def ammeter_offset(self) -> int | None:
         """Return ammeter's current offset."""
-        assert self._config is not None
-        return self._config["offset"]
+        return self._config.get("offset")
 
     @property
-    def ammeter_scale_factor(self) -> int:
+    def ammeter_scale_factor(self) -> int | None:
         """Return ammeter's current scale factor."""
-        assert self._config is not None
-        return self._config["scale"]
+        return self._config.get("scale")
 
     @property
     def temp_check_enabled(self) -> bool:
@@ -954,23 +949,21 @@ class OpenEVSE:
         return bool(self._config.get("relayt", False))
 
     @property
-    def service_level(self) -> str:
+    def service_level(self) -> str | None:
         """Return the service level."""
-        assert self._config is not None
-        return self._config["service"]
+        return self._config.get("service")
 
     @property
-    def openevse_firmware(self) -> str:
+    def openevse_firmware(self) -> str | None:
         """Return the firmware version."""
-        assert self._config is not None
-        return self._config["firmware"]
+        return self._config.get("firmware")
 
     @property
     def max_current_soft(self) -> int | None:
         """Return the max current soft."""
-        if self._config is not None and "max_current_soft" in self._config:
-            return self._config["max_current_soft"]
-        return self._status["pilot"]
+        if "max_current_soft" in self._config:
+            return self._config.get("max_current_soft")
+        return self._status.get("pilot")
 
     @property
     async def async_charge_current(self) -> int | None:
@@ -984,9 +977,9 @@ class OpenEVSE:
             return min(
                 claims["properties"]["charge_current"], self._config["max_current_hard"]
             )
-        if self._config is not None and "max_current_soft" in self._config:
-            return self._config["max_current_soft"]
-        return self._status["pilot"]
+        if "max_current_soft" in self._config:
+            return self._config.get("max_current_soft")
+        return self._status.get("pilot")
 
     @property
     def max_current(self) -> int | None:
@@ -994,33 +987,29 @@ class OpenEVSE:
         return self._status.get("max_current", None)
 
     @property
-    def wifi_firmware(self) -> str:
+    def wifi_firmware(self) -> str | None:
         """Return the ESP firmware version."""
-        assert self._config is not None
-        value = self._config["version"]
-        if "dev" in value:
+        value = self._config.get("version")
+        if value is not None and "dev" in value:
             _LOGGER.debug("Stripping 'dev' from version.")
             value = value.split(".")
             value = ".".join(value[0:3])
         return value
 
     @property
-    def ip_address(self) -> str:
+    def ip_address(self) -> str | None:
         """Return the ip address."""
-        assert self._status is not None
-        return self._status["ipaddress"]
+        return self._status.get("ipaddress")
 
     @property
-    def charging_voltage(self) -> int:
+    def charging_voltage(self) -> int | None:
         """Return the charging voltage."""
-        assert self._status is not None
-        return self._status["voltage"]
+        return self._status.get("voltage")
 
     @property
-    def mode(self) -> str:
+    def mode(self) -> str | None:
         """Return the mode."""
-        assert self._status is not None
-        return self._status["mode"]
+        return self._status.get("mode")
 
     @property
     def using_ethernet(self) -> bool:
@@ -1028,98 +1017,80 @@ class OpenEVSE:
         return bool(self._status.get("eth_connected", False))
 
     @property
-    def stuck_relay_trip_count(self) -> int:
+    def stuck_relay_trip_count(self) -> int | None:
         """Return the stuck relay count."""
-        assert self._status is not None
-        return self._status["stuckcount"]
+        return self._status.get("stuckcount")
 
     @property
-    def no_gnd_trip_count(self) -> int:
+    def no_gnd_trip_count(self) -> int | None:
         """Return the no ground count."""
-        assert self._status is not None
-        return self._status["nogndcount"]
+        return self._status.get("nogndcount")
 
     @property
-    def gfi_trip_count(self) -> int:
+    def gfi_trip_count(self) -> int | None:
         """Return the GFCI count."""
-        assert self._status is not None
-        return self._status["gfcicount"]
+        return self._status.get("gfcicount")
 
     @property
     def status(self) -> str:
         """Return charger's state."""
-        state = self._status.get("status", states[int(self._status.get("state", 0))])
-        return state
+        return self._status.get("status", states[int(self._status.get("state", 0))])
 
     @property
     def state(self) -> str:
         """Return charger's state."""
-        assert self._status is not None
-        return states[int(self._status["state"])]
+        return states[int(self._status.get("state", 0))]
 
     @property
-    def state_raw(self) -> int:
+    def state_raw(self) -> int | None:
         """Return charger's state int form."""
-        assert self._status is not None
-        return self._status["state"]
+        return self._status.get("state")
 
     @property
-    def charge_time_elapsed(self) -> int:
+    def charge_time_elapsed(self) -> int | None:
         """Return elapsed charging time."""
-        assert self._status is not None
-        return self._status["elapsed"]
+        return self._status.get("elapsed")
 
     @property
-    def wifi_signal(self) -> str:
+    def wifi_signal(self) -> str | None:
         """Return charger's wifi signal."""
-        assert self._status is not None
-        return self._status["srssi"]
+        return self._status.get("srssi")
 
     @property
-    def charging_current(self) -> float:
+    def charging_current(self) -> float | None:
         """Return the charge current.
 
         0 if is not currently charging.
         """
-        assert self._status is not None
-        return self._status["amp"]
+        return self._status.get("amp")
 
     @property
-    def current_capacity(self) -> int:
+    def current_capacity(self) -> int | None:
         """Return the current capacity."""
-        assert self._status is not None
-        return self._status["pilot"]
+        return self._status.get("pilot")
 
     @property
-    def usage_total(self) -> float:
+    def usage_total(self) -> float | None:
         """Return the total energy usage in Wh."""
-        assert self._status is not None
         if "total_energy" in self._status:
-            return self._status["total_energy"]
-        return self._status["watthour"]
+            return self._status.get("total_energy")
+        return self._status.get("watthour")
 
     @property
     def ambient_temperature(self) -> float | None:
         """Return the temperature of the ambient sensor, in degrees Celsius."""
-        assert self._status is not None
-        temp = None
         if "temp" in self._status and self._status["temp"]:
-            temp = self._status["temp"] / 10
+            return self._status.get("temp", 0) / 10
         else:
-            temp = self._status["temp1"] / 10
-        return temp
+            return self._status.get("temp1", 0) / 10
 
     @property
     def rtc_temperature(self) -> float | None:
-        """Return the temperature of the real time clock sensor.
-
-        In degrees Celsius.
-        """
-        assert self._status is not None
-        temp = self._status["temp2"] if self._status["temp2"] else None
-        if temp is not None:
-            return temp / 10
-        return None
+        """Return the temperature of the real time clock sensor."""
+        temp = self._status.get("temp2", None)
+        if not temp or temp == "false":
+            return None
+        return temp / 10
 
     @property
     def ir_temperature(self) -> float | None:
@@ -1127,27 +1098,25 @@ class OpenEVSE:
 
         In degrees Celsius.
         """
-        assert self._status is not None
-        temp = self._status["temp3"] if self._status["temp3"] else None
-        if temp is not None:
-            return temp / 10
-        return None
+        temp = self._status.get("temp3", None)
+        if not temp or temp == "false":
+            return None
+        return temp / 10
 
     @property
     def esp_temperature(self) -> float | None:
         """Return the temperature of the ESP sensor, in degrees Celsius."""
-        assert self._status is not None
         if "temp4" in self._status:
-            temp = self._status["temp4"] if self._status["temp4"] else None
-            if temp is not None:
-                return temp / 10
+            temp = self._status.get("temp4", None)
+            if not temp or temp == "false":
+                return None
+            return temp / 10
         return None
 
     @property
     def time(self) -> datetime | None:
         """Get the RTC time."""
         value = self._status.get("time")
-
         if value:
             try:
                 return datetime.fromisoformat(value.replace("Z", "+00:00"))
@@ -1156,14 +1125,13 @@ class OpenEVSE:
         return None
 
     @property
-    def usage_session(self) -> float:
+    def usage_session(self) -> float | None:
         """Get the energy usage for the current charging session.
 
         Return the energy usage in Wh.
         """
-        assert self._status is not None
         if "session_energy" in self._status:
-            return self._status["session_energy"]
+            return self._status.get("session_energy")
         return float(round(self._status["wattsec"] / 3600, 2))
 
     @property
@@ -1200,55 +1168,47 @@ class OpenEVSE:
         return self._config["protocol"]
 
     @property
-    def vehicle(self) -> str:
+    def vehicle(self) -> bool:
         """Return if a vehicle is connected dto the EVSE."""
-        assert self._status is not None
-        return self._status["vehicle"]
+        return self._status.get("vehicle", False)
 
     @property
-    def ota_update(self) -> str:
+    def ota_update(self) -> bool:
         """Return if an OTA update is active."""
-        assert self._status is not None
-        return self._status["ota_update"]
+        return self._status.get("ota_update", False)
 
     @property
-    def manual_override(self) -> str:
+    def manual_override(self) -> bool:
         """Return if Manual Override is set."""
-        assert self._status is not None
-        return self._status["manual_override"]
+        return self._status.get("manual_override", False)
 
     @property
     def divertmode(self) -> str:
         """Return the divert mode."""
-        assert self._status is not None
-        mode = self._status["divertmode"]
+        mode = self._status.get("divertmode", 1)
         if mode == 1:
             return "fast"
         return "eco"
 
     @property
-    def charge_mode(self) -> str:
+    def charge_mode(self) -> str | None:
         """Return the charge mode."""
-        assert self._config is not None
-        return self._config["charge_mode"]
+        return self._config.get("charge_mode")
 
     @property
-    def available_current(self) -> float:
+    def available_current(self) -> float | None:
         """Return the computed available current for divert."""
-        assert self._status is not None
-        return self._status["available_current"]
+        return self._status.get("available_current")
 
     @property
-    def smoothed_available_current(self) -> float:
+    def smoothed_available_current(self) -> float | None:
         """Return the computed smoothed available current for divert."""
-        assert self._status is not None
-        return self._status["smoothed_available_current"]
+        return self._status.get("smoothed_available_current")
 
     @property
-    def charge_rate(self) -> float:
+    def charge_rate(self) -> float | None:
         """Return the divert charge rate."""
-        assert self._status is not None
-        return self._status["charge_rate"]
+        return self._status.get("charge_rate")
 
     @property
     def divert_active(self) -> bool:
