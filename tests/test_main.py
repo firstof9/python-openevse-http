@@ -687,29 +687,27 @@ async def test_get_charge_rate(fixture, expected, request):
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
+    "fixture, expected", [("test_charger", None), ("test_charger_v2", None)]
 )
 async def test_get_available_current(fixture, expected, request):
     """Test v4 Status reply."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
-    with pytest.raises(KeyError):
-        status = charger.available_current
-        # assert status == expected
-        await charger.ws_disconnect()
+    status = charger.available_current
+    assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
+    "fixture, expected", [("test_charger", None), ("test_charger_v2", None)]
 )
 async def test_get_smoothed_available_current(fixture, expected, request):
     """Test v4 Status reply."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
-    with pytest.raises(KeyError):
-        status = charger.smoothed_available_current
-        # assert status == expected
-        await charger.ws_disconnect()
+    status = charger.smoothed_available_current
+    assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -726,16 +724,15 @@ async def test_get_divert_active(fixture, expected, request):
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
+    "fixture, expected", [("test_charger", False), ("test_charger_v2", False)]
 )
 async def test_get_manual_override(fixture, expected, request):
     """Test v4 Status reply."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
-    with pytest.raises(KeyError):
-        status = charger.manual_override
-        # assert status == expected
-        await charger.ws_disconnect()
+    status = charger.manual_override
+    assert status == expected
+    await charger.ws_disconnect()
 
 
 async def test_toggle_override(
