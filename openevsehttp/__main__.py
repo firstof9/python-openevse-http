@@ -896,7 +896,7 @@ class OpenEVSE:
             raise UnknownError
 
     @property
-    def led_brightness(self) -> str | None:
+    def led_brightness(self) -> int | None:
         """Return charger led_brightness."""
         if not self._version_check("4.1.0"):
             _LOGGER.debug("Feature not supported for older firmware.")
@@ -1131,7 +1131,10 @@ class OpenEVSE:
         """
         if "session_energy" in self._status:
             return self._status.get("session_energy")
-        return float(round(self._status["wattsec"] / 3600, 2))
+        wattsec = self._status.get("wattsec")
+        if wattsec is not None:
+            return float(round(wattsec / 3600, 2))
+        return None
 
     @property
     def total_day(self) -> float | None:
