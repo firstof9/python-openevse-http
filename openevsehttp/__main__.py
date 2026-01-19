@@ -1090,10 +1090,7 @@ class OpenEVSE:
         temp = self._status.get("temp2")
         if temp is None or isinstance(temp, bool):
             return None
-        try:
-            return float(temp) / 10
-        except (TypeError, ValueError):
-            return None
+        return float(temp) / 10
 
     @property
     def ir_temperature(self) -> float | None:
@@ -1104,10 +1101,7 @@ class OpenEVSE:
         temp = self._status.get("temp3")
         if temp is None or isinstance(temp, bool):
             return None
-        try:
-            return float(temp) / 10
-        except (TypeError, ValueError):
-            return None
+        return float(temp) / 10
 
     @property
     def esp_temperature(self) -> float | None:
@@ -1115,10 +1109,7 @@ class OpenEVSE:
         temp = self._status.get("temp4")
         if temp is None or isinstance(temp, bool):
             return None
-        try:
-            return float(temp) / 10
-        except (TypeError, ValueError):
-            return None
+        return float(temp) / 10
 
     @property
     def time(self) -> datetime | None:
