@@ -1081,8 +1081,7 @@ class OpenEVSE:
         """Return the temperature of the ambient sensor, in degrees Celsius."""
         if "temp" in self._status and self._status["temp"]:
             return self._status.get("temp", 0) / 10
-        else:
-            return self._status.get("temp1", 0) / 10
+        return self._status.get("temp1", 0) / 10
 
     @property
     def rtc_temperature(self) -> float | None:
