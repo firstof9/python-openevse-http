@@ -1087,10 +1087,13 @@ class OpenEVSE:
     @property
     def rtc_temperature(self) -> float | None:
         """Return the temperature of the real time clock sensor."""
-        temp = self._status.get("temp2", None)
-        if not temp or temp == "false":
+        temp = self._status.get("temp2")
+        if temp is None or isinstance(temp, bool):
             return None
-        return temp / 10
+        try:
+            return float(temp) / 10
+        except (TypeError, ValueError):
+            return None
 
     @property
     def ir_temperature(self) -> float | None:
@@ -1098,20 +1101,24 @@ class OpenEVSE:
 
         In degrees Celsius.
         """
-        temp = self._status.get("temp3", None)
-        if not temp or temp == "false":
+        temp = self._status.get("temp3")
+        if temp is None or isinstance(temp, bool):
             return None
-        return temp / 10
+        try:
+            return float(temp) / 10
+        except (TypeError, ValueError):
+            return None
 
     @property
     def esp_temperature(self) -> float | None:
         """Return the temperature of the ESP sensor, in degrees Celsius."""
-        if "temp4" in self._status:
-            temp = self._status.get("temp4", None)
-            if not temp or temp == "false":
-                return None
-            return temp / 10
-        return None
+        temp = self._status.get("temp4")
+        if temp is None or isinstance(temp, bool):
+            return None
+        try:
+            return float(temp) / 10
+        except (TypeError, ValueError):
+            return None
 
     @property
     def time(self) -> datetime | None:
