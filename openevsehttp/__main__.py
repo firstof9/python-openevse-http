@@ -1079,8 +1079,9 @@ class OpenEVSE:
     @property
     def ambient_temperature(self) -> float | None:
         """Return the temperature of the ambient sensor, in degrees Celsius."""
-        if "temp" in self._status and self._status["temp"]:
-            return self._status.get("temp", 0) / 10
+        temp = self._status.get("temp")
+        if temp:
+            return temp / 10
         return self._status.get("temp1", 0) / 10
 
     @property
