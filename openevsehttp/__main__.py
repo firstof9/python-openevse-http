@@ -1164,10 +1164,10 @@ class OpenEVSE:
     @property
     def protocol_version(self) -> str | None:
         """Return the protocol version."""
-        assert self._config is not None
-        if self._config["protocol"] == "-":
+        protocol = self._config.get("protocol")
+        if protocol == "-":
             return None
-        return self._config["protocol"]
+        return protocol
 
     @property
     def vehicle(self) -> bool:
@@ -1228,7 +1228,7 @@ class OpenEVSE:
 
         Calculate Watts base on V*I
         """
-        if self._status is not None and any(
+        if self._status is not None and all(
             key in self._status for key in ["voltage", "amp"]
         ):
             return round(self._status["voltage"] * self._status["amp"], 2)
