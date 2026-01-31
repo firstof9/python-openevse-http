@@ -31,9 +31,10 @@ class OpenEVSEWebsocket:
         callback,
         user=None,
         password=None,
+        session=None,
     ):
         """Initialize a OpenEVSEWebsocket instance."""
-        self.session = aiohttp.ClientSession()
+        self._session = session
         self.uri = self._get_uri(server)
         self._user = user
         self._password = password
@@ -44,6 +45,13 @@ class OpenEVSEWebsocket:
         self._client = None
         self._ping = None
         self._pong = None
+
+    @property
+    def session(self):
+        """Return the aiohttp session, creating one if needed."""
+        if self._session is None:
+            self._session = aiohttp.ClientSession()
+        return self._session
 
     @property
     def state(self):
@@ -159,7 +167,8 @@ class OpenEVSEWebsocket:
     async def close(self):
         """Close the listening websocket."""
         await self._set_state(STATE_STOPPED)
-        await self.session.close()
+        if self._client:
+            await self._client.close()
 
     async def keepalive(self):
         """Send ping requests to websocket."""
