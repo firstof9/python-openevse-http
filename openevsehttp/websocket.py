@@ -52,7 +52,7 @@ class OpenEVSEWebsocket:
 
     @state.setter
     def state(self, value):
-        """Set the state (synchronous setter that schedules the callback)."""
+        """Setter that schedules the callback."""
         self._state = value
         _LOGGER.debug("Websocket %s", value)
         # Schedule the callback asynchronously without awaiting here.
