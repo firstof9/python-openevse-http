@@ -283,7 +283,7 @@ async def test_keepalive_send_exceptions(ws_client_auth):
 
 
 @pytest.mark.asyncio
-async def test_state_setter_threadsafe_fallback(ws_client, mock_callback):
+async def test_state_setter_threadsafe_fallback(ws_client):
     """Test state setter falls back to call_soon_threadsafe on RuntimeError."""
     mock_loop = MagicMock()
     ws_client._error_reason = "Previous Error"
