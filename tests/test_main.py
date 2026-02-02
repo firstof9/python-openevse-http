@@ -1,6 +1,5 @@
 """Library tests."""
 
-import asyncio
 import json
 import logging
 from unittest import mock
@@ -12,7 +11,6 @@ from datetime import datetime, timezone, timedelta
 from freezegun import freeze_time
 from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
 from aiohttp.client_reqrep import ConnectionKey
-from awesomeversion.exceptions import AwesomeVersionCompareException
 
 import openevsehttp.__main__ as main
 from openevsehttp.__main__ import OpenEVSE
@@ -23,8 +21,6 @@ from openevsehttp.exceptions import (
     UnsupportedFeature,
 )
 from openevsehttp.websocket import (
-    SIGNAL_CONNECTION_STATE,
-    STATE_CONNECTED,
     STATE_DISCONNECTED,
 )
 from tests.common import load_fixture
@@ -1118,7 +1114,7 @@ async def test_firmware_check(
         body="",
     )
     firmware = await test_charger.firmware_check()
-    assert firmware == None
+    assert firmware is None
 
     mock_aioclient.get(
         TEST_URL_GITHUB_v4,
@@ -2177,7 +2173,7 @@ async def test_get_shaper_updated(fixture, expected, request):
     await charger.ws_disconnect()
 
 
-async def test_get_status(test_charger_timeout, caplog):
+async def test_get_status_error(test_charger_timeout, caplog):
     """Test v4 Status reply."""
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(TimeoutError):
