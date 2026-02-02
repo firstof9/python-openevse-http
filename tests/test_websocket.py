@@ -280,3 +280,27 @@ async def test_keepalive_send_exceptions(ws_client_auth):
     ws_client_auth._client.send_json.side_effect = Exception("Generic err")
     await ws_client_auth.keepalive()
     assert ws_client_auth.state == STATE_DISCONNECTED
+
+
+@pytest.mark.asyncio
+async def test_state_setter_threadsafe_fallback(ws_client, mock_callback):
+    """Test state setter falls back to call_soon_threadsafe on RuntimeError."""
+    mock_loop = MagicMock()
+    ws_client._error_reason = "Previous Error"
+
+    with (
+        patch(
+            "asyncio.create_task", side_effect=RuntimeError("No running loop")
+        ) as mock_create_task,
+        patch("asyncio.get_event_loop", return_value=mock_loop),
+    ):
+
+        ws_client.state = STATE_CONNECTED
+        assert ws_client.state == STATE_CONNECTED
+
+        mock_loop.call_soon_threadsafe.assert_called_once()
+
+        args, _ = mock_loop.call_soon_threadsafe.call_args
+        assert args[0] is mock_create_task
+
+        assert ws_client._error_reason is None
