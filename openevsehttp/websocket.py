@@ -51,8 +51,26 @@ class OpenEVSEWebsocket:
         return self._state
 
     @state.setter
-    async def state(self, value):
-        """Set the state."""
+    def state(self, value):
+        """Set the state (synchronous setter that schedules the callback)."""
+        self._state = value
+        _LOGGER.debug("Websocket %s", value)
+        # Schedule the callback asynchronously without awaiting here.
+        try:
+            asyncio.create_task(
+                self.callback(SIGNAL_CONNECTION_STATE, value, self._error_reason)
+            )
+        except RuntimeError:
+            # If there's no running loop, schedule safely on the event loop.
+            loop = asyncio.get_event_loop()
+            loop.call_soon_threadsafe(
+                asyncio.create_task,
+                self.callback(SIGNAL_CONNECTION_STATE, value, self._error_reason),
+            )
+        self._error_reason = None
+
+    async def _set_state(self, value):
+        """Async helper to set the state and await the callback."""
         self._state = value
         _LOGGER.debug("Websocket %s", value)
         await self.callback(SIGNAL_CONNECTION_STATE, value, self._error_reason)
@@ -65,7 +83,7 @@ class OpenEVSEWebsocket:
 
     async def running(self):
         """Open a persistent websocket connection and act on events."""
-        await OpenEVSEWebsocket.state.fset(self, STATE_STARTING)
+        await self._set_state(STATE_STARTING)
         auth = None
 
         if self._user and self._password:
@@ -77,7 +95,7 @@ class OpenEVSEWebsocket:
                 heartbeat=15,
                 auth=auth,
             ) as ws_client:
-                await OpenEVSEWebsocket.state.fset(self, STATE_CONNECTED)
+                await self._set_state(STATE_CONNECTED)
                 self.failed_attempts = 0
                 self._client = ws_client
 
@@ -107,11 +125,11 @@ class OpenEVSEWebsocket:
             else:
                 _LOGGER.error("Unexpected response received: %s", error)
                 self._error_reason = error
-            await OpenEVSEWebsocket.state.fset(self, STATE_STOPPED)
+            await self._set_state(STATE_STOPPED)
         except (aiohttp.ClientConnectionError, asyncio.TimeoutError) as error:
             if self.failed_attempts > MAX_FAILED_ATTEMPTS:
                 self._error_reason = ERROR_TOO_MANY_RETRIES
-                await OpenEVSEWebsocket.state.fset(self, STATE_STOPPED)
+                await self._set_state(STATE_STOPPED)
             elif self.state != STATE_STOPPED:
                 retry_delay = min(2 ** (self.failed_attempts - 1) * 30, 300)
                 self.failed_attempts += 1
@@ -120,16 +138,16 @@ class OpenEVSEWebsocket:
                     retry_delay,
                     error,
                 )
-                await OpenEVSEWebsocket.state.fset(self, STATE_DISCONNECTED)
+                await self._set_state(STATE_DISCONNECTED)
                 await asyncio.sleep(retry_delay)
         except Exception as error:  # pylint: disable=broad-except
             if self.state != STATE_STOPPED:
                 _LOGGER.exception("Unexpected exception occurred: %s", error)
                 self._error_reason = error
-                await OpenEVSEWebsocket.state.fset(self, STATE_STOPPED)
+                await self._set_state(STATE_STOPPED)
         else:
             if self.state != STATE_STOPPED:
-                await OpenEVSEWebsocket.state.fset(self, STATE_DISCONNECTED)
+                await self._set_state(STATE_DISCONNECTED)
                 await asyncio.sleep(5)
 
     async def listen(self):
@@ -140,7 +158,7 @@ class OpenEVSEWebsocket:
 
     async def close(self):
         """Close the listening websocket."""
-        await OpenEVSEWebsocket.state.fset(self, STATE_STOPPED)
+        await self._set_state(STATE_STOPPED)
         await self.session.close()
 
     async def keepalive(self):
@@ -151,7 +169,7 @@ class OpenEVSEWebsocket:
                 # Negitive time should indicate no pong reply so consider the
                 # websocket disconnected.
                 self._error_reason = ERROR_PING_TIMEOUT
-                await OpenEVSEWebsocket.state.fset(self, STATE_DISCONNECTED)
+                await self._set_state(STATE_DISCONNECTED)
 
         data = {"ping": 1}
         _LOGGER.debug("Sending message: %s to websocket.", data)
@@ -168,7 +186,7 @@ class OpenEVSEWebsocket:
             _LOGGER.error("Error parsing data: %s", err)
         except RuntimeError as err:
             _LOGGER.debug("Websocket connection issue: %s", err)
-            await OpenEVSEWebsocket.state.fset(self, STATE_DISCONNECTED)
+            await self._set_state(STATE_DISCONNECTED)
         except Exception as err:  # pylint: disable=broad-exception-caught
             _LOGGER.debug("Problem sending ping request: %s", err)
-            await OpenEVSEWebsocket.state.fset(self, STATE_DISCONNECTED)
+            await self._set_state(STATE_DISCONNECTED)
