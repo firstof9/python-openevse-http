@@ -1,6 +1,5 @@
 """Provide common pytest fixtures."""
 
-
 import pytest
 from aioresponses import aioresponses
 
