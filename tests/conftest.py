@@ -222,7 +222,7 @@ async def test_charger_v2(mock_aioclient, session):
 
 @pytest_asyncio.fixture
 async def charger(request, mock_aioclient, session):
-    """Factory fixture to create different charger types based on parameter.
+    """Fixture to create different charger types based on parameter.
 
     Use with indirect parametrization:
         @pytest.mark.parametrize("charger", ["test_charger", "test_charger_v2"], indirect=True)
