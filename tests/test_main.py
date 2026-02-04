@@ -706,12 +706,12 @@ async def test_set_current_v2(
 
 
 @pytest.mark.parametrize(
-    "fixture, expected",
-    [("test_charger", True), ("test_charger_v2", None)],
+    "charger, expected",
+    [("test_charger", 7728.0), ("test_charger_v2", 0)],
+    indirect=["charger"],
 )
-async def test_get_charging_power(fixture, expected, request):
+async def test_get_charging_power(charger, expected):
     """Test v4 Status reply."""
-    charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.charging_power
     assert status == expected
@@ -1379,15 +1379,15 @@ async def test_freeram(charger, expected):
 
 
 @pytest.mark.parametrize(
-    "fixture, expected",
+    "charger, expected",
     [
         ("test_charger_new", {"gfcicount": 1, "nogndcount": 0, "stuckcount": 0}),
         ("test_charger_v2", {"gfcicount": 0, "nogndcount": 0, "stuckcount": 0}),
     ],
+    indirect=["charger"],
 )
-async def test_checks_count(fixture, expected, request):
+async def test_checks_count(charger, expected):
     """Test checks_count reply."""
-    charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.checks_count
     assert status == expected
@@ -1512,17 +1512,17 @@ async def test_async_override_state(
 
 
 @pytest.mark.parametrize(
-    "fixture, expected",
+    "charger, expected",
     [
         ("test_charger", False),
         ("test_charger_v2", False),
         ("test_charger_broken", False),
         ("test_charger_new", True),
     ],
+    indirect=["charger"],
 )
-async def test_get_shaper_updated(fixture, expected, request):
+async def test_get_shaper_updated(charger, expected):
     """Test v4 Status reply."""
-    charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.shaper_updated
     assert status == expected
@@ -1542,17 +1542,17 @@ async def test_get_status_error(test_charger_timeout, caplog):
 
 
 @pytest.mark.parametrize(
-    "fixture, expected",
+    "charger, expected",
     [
         ("test_charger", "eco"),
         ("test_charger_v2", "fast"),
         ("test_charger_broken", "eco"),
         ("test_charger_new", "fast"),
     ],
+    indirect=["charger"],
 )
-async def test_divertmode(fixture, expected, request):
+async def test_divertmode(charger, expected):
     """Test divertmode property."""
-    charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.divertmode
     assert status == expected
@@ -1667,17 +1667,17 @@ async def test_send_command_empty_fallback():
 
 
 @pytest.mark.parametrize(
-    "fixture, expected",
+    "charger, expected",
     [
         ("test_charger", UnsupportedFeature),
         ("test_charger_v2", UnsupportedFeature),
         ("test_charger_broken", UnsupportedFeature),
         ("test_charger_new", 4500),
     ],
+    indirect=["charger"],
 )
-async def test_power(fixture, expected, request):
+async def test_power(charger, expected):
     """Test current_power property."""
-    charger = request.getfixturevalue(fixture)
     await charger.update()
 
     # If we expect an exception (UnsupportedFeature), we must use pytest.raises
