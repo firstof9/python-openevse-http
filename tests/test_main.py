@@ -2682,6 +2682,7 @@ async def test_external_session_with_error_handling(mock_aioclient):
         # Session should still be open
         assert not session.closed
 
+
 async def test_external_session_unicode_decode_error():
     """Test external session handles UnicodeDecodeError."""
     mock_response = AsyncMock()
