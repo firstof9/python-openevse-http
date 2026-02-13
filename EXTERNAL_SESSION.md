@@ -73,7 +73,7 @@ async def main():
 
 ## API Changes
 
-### OpenEVSE.__init__()
+### `OpenEVSE.__init__()`
 
 ```python
 def __init__(
@@ -91,7 +91,7 @@ def __init__(
 - `pwd` (str, optional): Password for authentication
 - `session` (aiohttp.ClientSession | None, optional): External session to use for HTTP requests. If not provided, the library will create temporary sessions as needed.
 
-### OpenEVSEWebsocket.__init__()
+### `OpenEVSEWebsocket.__init__()`
 
 ```python
 def __init__(
