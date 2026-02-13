@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timedelta, timezone
 import json
 import logging
 import re
+from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Dict, Union
 
 import aiohttp  # type: ignore
@@ -14,37 +14,13 @@ from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
 from awesomeversion import AwesomeVersion
 from awesomeversion.exceptions import AwesomeVersionCompareException
 
-from .const import (
-    BAT_LVL,
-    BAT_RANGE,
-    CLIENT,
-    GRID,
-    MAX_AMPS,
-    MIN_AMPS,
-    RELEASE,
-    SOLAR,
-    TTF,
-    TYPE,
-    VALUE,
-    VOLTAGE,
-)
-from .exceptions import (
-    AlreadyListening,
-    AuthenticationError,
-    InvalidType,
-    MissingMethod,
-    MissingSerial,
-    ParseJSONError,
-    UnknownError,
-    UnsupportedFeature,
-)
-from .websocket import (
-    SIGNAL_CONNECTION_STATE,
-    STATE_CONNECTED,
-    STATE_DISCONNECTED,
-    STATE_STOPPED,
-    OpenEVSEWebsocket,
-)
+from .const import (BAT_LVL, BAT_RANGE, CLIENT, GRID, MAX_AMPS, MIN_AMPS,
+                    RELEASE, SOLAR, TTF, TYPE, VALUE, VOLTAGE)
+from .exceptions import (AlreadyListening, AuthenticationError, InvalidType,
+                         MissingMethod, MissingSerial, ParseJSONError,
+                         UnknownError, UnsupportedFeature)
+from .websocket import (SIGNAL_CONNECTION_STATE, STATE_CONNECTED,
+                        STATE_DISCONNECTED, STATE_STOPPED, OpenEVSEWebsocket)
 
 _LOGGER = logging.getLogger(__name__)
 
