@@ -3220,7 +3220,7 @@ async def test_websocket_stop_break():
 
             ws.state = "connected"
 
-            async def side_effect(msgtype, data, error):
+            async def side_effect(msgtype, _data, _error):
                 if msgtype == "data":
                     ws._state = "stopped"  # Direct set to avoid callback loop
 
