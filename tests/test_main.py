@@ -2333,3 +2333,349 @@ async def test_power(fixture, expected, request):
         assert charger.current_power == expected
 
     await charger.ws_disconnect()
+
+
+# Additional coverage tests for error handling and edge cases
+
+
+async def test_process_request_missing_method():
+    """Test process_request raises error when method is None."""
+    from openevsehttp.exceptions import MissingMethod
+
+    charger = OpenEVSE(SERVER_URL)
+
+    with pytest.raises(MissingMethod):
+        await charger.process_request(TEST_URL_STATUS, method=None)
+
+
+async def test_process_request_unicode_decode_error(mock_aioclient):
+    """Test process_request handles UnicodeDecodeError."""
+    # Create a mock response that raises UnicodeDecodeError on text()
+    mock_response = AsyncMock()
+    mock_response.status = 200
+    mock_response.text = AsyncMock(
+        side_effect=UnicodeDecodeError("utf-8", b"", 0, 1, "")
+    )
+    mock_response.read = AsyncMock(return_value=b'{"status": "ok"}')
+
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=200,
+        body='{"status": "ok"}',
+    )
+
+    # Patch the session.get to return our mock response
+    with patch("aiohttp.ClientSession.get") as mock_get:
+        mock_get.return_value.__aenter__.return_value = mock_response
+
+        charger = OpenEVSE(SERVER_URL)
+        result = await charger.process_request(TEST_URL_STATUS, method="get")
+
+        assert result == {"status": "ok"}
+
+
+async def test_process_request_non_json_response(mock_aioclient):
+    """Test process_request handles non-JSON response."""
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=200,
+        body="Not JSON",
+    )
+
+    charger = OpenEVSE(SERVER_URL)
+    result = await charger.process_request(TEST_URL_STATUS, method="get")
+
+    # Should return the string as-is
+    assert result == "Not JSON"
+
+
+async def test_process_request_400_error_with_msg(mock_aioclient):
+    """Test process_request handles 400 error with msg field."""
+    from openevsehttp.exceptions import ParseJSONError
+
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=400,
+        body='{"msg": "Bad request"}',
+    )
+
+    charger = OpenEVSE(SERVER_URL)
+
+    with pytest.raises(ParseJSONError):
+        await charger.process_request(TEST_URL_STATUS, method="get")
+
+
+async def test_process_request_400_error_with_error_field(mock_aioclient):
+    """Test process_request handles 400 error with error field."""
+    from openevsehttp.exceptions import ParseJSONError
+
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=400,
+        body='{"error": "Invalid input"}',
+    )
+
+    charger = OpenEVSE(SERVER_URL)
+
+    with pytest.raises(ParseJSONError):
+        await charger.process_request(TEST_URL_STATUS, method="get")
+
+
+async def test_process_request_401_error(mock_aioclient):
+    """Test process_request handles 401 authentication error."""
+    from openevsehttp.exceptions import AuthenticationError
+
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=401,
+        body='{"error": "Unauthorized"}',
+    )
+
+    charger = OpenEVSE(SERVER_URL)
+
+    with pytest.raises(AuthenticationError):
+        await charger.process_request(TEST_URL_STATUS, method="get")
+
+
+async def test_process_request_404_error(mock_aioclient):
+    """Test process_request handles 404 error."""
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=404,
+        body='{"error": "Not found"}',
+    )
+
+    charger = OpenEVSE(SERVER_URL)
+    # Should not raise, just log warning
+    result = await charger.process_request(TEST_URL_STATUS, method="get")
+    assert result == {"error": "Not found"}
+
+
+async def test_process_request_405_error(mock_aioclient):
+    """Test process_request handles 405 error."""
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=405,
+        body='{"error": "Method not allowed"}',
+    )
+
+    charger = OpenEVSE(SERVER_URL)
+    # Should not raise, just log warning
+    result = await charger.process_request(TEST_URL_STATUS, method="get")
+    assert result == {"error": "Method not allowed"}
+
+
+async def test_process_request_500_error(mock_aioclient):
+    """Test process_request handles 500 error."""
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=500,
+        body='{"error": "Internal server error"}',
+    )
+
+    charger = OpenEVSE(SERVER_URL)
+    # Should not raise, just log warning
+    result = await charger.process_request(TEST_URL_STATUS, method="get")
+    assert result == {"error": "Internal server error"}
+
+
+async def test_process_request_timeout_error():
+    """Test process_request handles TimeoutError."""
+    with patch("aiohttp.ClientSession.get") as mock_get:
+        mock_get.side_effect = TimeoutError("Connection timeout")
+
+        charger = OpenEVSE(SERVER_URL)
+
+        with pytest.raises(TimeoutError):
+            await charger.process_request(TEST_URL_STATUS, method="get")
+
+
+async def test_process_request_server_timeout_error():
+    """Test process_request handles ServerTimeoutError."""
+    with patch("aiohttp.ClientSession.get") as mock_get:
+        mock_get.side_effect = ServerTimeoutError("Server timeout")
+
+        charger = OpenEVSE(SERVER_URL)
+
+        with pytest.raises(ServerTimeoutError):
+            await charger.process_request(TEST_URL_STATUS, method="get")
+
+
+async def test_process_request_content_type_error():
+    """Test process_request handles ContentTypeError."""
+    with patch("aiohttp.ClientSession.get") as mock_get:
+        error = ContentTypeError(
+            request_info=MagicMock(),
+            history=(),
+            message="Invalid content type",
+        )
+        mock_get.side_effect = error
+
+        charger = OpenEVSE(SERVER_URL)
+
+        with pytest.raises(ContentTypeError):
+            await charger.process_request(TEST_URL_STATUS, method="get")
+
+
+async def test_process_request_post_with_config_version(mock_aioclient):
+    """Test process_request calls update when posting config_version."""
+    mock_aioclient.post(
+        TEST_URL_CONFIG,
+        status=200,
+        body='{"config_version": "1.0"}',
+    )
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=200,
+        body=load_fixture("v4_json/status.json"),
+    )
+    mock_aioclient.get(
+        TEST_URL_CONFIG,
+        status=200,
+        body=load_fixture("v4_json/config.json"),
+    )
+
+    charger = OpenEVSE(SERVER_URL)
+
+    # This should trigger update() because of config_version in response
+    result = await charger.process_request(TEST_URL_CONFIG, method="post", data={})
+
+    assert "config_version" in result
+    # Verify update was called by checking if status was set
+    assert charger._status is not None
+
+
+async def test_send_command_no_ret_with_msg(mock_aioclient):
+    """Test send_command when response has msg but no ret."""
+    mock_aioclient.post(
+        "http://openevse.test.tld/r",
+        status=200,
+        body='{"msg": "Command failed"}',
+    )
+
+    charger = OpenEVSE(SERVER_URL)
+    result = await charger.send_command("test_command")
+
+    assert result == (False, "Command failed")
+
+
+async def test_send_command_no_ret_no_msg(mock_aioclient):
+    """Test send_command when response has neither ret nor msg."""
+    mock_aioclient.post(
+        "http://openevse.test.tld/r",
+        status=200,
+        body='{"error": "Unknown"}',
+    )
+
+    charger = OpenEVSE(SERVER_URL)
+    result = await charger.send_command("test_command")
+
+    assert result == (False, "")
+
+
+async def test_firmware_check_no_config(mock_aioclient):
+    """Test firmware_check when config is not loaded."""
+    charger = OpenEVSE(SERVER_URL)
+
+    result = await charger.firmware_check()
+
+    assert result is None
+
+
+async def test_firmware_check_no_firmware_version(mock_aioclient):
+    """Test firmware_check when firmware_version is missing."""
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=200,
+        body="{}",
+    )
+    mock_aioclient.get(
+        TEST_URL_CONFIG,
+        status=200,
+        body='{"hostname": "openevse"}',
+    )
+
+    charger = OpenEVSE(SERVER_URL)
+    await charger.update()
+
+    result = await charger.firmware_check()
+
+    assert result is None
+
+
+async def test_firmware_check_github_api_error(mock_aioclient):
+    """Test firmware_check when GitHub API fails."""
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=200,
+        body=load_fixture("v4_json/status.json"),
+    )
+    mock_aioclient.get(
+        TEST_URL_CONFIG,
+        status=200,
+        body=load_fixture("v4_json/config.json"),
+    )
+    mock_aioclient.get(
+        "https://api.github.com/repos/OpenEVSE/ESP32_WiFi_V4.x/releases/latest",
+        status=404,
+        body='{"error": "Not found"}',
+    )
+
+    charger = OpenEVSE(SERVER_URL)
+    await charger.update()
+
+    result = await charger.firmware_check()
+
+    # Should return None when GitHub API fails
+    assert result is None
+
+
+async def test_property_getters_with_missing_data(mock_aioclient):
+    """Test property getters when data is missing."""
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=200,
+        body="{}",  # Empty status
+    )
+    mock_aioclient.get(
+        TEST_URL_CONFIG,
+        status=200,
+        body="{}",  # Empty config
+    )
+
+    charger = OpenEVSE(SERVER_URL)
+    await charger.update()
+
+    # Test various properties that should handle missing data
+    # String/numeric properties return None
+    assert charger.hostname is None
+    assert charger.ammeter_offset is None
+    assert charger.ammeter_scale_factor is None
+    assert charger.service_level is None
+
+    # Boolean properties return False when data is missing
+    assert charger.temp_check_enabled is False
+    assert charger.diode_check_enabled is False
+    assert charger.vent_required_enabled is False
+    assert charger.ground_check_enabled is False
+    assert charger.stuck_relay_check_enabled is False
+
+
+async def test_external_session_with_error_handling(mock_aioclient):
+    """Test external session handles errors properly."""
+    from openevsehttp.exceptions import AuthenticationError
+
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=401,
+        body='{"error": "Unauthorized"}',
+    )
+
+    async with aiohttp.ClientSession() as session:
+        charger = OpenEVSE(SERVER_URL, session=session)
+
+        with pytest.raises(AuthenticationError):
+            await charger.process_request(TEST_URL_STATUS, method="get")
+
+        # Session should still be open
+        assert not session.closed
