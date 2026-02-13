@@ -7,5 +7,5 @@ pytest-asyncio
 requests_mock
 aiohttp
 aioresponses
-tox==4.34.1
+tox==4.35.0
 freezegun
