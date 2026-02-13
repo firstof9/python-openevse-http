@@ -229,9 +229,6 @@ class OpenEVSE:
                     _LOGGER.error("Content error: %s", err.message)
                     raise err
 
-                await session.close()
-                return message
-
     async def send_command(self, command: str) -> tuple:
         """Send a RAPI command to the charger and parses the response."""
         url = f"{self.url}r"

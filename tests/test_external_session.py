@@ -17,7 +17,7 @@ TEST_URL_CONFIG = "http://openevse.test.tld/config"
 TEST_TLD = "openevse.test.tld"
 
 
-async def test_external_session_provided(mock_aioclient):
+async def test_external_session_provided():
     """Test that an external session is used when provided."""
     # Create a mock session
     mock_session = MagicMock(spec=aiohttp.ClientSession)
