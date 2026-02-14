@@ -122,7 +122,7 @@ class OpenEVSE:
             auth = aiohttp.BasicAuth(self._user, self._pwd)
 
         # Use provided session or create a temporary one
-        if self._session:
+        if self._session is not None:
             session = self._session
             http_method = getattr(session, method)
             _LOGGER.debug(

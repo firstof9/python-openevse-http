@@ -170,8 +170,8 @@ async def test_websocket_auth(ws_client_auth):
 
     # Use an async generator function for clean async iteration
     async def empty_iter():
-        if False:
-            yield
+        return
+        yield
 
     mock_ws.__aiter__.side_effect = empty_iter
 

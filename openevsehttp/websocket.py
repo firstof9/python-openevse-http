@@ -34,7 +34,7 @@ class OpenEVSEWebsocket:
         session: aiohttp.ClientSession | None = None,
     ):
         """Initialize a OpenEVSEWebsocket instance."""
-        self.session = session if session else aiohttp.ClientSession()
+        self.session = session if session is not None else aiohttp.ClientSession()
         self._session_external = session is not None
         self.uri = self._get_uri(server)
         self._user = user

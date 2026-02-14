@@ -3,16 +3,17 @@
 import asyncio
 import json
 import logging
+from datetime import datetime, timedelta, timezone
 from unittest import mock
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
+from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import aiohttp
 import pytest
-from datetime import datetime, timezone, timedelta
-from freezegun import freeze_time
 from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
-from awesomeversion.exceptions import AwesomeVersionCompareException
 from aiohttp.client_reqrep import ConnectionKey
+from awesomeversion import AwesomeVersion
+from awesomeversion.exceptions import AwesomeVersionCompareException
+from freezegun import freeze_time
 
 import openevsehttp.__main__ as main
 from openevsehttp.__main__ import OpenEVSE
@@ -20,16 +21,18 @@ from openevsehttp.exceptions import (
     AlreadyListening,
     AuthenticationError,
     InvalidType,
+    MissingMethod,
     MissingSerial,
     ParseJSONError,
     UnknownError,
     UnsupportedFeature,
 )
 from openevsehttp.websocket import (
+    SIGNAL_CONNECTION_STATE,
     STATE_CONNECTED,
     STATE_DISCONNECTED,
     STATE_STOPPED,
-    SIGNAL_CONNECTION_STATE,
+    OpenEVSEWebsocket,
 )
 from tests.common import load_fixture
 
@@ -2348,7 +2351,6 @@ async def test_power(fixture, expected, request):
 
 async def test_process_request_missing_method():
     """Test process_request raises error when method is None."""
-    from openevsehttp.exceptions import MissingMethod
 
     charger = OpenEVSE(SERVER_URL)
 
@@ -2399,7 +2401,6 @@ async def test_process_request_non_json_response(mock_aioclient):
 
 async def test_process_request_400_error_with_msg(mock_aioclient):
     """Test process_request handles 400 error with msg field."""
-    from openevsehttp.exceptions import ParseJSONError
 
     mock_aioclient.get(
         TEST_URL_STATUS,
@@ -2415,7 +2416,6 @@ async def test_process_request_400_error_with_msg(mock_aioclient):
 
 async def test_process_request_400_error_with_error_field(mock_aioclient):
     """Test process_request handles 400 error with error field."""
-    from openevsehttp.exceptions import ParseJSONError
 
     mock_aioclient.get(
         TEST_URL_STATUS,
@@ -2431,7 +2431,6 @@ async def test_process_request_400_error_with_error_field(mock_aioclient):
 
 async def test_process_request_401_error(mock_aioclient):
     """Test process_request handles 401 authentication error."""
-    from openevsehttp.exceptions import AuthenticationError
 
     mock_aioclient.get(
         TEST_URL_STATUS,
@@ -2671,7 +2670,6 @@ async def test_property_getters_with_missing_data(mock_aioclient):
 
 async def test_external_session_with_error_handling(mock_aioclient):
     """Test external session handles errors properly."""
-    from openevsehttp.exceptions import AuthenticationError
 
     mock_aioclient.get(
         TEST_URL_STATUS,
@@ -2887,12 +2885,6 @@ async def test_external_session_content_type_error():
                 await charger.process_request(TEST_URL_STATUS, method="get")
 
 
-pytestmark = pytest.mark.asyncio
-
-SERVER_URL = "openevse.test.tld"
-TEST_URL_STATUS = "http://openevse.test.tld/status"
-
-
 async def test_identify_with_buildenv(mock_aioclient):
     """Test test_and_get method (identify) with buildenv in response."""
     mock_aioclient.get(
@@ -3007,7 +2999,6 @@ async def test_version_check_exceptions():
         assert charger._version_check("2.0.0") is False
 
     # Trigger AwesomeVersionCompareException in limit comparison
-    from awesomeversion import AwesomeVersion
 
     with patch(
         "awesomeversion.AwesomeVersion.__le__",
@@ -3136,7 +3127,6 @@ async def test_firmware_check_errors(mock_aioclient):
     assert await charger.firmware_check() is None
 
     # ContentTypeError from github
-    from aiohttp.client_exceptions import ContentTypeError
 
     mock_aioclient.get(
         url, exception=ContentTypeError(MagicMock(), MagicMock(), message="test")
@@ -3146,7 +3136,6 @@ async def test_firmware_check_errors(mock_aioclient):
 
 async def test_websocket_pong():
     """Test websocket handles pong message."""
-    from openevsehttp.websocket import OpenEVSEWebsocket
 
     callback = AsyncMock()
     async with aiohttp.ClientSession() as session:
@@ -3181,7 +3170,6 @@ async def test_websocket_pong():
 
 async def test_websocket_listen():
     """Test websocket listen calls running."""
-    from openevsehttp.websocket import OpenEVSEWebsocket
 
     callback = AsyncMock()
     ws = OpenEVSEWebsocket(f"http://{SERVER_URL}", callback)
@@ -3201,7 +3189,6 @@ async def test_websocket_listen():
 
 async def test_websocket_stop_break():
     """Test websocket stops loop when state is stopped."""
-    from openevsehttp.websocket import OpenEVSEWebsocket
 
     callback = AsyncMock()
     async with aiohttp.ClientSession() as session:
