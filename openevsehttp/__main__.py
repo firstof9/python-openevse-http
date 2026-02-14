@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timedelta, timezone
 import json
 import logging
 import re
+from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Dict, Union
 
 import aiohttp  # type: ignore
@@ -84,7 +84,13 @@ UPDATE_TRIGGERS = [
 class OpenEVSE:
     """Represent an OpenEVSE charger."""
 
-    def __init__(self, host: str, user: str = "", pwd: str = "") -> None:
+    def __init__(
+        self,
+        host: str,
+        user: str = "",
+        pwd: str = "",
+        session: aiohttp.ClientSession | None = None,
+    ) -> None:
         """Connect to an OpenEVSE charger equipped with wifi or ethernet."""
         self._user = user
         self._pwd = pwd
@@ -97,6 +103,8 @@ class OpenEVSE:
         self.callback: Callable | None = None
         self._loop = None
         self.tasks = None
+        self._session = session
+        self._session_external = session is not None
 
     async def process_request(
         self,
@@ -113,7 +121,9 @@ class OpenEVSE:
         if self._user and self._pwd:
             auth = aiohttp.BasicAuth(self._user, self._pwd)
 
-        async with aiohttp.ClientSession() as session:
+        # Use provided session or create a temporary one
+        if self._session is not None:
+            session = self._session
             http_method = getattr(session, method)
             _LOGGER.debug(
                 "Connecting to %s with data: %s rapi: %s using method %s",
@@ -165,9 +175,59 @@ class OpenEVSE:
             except ContentTypeError as err:
                 _LOGGER.error("Content error: %s", err.message)
                 raise err
+        else:
+            async with aiohttp.ClientSession() as session:
+                http_method = getattr(session, method)
+                _LOGGER.debug(
+                    "Connecting to %s with data: %s rapi: %s using method %s",
+                    url,
+                    data,
+                    rapi,
+                    method,
+                )
+                try:
+                    async with http_method(
+                        url,
+                        data=rapi,
+                        json=data,
+                        auth=auth,
+                    ) as resp:
+                        try:
+                            message = await resp.text()
+                        except UnicodeDecodeError:
+                            _LOGGER.debug("Decoding error")
+                            message = await resp.read()
+                            message = message.decode(errors="replace")
 
-            await session.close()
-            return message
+                        try:
+                            message = json.loads(message)
+                        except ValueError:
+                            _LOGGER.warning("Non JSON response: %s", message)
+
+                        if resp.status == 400:
+                            index = ""
+                            if "msg" in message.keys():
+                                index = "msg"
+                            elif "error" in message.keys():
+                                index = "error"
+                            _LOGGER.error("Error 400: %s", message[index])
+                            raise ParseJSONError
+                        if resp.status == 401:
+                            _LOGGER.error("Authentication error: %s", message)
+                            raise AuthenticationError
+                        if resp.status in [404, 405, 500]:
+                            _LOGGER.warning("%s", message)
+
+                        if method == "post" and "config_version" in message:
+                            await self.update()
+                        return message
+
+                except (TimeoutError, ServerTimeoutError) as err:
+                    _LOGGER.error("%s: %s", ERROR_TIMEOUT, url)
+                    raise err
+                except ContentTypeError as err:
+                    _LOGGER.error("Content error: %s", err.message)
+                    raise err
 
     async def send_command(self, command: str) -> tuple:
         """Send a RAPI command to the charger and parses the response."""
@@ -204,7 +264,7 @@ class OpenEVSE:
         if not self.websocket:
             # Start Websocket listening
             self.websocket = OpenEVSEWebsocket(
-                self.url, self._update_status, self._user, self._pwd
+                self.url, self._update_status, self._user, self._pwd, self._session
             )
 
     async def test_and_get(self) -> dict:
@@ -573,7 +633,8 @@ class OpenEVSE:
             return None
 
         try:
-            async with aiohttp.ClientSession() as session:
+            if self._session:
+                session = self._session
                 http_method = getattr(session, method)
                 _LOGGER.debug(
                     "Connecting to %s using method %s",
@@ -590,6 +651,24 @@ class OpenEVSE:
                     response["release_notes"] = message["body"]
                     response["release_url"] = message["html_url"]
                     return response
+            else:
+                async with aiohttp.ClientSession() as session:
+                    http_method = getattr(session, method)
+                    _LOGGER.debug(
+                        "Connecting to %s using method %s",
+                        url,
+                        method,
+                    )
+                    async with http_method(url) as resp:
+                        if resp.status != 200:
+                            return None
+                        message = await resp.text()
+                        message = json.loads(message)
+                        response = {}
+                        response["latest_version"] = message["tag_name"]
+                        response["release_notes"] = message["body"]
+                        response["release_url"] = message["html_url"]
+                        return response
 
         except (TimeoutError, ServerTimeoutError):
             _LOGGER.error("%s: %s", ERROR_TIMEOUT, url)

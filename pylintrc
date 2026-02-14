@@ -27,7 +27,8 @@ disable=
   too-many-branches,
   too-many-statements,
   too-many-lines,
-  too-many-positional-arguments
+  too-many-positional-arguments,
+  too-many-return-statements
 
 [REPORTS]
 score=no
