@@ -1312,6 +1312,20 @@ class OpenEVSE:
             return round(self._status["voltage"] * self._status["amp"], 2)
         return None
 
+    # Shaper HTTP Posting
+    async def set_shaper_live_pwr(self, power: int) -> None:
+        """Send pushed sensor data to shaper."""
+        if not self._version_check("4.0.0"):
+            _LOGGER.debug("Feature not supported for older firmware.")
+            raise UnsupportedFeature
+
+        url = f"{self.url}status"
+        data = {"shaper_live_pwr": power}
+
+        _LOGGER.debug("Posting shaper data: %s", data)
+        response = await self.process_request(url=url, method="post", data=data)
+        _LOGGER.debug("Shaper response: %s", response)
+
     # Shaper values
     @property
     def shaper_active(self) -> bool | None:
