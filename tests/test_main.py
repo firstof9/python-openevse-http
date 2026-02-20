@@ -1294,12 +1294,12 @@ async def test_set_shaper_live_power(
         await test_charger.set_shaper_live_pwr(0)
         assert "Posting shaper data: {'shaper_live_pwr': 0}" in caplog.text
 
+    await test_charger_v2.update()
     with pytest.raises(UnsupportedFeature):
         with caplog.at_level(logging.DEBUG):
-            await test_charger_v2.update()
             await test_charger_v2.set_shaper_live_pwr(210)
-            assert "Feature not supported for older firmware." in caplog.text
-            await test_charger_v2.ws_disconnect()
+    assert "Feature not supported for older firmware." in caplog.text
+    await test_charger_v2.ws_disconnect()
 
 
 @pytest.mark.parametrize(
