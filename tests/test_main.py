@@ -1271,6 +1271,21 @@ async def test_shaper_max_power(fixture, expected, request):
     await charger.ws_disconnect()
 
 
+async def test_set_shaper_live_power(test_charger, mock_aioclient, caplog):
+    """Test setting shaper live power."""
+    await test_charger.update()
+    mock_aioclient.post(
+        TEST_URL_STATUS,
+        status=200,
+        body='{"shaper_live_pwr": 210}',
+        repeat=True,
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.shaper_live_pwr(210)
+        assert "Posting shaper data: {'shaper_live_pwr': 210}" in caplog.text
+        assert "Shaper response: {'shaper_live_pwr': 210}" in caplog.text
+
+
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", 75), ("test_charger_v2", None)]
 )

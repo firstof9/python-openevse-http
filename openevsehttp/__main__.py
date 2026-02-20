@@ -1312,6 +1312,16 @@ class OpenEVSE:
             return round(self._status["voltage"] * self._status["amp"], 2)
         return None
 
+    # Shaper HTTP Posting
+    async def shaper_live_pwr(self, shaper_live_pwr: int) -> None:
+        """Send pushed sensor data to shaper."""
+        url = f"{self.url}status"
+        data = {"shaper_live_pwr": shaper_live_pwr}
+
+        _LOGGER.debug("Posting shaper data: %s", data)
+        response = await self.process_request(url=url, method="post", data=data)
+        _LOGGER.debug("Shaper response: %s", response)
+
     # Shaper values
     @property
     def shaper_active(self) -> bool | None:
