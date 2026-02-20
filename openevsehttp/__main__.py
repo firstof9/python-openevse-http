@@ -84,11 +84,18 @@ UPDATE_TRIGGERS = [
 class OpenEVSE:
     """Represent an OpenEVSE charger."""
 
-    def __init__(self, host: str, user: str = "", pwd: str = "") -> None:
+    def __init__(
+        self,
+        host: str,
+        user: str = "",
+        pwd: str = "",
+        session: aiohttp.ClientSession | None = None,
+    ) -> None:
         """Connect to an OpenEVSE charger equipped with wifi or ethernet."""
         self._user = user
         self._pwd = pwd
         self.url = f"http://{host}/"
+        self._session = session
         self._status: dict = {}
         self._config: dict = {}
         self._override = None
@@ -97,6 +104,13 @@ class OpenEVSE:
         self.callback: Callable | None = None
         self._loop = None
         self.tasks = None
+
+    @property
+    def session(self) -> aiohttp.ClientSession:
+        """Return the aiohttp session, creating one if needed."""
+        if self._session is None:
+            self._session = aiohttp.ClientSession()
+        return self._session
 
     async def process_request(
         self,
@@ -113,61 +127,57 @@ class OpenEVSE:
         if self._user and self._pwd:
             auth = aiohttp.BasicAuth(self._user, self._pwd)
 
-        async with aiohttp.ClientSession() as session:
-            http_method = getattr(session, method)
-            _LOGGER.debug(
-                "Connecting to %s with data: %s rapi: %s using method %s",
+        http_method = getattr(self.session, method)
+        _LOGGER.debug(
+            "Connecting to %s with data: %s rapi: %s using method %s",
+            url,
+            data,
+            rapi,
+            method,
+        )
+        try:
+            async with http_method(
                 url,
-                data,
-                rapi,
-                method,
-            )
-            try:
-                async with http_method(
-                    url,
-                    data=rapi,
-                    json=data,
-                    auth=auth,
-                ) as resp:
-                    try:
-                        message = await resp.text()
-                    except UnicodeDecodeError:
-                        _LOGGER.debug("Decoding error")
-                        message = await resp.read()
-                        message = message.decode(errors="replace")
+                data=rapi,
+                json=data,
+                auth=auth,
+            ) as resp:
+                try:
+                    message = await resp.text()
+                except UnicodeDecodeError:
+                    _LOGGER.debug("Decoding error")
+                    message = await resp.read()
+                    message = message.decode(errors="replace")
 
-                    try:
-                        message = json.loads(message)
-                    except ValueError:
-                        _LOGGER.warning("Non JSON response: %s", message)
+                try:
+                    message = json.loads(message)
+                except ValueError:
+                    _LOGGER.warning("Non JSON response: %s", message)
 
-                    if resp.status == 400:
-                        index = ""
-                        if "msg" in message.keys():
-                            index = "msg"
-                        elif "error" in message.keys():
-                            index = "error"
-                        _LOGGER.error("Error 400: %s", message[index])
-                        raise ParseJSONError
-                    if resp.status == 401:
-                        _LOGGER.error("Authentication error: %s", message)
-                        raise AuthenticationError
-                    if resp.status in [404, 405, 500]:
-                        _LOGGER.warning("%s", message)
+                if resp.status == 400:
+                    index = ""
+                    if "msg" in message.keys():
+                        index = "msg"
+                    elif "error" in message.keys():
+                        index = "error"
+                    _LOGGER.error("Error 400: %s", message[index])
+                    raise ParseJSONError
+                if resp.status == 401:
+                    _LOGGER.error("Authentication error: %s", message)
+                    raise AuthenticationError
+                if resp.status in [404, 405, 500]:
+                    _LOGGER.warning("%s", message)
 
-                    if method == "post" and "config_version" in message:
-                        await self.update()
-                    return message
+                if method == "post" and "config_version" in message:
+                    await self.update()
+                return message
 
-            except (TimeoutError, ServerTimeoutError) as err:
-                _LOGGER.error("%s: %s", ERROR_TIMEOUT, url)
-                raise err
-            except ContentTypeError as err:
-                _LOGGER.error("Content error: %s", err.message)
-                raise err
-
-            await session.close()
-            return message
+        except (TimeoutError, ServerTimeoutError) as err:
+            _LOGGER.error("%s: %s", ERROR_TIMEOUT, url)
+            raise err
+        except ContentTypeError as err:
+            _LOGGER.error("Content error: %s", err.message)
+            raise err
 
     async def send_command(self, command: str) -> tuple:
         """Send a RAPI command to the charger and parses the response."""
@@ -204,7 +214,11 @@ class OpenEVSE:
         if not self.websocket:
             # Start Websocket listening
             self.websocket = OpenEVSEWebsocket(
-                self.url, self._update_status, self._user, self._pwd
+                self.url,
+                self._update_status,
+                self._user,
+                self._pwd,
+                session=self.session,
             )
 
     async def test_and_get(self) -> dict:
@@ -573,23 +587,22 @@ class OpenEVSE:
             return None
 
         try:
-            async with aiohttp.ClientSession() as session:
-                http_method = getattr(session, method)
-                _LOGGER.debug(
-                    "Connecting to %s using method %s",
-                    url,
-                    method,
-                )
-                async with http_method(url) as resp:
-                    if resp.status != 200:
-                        return None
-                    message = await resp.text()
-                    message = json.loads(message)
-                    response = {}
-                    response["latest_version"] = message["tag_name"]
-                    response["release_notes"] = message["body"]
-                    response["release_url"] = message["html_url"]
-                    return response
+            http_method = getattr(self.session, method)
+            _LOGGER.debug(
+                "Connecting to %s using method %s",
+                url,
+                method,
+            )
+            async with http_method(url) as resp:
+                if resp.status != 200:
+                    return None
+                message = await resp.text()
+                message = json.loads(message)
+                response = {}
+                response["latest_version"] = message["tag_name"]
+                response["release_notes"] = message["body"]
+                response["release_url"] = message["html_url"]
+                return response
 
         except (TimeoutError, ServerTimeoutError):
             _LOGGER.error("%s: %s", ERROR_TIMEOUT, url)

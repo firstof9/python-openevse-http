@@ -34,8 +34,8 @@ async def ws_client(mock_callback):
     client = OpenEVSEWebsocket(SERVER_URL, mock_callback)
     yield client
     # Clean up session to prevent unclosed session warnings
-    if client.session and not client.session.closed:
-        await client.session.close()
+    if client._session and not client._session.closed:
+        await client._session.close()
 
 
 def test_get_uri():
@@ -157,8 +157,8 @@ async def ws_client_auth():
         f"http://{SERVER_URL}", callback, user="test", password="pw"
     )
     yield client
-    if client.session and not client.session.closed:
-        await client.session.close()
+    if client._session and not client._session.closed:
+        await client._session.close()
 
 
 @pytest.mark.asyncio
@@ -304,3 +304,64 @@ async def test_state_setter_threadsafe_fallback(ws_client):
         assert args[0] is mock_create_task
 
         assert ws_client._error_reason is None
+
+
+@pytest.mark.asyncio
+async def test_session_property_creates_session_lazily(mock_callback):
+    """Test that session property creates an aiohttp.ClientSession when none provided."""
+    client = OpenEVSEWebsocket(SERVER_URL, mock_callback)
+    assert client._session is None
+    session = client.session
+    assert session is not None
+    assert isinstance(session, aiohttp.ClientSession)
+    # Second access should return the same instance
+    assert client.session is session
+    await session.close()
+
+
+@pytest.mark.asyncio
+async def test_session_property_returns_provided_session(mock_callback):
+    """Test that session property returns a pre-provided session."""
+    mock_session = MagicMock(spec=aiohttp.ClientSession)
+    client = OpenEVSEWebsocket(SERVER_URL, mock_callback, session=mock_session)
+    assert client._session is mock_session
+    assert client.session is mock_session
+
+
+@pytest.mark.asyncio
+async def test_init_stores_provided_session(mock_callback):
+    """Test that __init__ stores the provided session without creating a new one."""
+    mock_session = MagicMock(spec=aiohttp.ClientSession)
+    client = OpenEVSEWebsocket(SERVER_URL, mock_callback, session=mock_session)
+    assert client._session is mock_session
+
+
+@pytest.mark.asyncio
+async def test_init_no_session_defers_creation(mock_callback):
+    """Test that __init__ without session sets _session to None."""
+    client = OpenEVSEWebsocket(SERVER_URL, mock_callback)
+    assert client._session is None
+
+
+@pytest.mark.asyncio
+async def test_close_closes_client(mock_callback):
+    """Test that close() closes _client instead of session."""
+    client = OpenEVSEWebsocket(SERVER_URL, mock_callback)
+    mock_ws_client = AsyncMock()
+    client._client = mock_ws_client
+
+    await client.close()
+
+    assert client.state == STATE_STOPPED
+    mock_ws_client.close.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_close_without_client(mock_callback):
+    """Test that close() works when _client is None."""
+    client = OpenEVSEWebsocket(SERVER_URL, mock_callback)
+    client._client = None
+
+    await client.close()
+
+    assert client.state == STATE_STOPPED
