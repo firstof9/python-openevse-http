@@ -11,7 +11,6 @@ import aiohttp
 import pytest
 from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
 from aiohttp.client_reqrep import ConnectionKey
-from awesomeversion import AwesomeVersion
 from awesomeversion.exceptions import AwesomeVersionCompareException
 from freezegun import freeze_time
 
@@ -1271,19 +1270,36 @@ async def test_shaper_max_power(fixture, expected, request):
     await charger.ws_disconnect()
 
 
-async def test_set_shaper_live_power(test_charger, mock_aioclient, caplog):
+async def test_set_shaper_live_power(
+    test_charger, test_charger_v2, mock_aioclient, caplog
+):
     """Test setting shaper live power."""
     await test_charger.update()
     mock_aioclient.post(
         TEST_URL_STATUS,
         status=200,
         body='{"shaper_live_pwr": 210}',
-        repeat=True,
     )
     with caplog.at_level(logging.DEBUG):
-        await test_charger.shaper_live_pwr(210)
+        await test_charger.set_shaper_live_pwr(210)
         assert "Posting shaper data: {'shaper_live_pwr': 210}" in caplog.text
         assert "Shaper response: {'shaper_live_pwr': 210}" in caplog.text
+
+    mock_aioclient.post(
+        TEST_URL_STATUS,
+        status=200,
+        body='{"shaper_live_pwr": 0}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.set_shaper_live_pwr(0)
+        assert "Posting shaper data: {'shaper_live_pwr': 0}" in caplog.text
+
+    with pytest.raises(UnsupportedFeature):
+        with caplog.at_level(logging.DEBUG):
+            await test_charger_v2.update()
+            await test_charger_v2.set_shaper_live_pwr(210)
+            assert "Feature not supported for older firmware." in caplog.text
+            await test_charger_v2.ws_disconnect()
 
 
 @pytest.mark.parametrize(

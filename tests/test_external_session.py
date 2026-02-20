@@ -1,12 +1,11 @@
 """Test external session management."""
 
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import aiohttp
 import pytest
 
-import openevsehttp.__main__ as main
 from openevsehttp.__main__ import OpenEVSE
 from tests.common import load_fixture
 

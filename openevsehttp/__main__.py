@@ -1313,10 +1313,14 @@ class OpenEVSE:
         return None
 
     # Shaper HTTP Posting
-    async def shaper_live_pwr(self, shaper_live_pwr: int) -> None:
+    async def set_shaper_live_pwr(self, power: int) -> None:
         """Send pushed sensor data to shaper."""
+        if not self._version_check("4.0.0"):
+            _LOGGER.debug("Feature not supported for older firmware.")
+            raise UnsupportedFeature
+
         url = f"{self.url}status"
-        data = {"shaper_live_pwr": shaper_live_pwr}
+        data = {"shaper_live_pwr": power}
 
         _LOGGER.debug("Posting shaper data: %s", data)
         response = await self.process_request(url=url, method="post", data=data)
