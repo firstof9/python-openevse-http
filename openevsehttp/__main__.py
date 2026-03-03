@@ -371,7 +371,9 @@ class OpenEVSE:
         data = {"charge_mode": mode}
 
         _LOGGER.debug("Setting charge mode to %s", mode)
-        response = await self.process_request(url=url, method="post", data=data)  # noqa: E501
+        response = await self.process_request(
+            url=url, method="post", data=data
+        )  # noqa: E501
         result = response["msg"]
         if result not in ["done", "no change"]:
             _LOGGER.error("Problem issuing command: %s", response["msg"])
@@ -396,7 +398,9 @@ class OpenEVSE:
         data = {"divert_enabled": mode}
 
         _LOGGER.debug("Toggling divert: %s", mode)
-        response = await self.process_request(url=url, method="post", data=data)  # noqa: E501
+        response = await self.process_request(
+            url=url, method="post", data=data
+        )  # noqa: E501
         _LOGGER.debug("divert_mode response: %s", response)
         return response
 
@@ -447,7 +451,9 @@ class OpenEVSE:
 
         _LOGGER.debug("Override data: %s", data)
         _LOGGER.debug("Setting override config on %s", url)
-        response = await self.process_request(url=url, method="post", data=data)  # noqa: E501
+        response = await self.process_request(
+            url=url, method="post", data=data
+        )  # noqa: E501
         return response
 
     async def toggle_override(self) -> None:
@@ -518,7 +524,9 @@ class OpenEVSE:
         data = {"service": level}
 
         _LOGGER.debug("Set service level to: %s", level)
-        response = await self.process_request(url=url, method="post", data=data)  # noqa: E501
+        response = await self.process_request(
+            url=url, method="post", data=data
+        )  # noqa: E501
         _LOGGER.debug("service response: %s", response)
         result = response["msg"]
         if result not in ["done", "no change"]:
@@ -801,7 +809,9 @@ class OpenEVSE:
 
         _LOGGER.debug("Limit data: %s", data)
         _LOGGER.debug("Setting limit config on %s", url)
-        response = await self.process_request(url=url, method="post", data=data)  # noqa: E501
+        response = await self.process_request(
+            url=url, method="post", data=data
+        )  # noqa: E501
         return response
 
     async def clear_limit(self) -> Any:
@@ -814,7 +824,9 @@ class OpenEVSE:
         data: Dict[str, Any] = {}
 
         _LOGGER.debug("Clearing limit config on %s", url)
-        response = await self.process_request(url=url, method="delete", data=data)  # noqa: E501
+        response = await self.process_request(
+            url=url, method="delete", data=data
+        )  # noqa: E501
         return response
 
     async def get_limit(self) -> Any:
@@ -827,7 +839,9 @@ class OpenEVSE:
         data: Dict[str, Any] = {}
 
         _LOGGER.debug("Getting limit config on %s", url)
-        response = await self.process_request(url=url, method="get", data=data)  # noqa: E501
+        response = await self.process_request(
+            url=url, method="get", data=data
+        )  # noqa: E501
         return response
 
     async def make_claim(
@@ -862,7 +876,9 @@ class OpenEVSE:
 
         _LOGGER.debug("Claim data: %s", data)
         _LOGGER.debug("Setting up claim on %s", url)
-        response = await self.process_request(url=url, method="post", data=data)  # noqa: E501
+        response = await self.process_request(
+            url=url, method="post", data=data
+        )  # noqa: E501
         return response
 
     async def release_claim(self, client: int = CLIENT) -> Any:
