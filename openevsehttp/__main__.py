@@ -170,12 +170,12 @@ class OpenEVSE:
                     _LOGGER.warning("Non JSON response: %s", message)
 
                 if resp.status == 400:
-                    index = ""
-                    if "msg" in message.keys():
-                        index = "msg"
-                    elif "error" in message.keys():
-                        index = "error"
-                    _LOGGER.error("Error 400: %s", message[index])
+                    if isinstance(message, dict) and "msg" in message:
+                        _LOGGER.error("Error 400: %s", message["msg"])
+                    elif isinstance(message, dict) and "error" in message:
+                        _LOGGER.error("Error 400: %s", message["error"])
+                    else:
+                        _LOGGER.error("Error 400: %s", message)
                     raise ParseJSONError
                 if resp.status == 401:
                     _LOGGER.error("Authentication error: %s", message)
