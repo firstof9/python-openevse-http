@@ -183,16 +183,20 @@ class OpenEVSE:
                 if resp.status in [404, 405, 500]:
                     _LOGGER.warning("%s", message)
 
-                if method == "post" and "config_version" in message:
+                if (
+                    method == "post"
+                    and isinstance(message, dict)
+                    and "config_version" in message
+                ):
                     await self.update()
                 return message
 
-        except (TimeoutError, ServerTimeoutError) as err:
+        except (TimeoutError, ServerTimeoutError):
             _LOGGER.error("%s: %s", ERROR_TIMEOUT, url)
-            raise err
+            raise
         except ContentTypeError as err:
             _LOGGER.error("Content error: %s", err.message)
-            raise err
+            raise
 
     async def send_command(self, command: str) -> tuple:
         """Send a RAPI command to the charger and parses the response."""
