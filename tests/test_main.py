@@ -3174,6 +3174,14 @@ async def test_firmware_check_errors(mock_aioclient):
     )
     assert await charger.firmware_check() is None
 
+    # JSONDecodeError from github
+    mock_aioclient.get(url, status=200, body="not json")
+    assert await charger.firmware_check() is None
+
+    # Non-dict JSON from github
+    mock_aioclient.get(url, status=200, body='"just a string"')
+    assert await charger.firmware_check() == {}
+
 
 async def test_websocket_pong():
     """Test websocket handles pong message."""

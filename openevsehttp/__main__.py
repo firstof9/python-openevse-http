@@ -622,11 +622,17 @@ class OpenEVSE:
             if resp.status != 200:
                 return None
             message = await resp.text()
-            message = json.loads(message)
+            try:
+                message = json.loads(message)
+            except json.JSONDecodeError:
+                _LOGGER.error("Failed to parse JSON response: %s", message)
+                return None
+
             response = {}
-            response["latest_version"] = message["tag_name"]
-            response["release_notes"] = message["body"]
-            response["release_url"] = message["html_url"]
+            if isinstance(message, dict):
+                response["latest_version"] = message.get("tag_name")
+                response["release_notes"] = message.get("body")
+                response["release_url"] = message.get("html_url")
             return response
 
     def _version_check(self, min_version: str, max_version: str = "") -> bool:
