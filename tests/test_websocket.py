@@ -294,7 +294,6 @@ async def test_state_setter_threadsafe_fallback(ws_client):
         ) as mock_create_task,
         patch("asyncio.get_event_loop", return_value=mock_loop),
     ):
-
         ws_client.state = STATE_CONNECTED
         assert ws_client.state == STATE_CONNECTED
 

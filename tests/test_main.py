@@ -864,7 +864,7 @@ async def test_toggle_override_v2_err(test_charger_v2, mock_aioclient, caplog):
     """Test v4 Status reply."""
     await test_charger_v2.update()
     content_error = mock.Mock()
-    setattr(content_error, "real_url", f"{TEST_URL_RAPI}")
+    content_error.real_url = f"{TEST_URL_RAPI}"
     mock_aioclient.post(
         TEST_URL_RAPI,
         exception=ContentTypeError(
@@ -1079,7 +1079,7 @@ async def test_set_divertmode(
 
 
 async def test_test_and_get(test_charger, test_charger_v2, mock_aioclient, caplog):
-    """Test v4 Status reply"""
+    """Test v4 Status reply."""
     data = await test_charger.test_and_get()
     mock_aioclient.get(
         TEST_URL_CONFIG,
@@ -1118,7 +1118,7 @@ async def test_firmware_check(
     mock_aioclient,
     caplog,
 ):
-    """Test v4 Status reply"""
+    """Test v4 Status reply."""
     await test_charger.update()
     mock_aioclient.get(
         TEST_URL_GITHUB_v4,

@@ -25,11 +25,11 @@ async def main():
     async with aiohttp.ClientSession(timeout=timeout) as session:
         # Pass the session to OpenEVSE
         charger = OpenEVSE("openevse.local", session=session)
-        
+
         # Use the charger normally
         await charger.update()
         print(f"Status: {charger.status}")
-        
+
         # Clean up
         await charger.ws_disconnect()
         # Session will be closed by the context manager
@@ -43,11 +43,11 @@ from openevsehttp import OpenEVSE
 async def main():
     # The library creates and manages its own sessions
     charger = OpenEVSE("openevse.local")
-    
+
     # Use the charger normally
     await charger.update()
     print(f"Status: {charger.status}")
-    
+
     await charger.ws_disconnect()
 ```
 
@@ -62,11 +62,11 @@ async def main():
         # Use the same session for multiple chargers
         charger1 = OpenEVSE("charger1.local", session=session)
         charger2 = OpenEVSE("charger2.local", session=session)
-        
+
         # Both chargers use the same session
         await charger1.update()
         await charger2.update()
-        
+
         await charger1.ws_disconnect()
         await charger2.ws_disconnect()
 ```

@@ -6,8 +6,9 @@ import asyncio
 import json
 import logging
 import re
+from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
-from typing import Any, Callable, Dict, Union
+from typing import Any
 
 import aiohttp  # type: ignore
 from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
@@ -151,12 +152,10 @@ class OpenEVSE:
             method,
         )
         try:
-            async with http_method(
-                url,
-                data=rapi,
-                json=data,
-                auth=auth,
-            ) as resp:
+            kwargs = {"data": rapi, "auth": auth}
+            if data is not None:
+                kwargs["json"] = data
+            async with http_method(url, **kwargs) as resp:
                 try:
                     message = await resp.text()
                 except UnicodeDecodeError:
@@ -356,7 +355,7 @@ class OpenEVSE:
             await asyncio.sleep(interval)
             await func(*args, **kwargs)
 
-    async def get_schedule(self) -> Union[Dict[str, str], Dict[str, Any]]:
+    async def get_schedule(self) -> dict[str, str] | dict[str, Any]:
         """Return the current schedule."""
         url = f"{self.url}schedule"
 
@@ -375,9 +374,7 @@ class OpenEVSE:
         data = {"charge_mode": mode}
 
         _LOGGER.debug("Setting charge mode to %s", mode)
-        response = await self.process_request(
-            url=url, method="post", data=data
-        )  # noqa: E501
+        response = await self.process_request(url=url, method="post", data=data)
         result = response["msg"]
         if result not in ["done", "no change"]:
             _LOGGER.error("Problem issuing command: %s", response["msg"])
@@ -402,13 +399,11 @@ class OpenEVSE:
         data = {"divert_enabled": mode}
 
         _LOGGER.debug("Toggling divert: %s", mode)
-        response = await self.process_request(
-            url=url, method="post", data=data
-        )  # noqa: E501
+        response = await self.process_request(url=url, method="post", data=data)
         _LOGGER.debug("divert_mode response: %s", response)
         return response
 
-    async def get_override(self) -> Union[Dict[str, str], Dict[str, Any]]:
+    async def get_override(self) -> dict[str, str] | dict[str, Any]:
         """Get the manual override status."""
         if not self._version_check("4.0.1"):
             _LOGGER.debug("Feature not supported for older firmware.")
@@ -455,9 +450,7 @@ class OpenEVSE:
 
         _LOGGER.debug("Override data: %s", data)
         _LOGGER.debug("Setting override config on %s", url)
-        response = await self.process_request(
-            url=url, method="post", data=data
-        )  # noqa: E501
+        response = await self.process_request(url=url, method="post", data=data)
         return response
 
     async def toggle_override(self) -> None:
@@ -528,9 +521,7 @@ class OpenEVSE:
         data = {"service": level}
 
         _LOGGER.debug("Set service level to: %s", level)
-        response = await self.process_request(
-            url=url, method="post", data=data
-        )  # noqa: E501
+        response = await self.process_request(url=url, method="post", data=data)
         _LOGGER.debug("service response: %s", response)
         result = response["msg"]
         if result not in ["done", "no change"]:
@@ -800,7 +791,7 @@ class OpenEVSE:
             raise UnsupportedFeature
 
         url = f"{self.url}limit"
-        data: Dict[str, Any] = await self.get_limit()
+        data: dict[str, Any] = await self.get_limit()
         valid_types = ["time", "energy", "soc", "range"]
 
         if limit_type not in valid_types:
@@ -813,9 +804,7 @@ class OpenEVSE:
 
         _LOGGER.debug("Limit data: %s", data)
         _LOGGER.debug("Setting limit config on %s", url)
-        response = await self.process_request(
-            url=url, method="post", data=data
-        )  # noqa: E501
+        response = await self.process_request(url=url, method="post", data=data)
         return response
 
     async def clear_limit(self) -> Any:
@@ -825,12 +814,9 @@ class OpenEVSE:
             raise UnsupportedFeature
 
         url = f"{self.url}limit"
-        data: Dict[str, Any] = {}
 
         _LOGGER.debug("Clearing limit config on %s", url)
-        response = await self.process_request(
-            url=url, method="delete", data=data
-        )  # noqa: E501
+        response = await self.process_request(url=url, method="delete")
         return response
 
     async def get_limit(self) -> Any:
@@ -840,12 +826,9 @@ class OpenEVSE:
             raise UnsupportedFeature
 
         url = f"{self.url}limit"
-        data: Dict[str, Any] = {}
 
         _LOGGER.debug("Getting limit config on %s", url)
-        response = await self.process_request(
-            url=url, method="get", data=data
-        )  # noqa: E501
+        response = await self.process_request(url=url, method="get")
         return response
 
     async def make_claim(
@@ -880,9 +863,7 @@ class OpenEVSE:
 
         _LOGGER.debug("Claim data: %s", data)
         _LOGGER.debug("Setting up claim on %s", url)
-        response = await self.process_request(
-            url=url, method="post", data=data
-        )  # noqa: E501
+        response = await self.process_request(url=url, method="post", data=data)
         return response
 
     async def release_claim(self, client: int = CLIENT) -> Any:
@@ -894,7 +875,7 @@ class OpenEVSE:
         url = f"{self.url}claims/{client}"
 
         _LOGGER.debug("Releasing claim on %s", url)
-        response = await self.process_request(url=url, method="delete")  # noqa: E501
+        response = await self.process_request(url=url, method="delete")
         return response
 
     async def list_claims(self, target: bool | None = None) -> Any:
@@ -910,7 +891,7 @@ class OpenEVSE:
         url = f"{self.url}claims{target_check}"
 
         _LOGGER.debug("Getting claims on %s", url)
-        response = await self.process_request(url=url, method="get")  # noqa: E501
+        response = await self.process_request(url=url, method="get")
         return response
 
     async def set_led_brightness(self, level: int) -> None:
@@ -924,7 +905,7 @@ class OpenEVSE:
 
         data["led_brightness"] = level
         _LOGGER.debug("Setting LED brightness to %s", level)
-        await self.process_request(url=url, method="post", data=data)  # noqa: E501
+        await self.process_request(url=url, method="post", data=data)
 
     async def set_divert_mode(self, mode: str = "fast") -> None:
         """Set the divert mode."""
@@ -1387,7 +1368,7 @@ class OpenEVSE:
     # Safety counts
     @property
     def checks_count(self) -> dict:
-        """Return the saftey checks counts."""
+        """Return the safety checks counts."""
         attributes = ("gfcicount", "nogndcount", "stuckcount")
         counts = {}
         if self._status is not None and set(attributes).issubset(self._status.keys()):

@@ -170,7 +170,7 @@ class OpenEVSEWebsocket:
         if self._ping and self._pong:
             time_delta = self._pong - self._ping
             if time_delta < datetime.timedelta(0):
-                # Negitive time should indicate no pong reply so consider the
+                # Negative time should indicate no pong reply so consider the
                 # websocket disconnected.
                 self._error_reason = ERROR_PING_TIMEOUT
                 await self._set_state(STATE_DISCONNECTED)
