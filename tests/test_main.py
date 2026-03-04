@@ -150,6 +150,16 @@ async def test_send_command_parse_err(test_charger_auth, mock_aioclient):
         status = await test_charger_auth.send_command("test")
         assert status is None
 
+    mock_aioclient.post(TEST_URL_RAPI, status=400, body='{"other": "Something else"}')
+    with pytest.raises(main.ParseJSONError):
+        status = await test_charger_auth.send_command("test")
+        assert status is None
+
+    mock_aioclient.post(TEST_URL_RAPI, status=400, body='"Just a string response"')
+    with pytest.raises(main.ParseJSONError):
+        status = await test_charger_auth.send_command("test")
+        assert status is None
+
 
 async def test_send_command_auth_err(test_charger_auth, mock_aioclient):
     """Test v4 Status reply."""
