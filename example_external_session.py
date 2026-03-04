@@ -14,7 +14,7 @@ from openevsehttp.__main__ import OpenEVSE
 
 
 async def example_with_external_session():
-    """Example using an external session."""
+    """Demonstrate using an external session."""
     # Create your own session with custom settings
     timeout = aiohttp.ClientTimeout(total=30)
     async with aiohttp.ClientSession(timeout=timeout) as session:
@@ -32,7 +32,7 @@ async def example_with_external_session():
 
 
 async def example_without_external_session():
-    """Example without external session (backward compatible)."""
+    """Demonstrate without external session (backward compatible)."""
     # The library will create and manage its own sessions
     charger = OpenEVSE("openevse.local")
 
@@ -45,7 +45,7 @@ async def example_without_external_session():
 
 
 async def example_shared_session():
-    """Example sharing a session between multiple clients."""
+    """Demonstrate sharing a session between multiple clients."""
     async with aiohttp.ClientSession() as session:
         # Use the same session for multiple chargers
         charger1 = OpenEVSE("charger1.local", session=session)
