@@ -114,7 +114,7 @@ class OpenEVSE:
             url=url, method=method, data=data, rapi=rapi
         )
 
-    async def send_command(self, command: str) -> tuple:
+    async def send_command(self, command: str) -> tuple | dict:
         """Send a RAPI command to the charger and parses the response."""
         return await self.requester.send_command(command)
 
@@ -129,6 +129,10 @@ class OpenEVSE:
         for url in urls:
             _LOGGER.debug("Updating data from %s", url)
             response = await self.process_request(url, method="get")
+            if isinstance(response, dict) and response.get("ok") is False:
+                _LOGGER.debug("Update failed for %s, keeping previous cache.", url)
+                continue
+
             if "/status" in url:
                 self._status = response
                 _LOGGER.debug("Status update: %s", self._status)
@@ -136,12 +140,6 @@ class OpenEVSE:
             else:
                 self._config = response
                 _LOGGER.debug("Config update: %s", self._config)
-
-        if not self.websocket:
-            # Start Websocket listening
-            self.websocket = OpenEVSEWebsocket(
-                self.url, self._update_status, self._user, self._pwd, self._session
-            )
 
     def _extract_msg(self, response: Any) -> str | None:
         """Safely extract the 'msg' field from a response."""
@@ -257,7 +255,14 @@ class OpenEVSE:
                 data["watthour"] = data.pop("wh")
             # TODO: update specific endpoints based on _version prefix
             if any(key in keys for key in UPDATE_TRIGGERS):
-                await self.update()
+                try:
+                    await self.update()
+                except Exception as err:  # pylint: disable=broad-exception-caught
+                    _LOGGER.error(
+                        "Update failed during websocket push (triggers: %s): %s",
+                        [k for k in keys if k in UPDATE_TRIGGERS],
+                        err,
+                    )
             self._status.update(data)
 
             if self.callback is not None:
@@ -514,7 +519,11 @@ class OpenEVSE:
             # Different parameters for older firmware
             if self._version_check("2.9.1"):
                 command = f"$SC {amps} V"
-            cmd, msg = await self.send_command(command)
+            results = await self.send_command(command)
+            if isinstance(results, dict):
+                _LOGGER.error("Problem setting current limit. Response: %s", results)
+                return False
+            cmd, msg = results
             if (isinstance(cmd, str) and cmd.startswith("$NK")) or (
                 isinstance(msg, str) and (msg.startswith("$NK") or msg == "")
             ):
@@ -566,7 +575,12 @@ class OpenEVSE:
         else:
             _LOGGER.debug("Restarting EVSE module via RAPI")
             command = "$FR"
-            _, response = await self.send_command(command)
+            results = await self.send_command(command)
+            if isinstance(results, dict):
+                _LOGGER.error("Problem restarting EVSE. Response: %s", results)
+                response = ""
+            else:
+                _, response = results
 
         _LOGGER.debug("EVSE Restart response: %s", response)
         if response not in ["done", "no change", "OK", "restart evse"] and not str(

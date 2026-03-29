@@ -9,6 +9,7 @@ import pytest
 from freezegun import freeze_time
 
 from openevsehttp.__main__ import OpenEVSE
+from openevsehttp.client import UPDATE_TRIGGERS
 from openevsehttp.exceptions import (
     AlreadyListening,
     MissingSerial,
@@ -25,6 +26,7 @@ from tests.common import load_fixture
 from tests.const import (
     SERVER_URL,
     TEST_URL_CONFIG,
+    TEST_URL_RAPI,
     TEST_URL_RESTART,
     TEST_URL_STATUS,
 )
@@ -36,7 +38,7 @@ async def test_ws_state(test_charger):
     """Test v4 Status reply."""
     await test_charger.update()
     value = test_charger.ws_state
-    assert value == STATE_DISCONNECTED
+    assert value == STATE_STOPPED
     await test_charger.ws_disconnect()
 
 
@@ -1696,3 +1698,74 @@ async def test_client_none_safeguards(mock_aioclient):
     charger._config = None
     with pytest.raises(UnsupportedFeature):
         await charger.divert_mode()
+
+
+async def test_update_failure_cache_preservation(mock_aioclient):
+    """Test that update() preserves cache on failure (Lines 133-134)."""
+    charger = OpenEVSE(SERVER_URL)
+    # Initial success to establish a state
+    mock_aioclient.get(
+        TEST_URL_STATUS, status=200, body=load_fixture("v4_json/status.json")
+    )
+    mock_aioclient.get(
+        TEST_URL_CONFIG, status=200, body=load_fixture("v4_json/config.json")
+    )
+    await charger.update()
+
+    # fixture status.json has "status": "sleeping"
+    assert charger.state == "sleeping"
+
+    # Subsequent failure should not change it
+    mock_aioclient.get(
+        TEST_URL_STATUS, status=200, body='{"ok": false, "msg": "failed"}'
+    )
+    mock_aioclient.get(
+        TEST_URL_CONFIG, status=200, body='{"ok": false, "msg": "failed"}'
+    )
+    await charger.update()
+    # Should stay as 'sleeping'
+    assert charger.state == "sleeping"
+
+
+async def test_websocket_update_exception_handling():
+    """Test update failure during websocket push (Lines 260-261)."""
+    charger = OpenEVSE(SERVER_URL)
+    await charger.ws_start()
+
+    # Trigger key present
+    trigger_key = list(UPDATE_TRIGGERS)[0]
+    data = {trigger_key: "value"}
+
+    with patch.object(charger, "update", side_effect=Exception("Update failed")):
+        # This calls _update_status internally - it expects (msgtype, data, error)
+        await charger._update_status("data", data, None)
+        # Should not raise, just log
+
+    await charger.ws_disconnect()
+
+
+async def test_set_current_rapi_dict_error(mock_aioclient):
+    """Test set_current handling of RAPI dict error (Lines 524-525)."""
+    charger = OpenEVSE(SERVER_URL)
+    # Force RAPI branch
+    charger._config["version"] = "2.9.0"
+
+    # requester.py Line 159 covered here too (returning dict if ok=False)
+    mock_aioclient.post(
+        TEST_URL_RAPI, status=200, body='{"ok": false, "msg": "transport error"}'
+    )
+    result = await charger.set_current(16)
+    assert result is False
+
+
+async def test_restart_evse_rapi_dict_error(mock_aioclient):
+    """Test restart_evse handling of RAPI dict error (Lines 580-581)."""
+    charger = OpenEVSE(SERVER_URL)
+    # Force RAPI branch
+    charger._config["version"] = "4.1.0"
+
+    mock_aioclient.post(
+        TEST_URL_RAPI, status=200, body='{"ok": false, "msg": "transport error"}'
+    )
+    with pytest.raises(UnknownError):
+        await charger.restart_evse()

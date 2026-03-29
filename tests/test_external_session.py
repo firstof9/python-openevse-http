@@ -118,8 +118,8 @@ async def test_websocket_uses_external_session(mock_aioclient):
         with patch("openevsehttp.__main__.OpenEVSE.repeat", return_value=AsyncMock()):
             charger = OpenEVSE(TEST_TLD, session=session)
 
-            # Update to initialize websocket
-            await charger.update()
+            # Initialize websocket lazily
+            await charger.ws_start()
 
             # Verify websocket was created with the session
             assert charger.websocket is not None

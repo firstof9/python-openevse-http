@@ -297,10 +297,11 @@ async def test_clear_override(test_charger, test_charger_v2, mock_aioclient, cap
         assert "Clear response: OK" in caplog.text
 
     with pytest.raises(UnsupportedFeature):
-        with caplog.at_level(logging.DEBUG):
-            await test_charger_v2.update()
-            await test_charger_v2.clear_override()
-            assert "Feature not supported for older firmware." in caplog.text
+        await test_charger_v2.update()
+        await test_charger_v2.clear_override()
+
+    with caplog.at_level(logging.DEBUG):
+        assert "Feature not supported for older firmware." in caplog.text
 
 
 async def test_get_override(test_charger, test_charger_v2, mock_aioclient, caplog):
@@ -324,10 +325,11 @@ async def test_get_override(test_charger, test_charger_v2, mock_aioclient, caplo
         assert status == value
 
     with pytest.raises(UnsupportedFeature):
-        with caplog.at_level(logging.DEBUG):
-            await test_charger_v2.update()
-            await test_charger_v2.get_override()
-            assert "Feature not supported for older firmware." in caplog.text
+        await test_charger_v2.update()
+        await test_charger_v2.get_override()
+
+    with caplog.at_level(logging.DEBUG):
+        assert "Feature not supported for older firmware." in caplog.text
 
 
 async def test_set_override_partial(test_charger, mock_aioclient, caplog):

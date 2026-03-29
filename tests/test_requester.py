@@ -34,9 +34,10 @@ async def test_get_status_auth(test_charger_auth):
 
 async def test_get_status_auth_err(test_charger_auth_err):
     """Test v4 Status reply."""
+    pre_state = test_charger_auth_err.state
     with pytest.raises(main.AuthenticationError):
         await test_charger_auth_err.update()
-    assert test_charger_auth_err is not None  # Corrected dead assertion
+    assert test_charger_auth_err.state == pre_state
 
 
 async def test_send_command(test_charger, mock_aioclient):
