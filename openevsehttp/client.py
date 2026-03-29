@@ -261,10 +261,17 @@ class OpenEVSE:
             self._status.update(data)
 
             if self.callback is not None:
-                if self.is_coroutine_function(self.callback):
-                    await self.callback()  # pylint: disable=not-callable
-                else:
-                    self.callback()  # pylint: disable=not-callable
+                try:
+                    if self.is_coroutine_function(self.callback):
+                        await self.callback()  # pylint: disable=not-callable
+                    else:
+                        self.callback()  # pylint: disable=not-callable
+                except Exception as err:  # pylint: disable=broad-exception-caught
+                    _LOGGER.exception("Exception in user callback: %s", err)
+
+    def set_update_callback(self, callback: Callable | None) -> None:
+        """Set the update callback."""
+        self.callback = callback
 
     async def ws_disconnect(self) -> None:
         """Disconnect the websocket listener (idempotent)."""
@@ -477,6 +484,11 @@ class OpenEVSE:
         _LOGGER.debug("Toggling divert: %s", mode)
         response = await self.process_request(url=url, method="post", data=data)
         _LOGGER.debug("divert_mode response: %s", response)
+        if response.get("ok") is False:
+            _LOGGER.error("Problem toggling divert: %s", response)
+            raise UnknownError
+        # Update local cache on success
+        self._config["divert_enabled"] = mode
         return response
 
     async def set_current(self, amps: int = 6) -> Any:
@@ -502,11 +514,16 @@ class OpenEVSE:
             # Different parameters for older firmware
             if self._version_check("2.9.1"):
                 command = f"$SC {amps} V"
-            success, msg = await self.send_command(command)
-            if not success or (isinstance(msg, str) and msg.startswith("$NK")):
-                _LOGGER.error("Problem setting current limit. Response: %s", msg)
+            cmd, msg = await self.send_command(command)
+            if (isinstance(cmd, str) and cmd.startswith("$NK")) or (
+                isinstance(msg, str) and (msg.startswith("$NK") or msg == "")
+            ):
+                _LOGGER.error(
+                    "Problem setting current limit. Command: %s, Response: %s", cmd, msg
+                )
                 return False
             _LOGGER.debug("Set current response: %s", msg)
+            return True
 
     async def set_service_level(self, level: int = 2) -> None:
         """Set the service level of the EVSE."""

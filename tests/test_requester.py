@@ -532,7 +532,9 @@ async def test_external_session_post_with_config_version(mock_aioclient):
         result = await charger.process_request(TEST_URL_CONFIG, method="post", data={})
 
         assert "config_version" in result
-        assert charger._status is not None
+        # Verify that _status was actually updated by the triggered update() call
+        assert "mode" in charger._status
+        assert charger._status["mode"] == "STA"
 
 
 async def test_external_session_timeout_error():

@@ -1629,21 +1629,59 @@ async def test_set_current_rapi_error(test_charger, caplog):
 
     # Mock send_command to return $NK
     with patch.object(
-        test_charger, "send_command", AsyncMock(return_value=(True, "$NK^21"))
+        test_charger, "send_command", AsyncMock(return_value=("$SC 15 V", "$NK^21"))
     ):
         with caplog.at_level(logging.ERROR):
             result = await test_charger.set_current(15)
             assert result is False
-            assert "Problem setting current limit. Response: $NK^21" in caplog.text
+            assert (
+                "Problem setting current limit. Command: $SC 15 V, Response: $NK^21"
+                in caplog.text
+            )
 
-    # Mock send_command to return success=False
+    # Mock send_command to return success=False (e.g. via $NK in command field)
     with patch.object(
-        test_charger, "send_command", AsyncMock(return_value=(False, "timeout"))
+        test_charger, "send_command", AsyncMock(return_value=("$NK", "timeout"))
     ):
         with caplog.at_level(logging.ERROR):
             result = await test_charger.set_current(15)
             assert result is False
-            assert "Problem setting current limit. Response: timeout" in caplog.text
+            assert (
+                "Problem setting current limit. Command: $NK, Response: timeout"
+                in caplog.text
+            )
+
+
+async def test_callback_exception(test_charger, caplog):
+    """Test that a callback exception does not crash the receive loop."""
+
+    def callback():
+        raise Exception("Callback error")
+
+    test_charger.set_update_callback(callback)
+    with caplog.at_level(logging.ERROR):
+        await test_charger._update_status("data", {"mode": 1}, None)
+        assert "Exception in user callback: Callback error" in caplog.text
+
+
+async def test_divert_mode_server_error(mock_aioclient, caplog):
+    """Test divert_mode with server 'ok': False response."""
+    charger = OpenEVSE(SERVER_URL)
+    charger._config["version"] = "2.9.1"
+    charger._config["divert_enabled"] = False
+
+    mock_aioclient.post(
+        f"http://{SERVER_URL}/config",
+        status=200,
+        body='{"ok": false, "msg": "Toggling divert failed"}',
+    )
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(UnknownError):
+            await charger.divert_mode()
+        assert (
+            "Problem toggling divert: {'ok': False, 'msg': 'Toggling divert failed'}"
+            in caplog.text
+        )
 
 
 async def test_client_none_safeguards(mock_aioclient):
