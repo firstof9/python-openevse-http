@@ -677,6 +677,22 @@ async def test_set_current_error(
     assert "Unable to find firmware version." in caplog.text
 
 
+async def test_divert_mode_missing_ok(mock_aioclient):
+    """Test divert mode with missing 'ok' field in response."""
+    charger = OpenEVSE(SERVER_URL)
+    charger._config["version"] = "2.9.1"
+    charger._config["divert_enabled"] = False
+
+    # Mock success (missing 'ok', but has 'msg')
+    mock_aioclient.post(
+        f"http://{SERVER_URL}/config", status=200, body='{"msg": "done"}'
+    )
+
+    result = await charger.divert_mode()
+    assert result["msg"] == "done"
+    assert charger._config["divert_enabled"] is True
+
+
 async def test_set_current_v2(
     test_charger_v2, test_charger_dev, mock_aioclient, caplog
 ):
@@ -1629,27 +1645,23 @@ async def test_extra_coverage_edge_cases(mock_aioclient, caplog):
 
     # Cleanup any remaining test state
     await charger.ws_disconnect()
-    charger.websocket = OpenEVSEWebsocket(
-        charger.url, session=charger.requester._session, callback=charger._update_status
-    )
 
-    # Stub websocket to avoid starting real tasks
+    # Use a mock instead of real OpenEVSEWebsocket to avoid ClientSession allocation
     async def noop():
         pass
 
-    with (
-        patch.object(charger.websocket, "listen", side_effect=noop),
-        patch.object(charger.websocket, "keepalive", side_effect=noop),
-    ):
-        # Prepare charger.tasks to exercise orphan-task cleanup
-        charger.tasks = set()
-        charger.tasks.add(asyncio.create_task(noop()))
+    charger.websocket = MagicMock(spec=OpenEVSEWebsocket)
+    charger.websocket.listen = noop
+    charger.websocket.keepalive = noop
+    charger.websocket.state = "disconnected"
 
-        with caplog.at_level(logging.DEBUG):
-            await charger.ws_start()
-            assert (
-                "Cleaning up orphaned websocket tasks before restart..." in caplog.text
-            )
+    # Prepare charger.tasks to exercise orphan-task cleanup
+    charger.tasks = set()
+    charger.tasks.add(asyncio.create_task(noop()))
+
+    with caplog.at_level(logging.DEBUG):
+        await charger.ws_start()
+        assert "Cleaning up orphaned websocket tasks before restart..." in caplog.text
 
     # Now mock it as connected to finally hit AlreadyListening at line 191 (was 181)
     charger.websocket.state = "connected"
@@ -1828,6 +1840,15 @@ async def test_websocket_update_exception_handling(caplog):
     charger = OpenEVSE(SERVER_URL)
 
     # Trigger key present
+    charger._config["version"] = "4.0.0"
+
+
+async def test_websocket_non_mapping_payload(caplog):
+    """Test websocket with non-mapping payload."""
+    charger = OpenEVSE(SERVER_URL)
+    with caplog.at_level(logging.WARNING):
+        await charger._update_status("data", "not a dict", None)
+    assert "Non-mapping websocket payload: not a dict" in caplog.text
     trigger_key = list(UPDATE_TRIGGERS)[0]
     data = {trigger_key: "value"}
 

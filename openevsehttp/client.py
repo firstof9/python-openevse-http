@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import datetime
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from typing import Any
 
 import aiohttp
@@ -253,6 +253,10 @@ class OpenEVSE:
                 self._ws_listening = False
 
         elif msgtype == "data":
+            if not isinstance(data, Mapping):
+                _LOGGER.warning("Non-mapping websocket payload: %s", data)
+                return
+
             _LOGGER.debug("Websocket data: %s", data)
             keys = data.keys()
             if "wh" in keys:
@@ -493,7 +497,7 @@ class OpenEVSE:
         _LOGGER.debug("Toggling divert: %s", mode)
         response = await self.process_request(url=url, method="post", data=data)
         _LOGGER.debug("divert_mode response: %s", response)
-        if not response.get("ok", False):
+        if not isinstance(response, dict) or response.get("ok") is False:
             _LOGGER.error("Problem toggling divert: %s", response)
             raise UnknownError
 

@@ -225,6 +225,29 @@ async def test_toggle_override_missing_state_after_update(mock_aioclient, caplog
     assert "Cannot toggle override: current state is unknown" in caplog.text
 
 
+async def test_toggle_override_partial_status(mock_aioclient):
+    """Test toggle when status exists but state is missing."""
+    charger = OpenEVSE(SERVER_URL)
+    charger._config["version"] = "2.9.0"
+    charger._status = {"other": 1}  # Existing but incomplete status
+
+    # Mock Refresh/Update
+    mock_aioclient.get(f"http://{SERVER_URL}/status", status=200, body='{"state": 254}')
+    mock_aioclient.get(
+        f"http://{SERVER_URL}/config", status=200, body='{"version": "2.9.0"}'
+    )
+
+    # Mock toggle call (RAPI path)
+    mock_aioclient.post(
+        TEST_URL_RAPI,
+        status=200,
+        body='{"cmd": "$FE", "ret": "$OK"}',
+    )
+
+    await charger.toggle_override()
+    assert charger._status["state"] == 254
+
+
 async def test_set_override(
     test_charger, test_charger_v2, test_charger_unknown_semver, mock_aioclient, caplog
 ):

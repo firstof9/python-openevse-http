@@ -229,10 +229,12 @@ async def test_requester_coalesced_refresh(mock_aioclient):
     charger = OpenEVSE(SERVER_URL)
 
     refresh_count = 0
+    refresh_started = asyncio.Event()
 
     async def slow_refresh():
         nonlocal refresh_count
         refresh_count += 1
+        refresh_started.set()
         await asyncio.sleep(0.1)
 
     charger.requester.set_update_callback(slow_refresh)
@@ -250,7 +252,8 @@ async def test_requester_coalesced_refresh(mock_aioclient):
         charger.requester.process_request(TEST_URL_CONFIG, method="post")
     )
     # Ensure POST 1 has started the refresh loop
-    await asyncio.sleep(0.01)
+    await refresh_started.wait()
+    refresh_started.clear()
 
     # Start POST 2 whilst POST 1 is in refresh
     task2 = asyncio.ensure_future(
