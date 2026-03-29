@@ -157,11 +157,11 @@ class OpenEVSE:
         url = f"{self.url}config"
 
         response = await self.process_request(url, method="get")
-        if isinstance(response, dict) and response.get("ok") is False:
+        if not isinstance(response, dict) or response.get("ok") is False:
             _LOGGER.error("Problem getting config for serial detection: %s", response)
-            raise MissingSerial
+            raise UnknownError
 
-        serial = response.get("wifi_serial") if isinstance(response, dict) else None
+        serial = response.get("wifi_serial")
         if serial is None:
             _LOGGER.debug(
                 "Older firmware detected, missing serial. Response: %s", response
@@ -493,9 +493,10 @@ class OpenEVSE:
         _LOGGER.debug("Toggling divert: %s", mode)
         response = await self.process_request(url=url, method="post", data=data)
         _LOGGER.debug("divert_mode response: %s", response)
-        if response.get("ok") is False:
+        if not response.get("ok", False):
             _LOGGER.error("Problem toggling divert: %s", response)
             raise UnknownError
+
         # Update local cache on success
         self._config["divert_enabled"] = mode
         return response

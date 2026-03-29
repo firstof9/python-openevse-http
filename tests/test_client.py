@@ -1,5 +1,6 @@
 """Tests for OpenEVSE Client."""
 
+import asyncio
 import json
 import logging
 from datetime import datetime, timedelta, timezone
@@ -21,6 +22,7 @@ from openevsehttp.websocket import (
     STATE_CONNECTED,
     STATE_DISCONNECTED,
     STATE_STOPPED,
+    OpenEVSEWebsocket,
 )
 from tests.common import load_fixture
 from tests.const import (
@@ -737,7 +739,7 @@ async def test_set_divertmode(
 ):
     """Test v4 set divert mode."""
     await test_charger_new.update()
-    value = "Divert Mode changed"
+    value = '{"ok": true, "msg": "Divert Mode changed"}'
     mock_aioclient.post(
         TEST_URL_CONFIG,
         status=200,
@@ -746,7 +748,6 @@ async def test_set_divertmode(
     with caplog.at_level(logging.DEBUG):
         await test_charger_new.divert_mode()
         assert "Toggling divert: True" in caplog.text
-        assert "Non JSON response: Divert Mode changed" in caplog.text
 
     mock_aioclient.post(
         TEST_URL_CONFIG,
@@ -1240,7 +1241,7 @@ async def test_set_charge_mode(test_charger, mock_aioclient, caplog):
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(UnknownError):
             await test_charger.set_charge_mode("fast")
-        assert "Problem issuing command. Response: {'msg': 'error'}" in caplog.text
+    assert "Problem issuing command. Response: {'msg': 'error'}" in caplog.text
 
     value = {"msg": "done"}
     mock_aioclient.post(
@@ -1572,9 +1573,9 @@ async def test_extra_coverage_edge_cases(mock_aioclient, caplog):
         TEST_URL_CONFIG, status=200, body='{"ok": false, "msg": "failed"}'
     )
     with caplog.at_level(logging.ERROR):
-        with pytest.raises(MissingSerial):
+        with pytest.raises(UnknownError):
             await charger.test_and_get()
-        assert "Problem getting config for serial detection" in caplog.text
+    assert "Problem getting config for serial detection" in caplog.text
 
     # 4. restart_wifi error
     charger._config["version"] = "5.0.0"
@@ -1582,7 +1583,7 @@ async def test_extra_coverage_edge_cases(mock_aioclient, caplog):
     with caplog.at_level(logging.ERROR):
         with pytest.raises(UnknownError):
             await charger.restart_wifi()
-        assert "Problem issuing command. Response: {'msg': 'failed'}" in caplog.text
+    assert "Problem issuing command. Response: {'msg': 'failed'}" in caplog.text
 
     # 5. restart_evse RAPI failure path
     charger._config["version"] = "4.0.0"
@@ -1598,7 +1599,7 @@ async def test_extra_coverage_edge_cases(mock_aioclient, caplog):
     with caplog.at_level(logging.ERROR):
         with pytest.raises(UnknownError):
             await charger.restart_evse()
-        assert "Problem issuing command. Response: {'msg': 'failed'}" in caplog.text
+    assert "Problem issuing command. Response: {'msg': 'failed'}" in caplog.text
 
     # 7. Various property edge cases (missing data in cache)
     charger._config = {}
@@ -1624,18 +1625,33 @@ async def test_extra_coverage_edge_cases(mock_aioclient, caplog):
     with caplog.at_level(logging.ERROR):
         with pytest.raises(UnknownError):
             await charger.set_led_brightness(100)
-        assert "Problem issuing command. Response: {'msg': 'failed'}" in caplog.text
+    assert "Problem issuing command. Response: {'msg': 'failed'}" in caplog.text
 
     # Cleanup any remaining test state
     await charger.ws_disconnect()
+    charger.websocket = OpenEVSEWebsocket(
+        charger.url, session=charger.requester._session, callback=charger._update_status
+    )
 
-    # State is NOT "connected", so calling ws_start AGAIN will NOT raise AlreadyListening
-    # but WILL call _start_listening again, hitting line 205 because self.tasks is set.
-    with caplog.at_level(logging.DEBUG):
-        await charger.ws_start()
-        # Ensure we hit the "Checking for existing active tasks..." area indirectly
+    # Stub websocket to avoid starting real tasks
+    async def noop():
+        pass
 
-    # Now mock it as connected to finally hit AlreadyListening at line 181
+    with (
+        patch.object(charger.websocket, "listen", side_effect=noop),
+        patch.object(charger.websocket, "keepalive", side_effect=noop),
+    ):
+        # Prepare charger.tasks to exercise orphan-task cleanup
+        charger.tasks = set()
+        charger.tasks.add(asyncio.create_task(noop()))
+
+        with caplog.at_level(logging.DEBUG):
+            await charger.ws_start()
+            assert (
+                "Cleaning up orphaned websocket tasks before restart..." in caplog.text
+            )
+
+    # Now mock it as connected to finally hit AlreadyListening at line 191 (was 181)
     charger.websocket.state = "connected"
     with pytest.raises(AlreadyListening):
         await charger.ws_start()
@@ -1676,7 +1692,7 @@ async def test_set_divert_mode_error_coverage(mock_aioclient, caplog):
     with caplog.at_level(logging.ERROR):
         with pytest.raises(UnknownError):
             await charger.set_divert_mode("fast")
-        assert "Problem issuing command. Response: {'msg': 'failed'}" in caplog.text
+    assert "Problem issuing command. Response: {'msg': 'failed'}" in caplog.text
 
 
 async def test_set_current_rapi_error(test_charger, caplog):

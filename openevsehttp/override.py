@@ -47,6 +47,9 @@ class Override:
         url = f"{self._evse.url}override"
 
         data: dict[str, Any] = await self.get()
+        if not isinstance(data, dict) or data.get("ok") is False or "state" not in data:
+            _LOGGER.error("Failed to retrieve current override state: %s", data)
+            raise UnknownError
 
         if state not in ["active", "disabled", None]:
             _LOGGER.error("Invalid override state: %s", state)
@@ -96,7 +99,14 @@ class Override:
             state = self._evse._status.get("state", 0)
             _LOGGER.debug("Toggling manual override via RAPI. Current state: %s", state)
             command = "$FE" if state == 254 else "$FS"
-            cmd_sent, resp = await self._evse.send_command(command)
+            rapi_response = await self._evse.send_command(command)
+            if isinstance(rapi_response, dict):
+                _LOGGER.error(
+                    "Problem toggling override (%s): %s", command, rapi_response
+                )
+                raise UnknownError
+
+            cmd_sent, resp = rapi_response
             if not resp.startswith("$OK"):
                 _LOGGER.error(
                     "Problem issuing command %s. Response: %s", cmd_sent, resp

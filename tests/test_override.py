@@ -165,6 +165,27 @@ async def test_toggle_override_v2_fail(test_charger_v2, mock_aioclient, caplog):
         assert "Problem issuing command $FS. Response: toggle failed" in caplog.text
 
 
+async def test_toggle_override_v2_transport_fail(
+    test_charger_v2, mock_aioclient, caplog
+):
+    """Test v4 toggle transport fail (returns dict)."""
+    await test_charger_v2.update()
+    # Mock transport fail: ok=False in dict
+    value = {"ok": False, "msg": "transport fail"}
+    mock_aioclient.post(
+        TEST_URL_RAPI,
+        status=200,
+        body=json.dumps(value),
+    )
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(UnknownError):
+            await test_charger_v2.toggle_override()
+    assert (
+        "Problem toggling override ($FS): {'ok': False, 'msg': 'transport fail'}"
+        in caplog.text
+    )
+
+
 async def test_toggle_override_empty_status(test_charger_v2, mock_aioclient, caplog):
     """Test toggle with empty status (line 94-95)."""
     # Force empty status
@@ -385,3 +406,31 @@ async def test_clear_override_non_dict(test_charger, mock_aioclient, caplog):
     with caplog.at_level(logging.DEBUG):
         await test_charger.clear_override()
         assert "Clear response: Clear successful" in caplog.text
+
+
+async def test_set_override_get_fail(test_charger, mock_aioclient, caplog):
+    """Test set_override failure when get() fails."""
+    await test_charger.update()
+    mock_aioclient.get(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body='{"ok": false, "msg": "failed"}',
+    )
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(UnknownError):
+            await test_charger.set_override("active")
+    assert "Failed to retrieve current override state" in caplog.text
+
+
+async def test_set_override_get_missing_state(test_charger, mock_aioclient, caplog):
+    """Test set_override failure when get() returns invalid dict."""
+    await test_charger.update()
+    mock_aioclient.get(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body='{"ok": true}',
+    )
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(UnknownError):
+            await test_charger.set_override("active")
+    assert "Failed to retrieve current override state" in caplog.text
