@@ -27,10 +27,10 @@ async def test_voltage(test_charger, test_charger_v2, mock_aioclient, caplog):
         await test_charger.grid_voltage(None)
         assert "No sensor data to send to device." in caplog.text
 
-    with pytest.raises(UnsupportedFeature):
-        with caplog.at_level(logging.DEBUG):
+    with caplog.at_level(logging.DEBUG):
+        with pytest.raises(UnsupportedFeature):
             await test_charger_v2.grid_voltage(210)
-            assert "Feature not supported for older firmware." in caplog.text
+    assert "Feature not supported for older firmware." in caplog.text
 
 
 async def test_self_production(test_charger, test_charger_v2, mock_aioclient, caplog):
@@ -54,10 +54,10 @@ async def test_self_production(test_charger, test_charger_v2, mock_aioclient, ca
         await test_charger.self_production(None)
         assert "No sensor data to send to device." in caplog.text
 
-    with pytest.raises(UnsupportedFeature):
-        with caplog.at_level(logging.DEBUG):
+    with caplog.at_level(logging.DEBUG):
+        with pytest.raises(UnsupportedFeature):
             await test_charger_v2.self_production(210)
-            assert "Feature not supported for older firmware." in caplog.text
+    assert "Feature not supported for older firmware." in caplog.text
 
 
 async def test_soc(test_charger, test_charger_v2, mock_aioclient, caplog):
@@ -76,15 +76,18 @@ async def test_soc(test_charger, test_charger_v2, mock_aioclient, caplog):
 
         # Test battery_range and time_to_full and voltage
         await test_charger.soc(battery_range=100, time_to_full=60, voltage=230)
-        assert "Posting SOC data: {'battery_range': 100, 'time_to_full_charge': 60, 'voltage': 230}" in caplog.text
+        assert (
+            "Posting SOC data: {'battery_range': 100, 'time_to_full_charge': 60, 'voltage': 230}"
+            in caplog.text
+        )
 
         await test_charger.soc(None)
         assert "No SOC data to send to device." in caplog.text
 
-    with pytest.raises(UnsupportedFeature):
-        with caplog.at_level(logging.DEBUG):
+    with caplog.at_level(logging.DEBUG):
+        with pytest.raises(UnsupportedFeature):
             await test_charger_v2.soc(210)
-            assert "Feature not supported for older firmware." in caplog.text
+    assert "Feature not supported for older firmware." in caplog.text
 
 
 async def test_set_shaper_live_power(

@@ -38,7 +38,7 @@ class Override:
         max_current: int | None = None,
         energy_limit: int | None = None,
         time_limit: int | None = None,
-        auto_release: bool = True,
+        auto_release: bool | None = None,
     ) -> Any:
         """Set the manual override status."""
         if not self._evse._version_check("4.0.1"):
@@ -52,7 +52,8 @@ class Override:
             _LOGGER.error("Invalid override state: %s", state)
             raise ValueError
 
-        data["auto_release"] = auto_release
+        if auto_release is not None:
+            data["auto_release"] = auto_release
 
         if state is not None:
             data["state"] = state
@@ -97,4 +98,5 @@ class Override:
 
         _LOGGER.debug("Clearing manual override %s", url)
         response = await self._evse.process_request(url=url, method="delete")
-        _LOGGER.debug("Toggle response: %s", response["msg"])
+        msg = response.get("msg") if isinstance(response, dict) else response
+        _LOGGER.debug("Toggle response: %s", msg)

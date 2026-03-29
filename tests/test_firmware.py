@@ -300,8 +300,15 @@ async def test_firmware_check_errors(mock_aioclient):
 
     # ContentTypeError from github
     request_info = MagicMock()
-    request_info.real_url = "https://api.github.com/repos/OpenEVSE/ESP32_WiFi_V4.x/releases/latest"
-    mock_aioclient.get(url, exception=aiohttp.ContentTypeError(request_info, (), message="content type error"))
+    request_info.real_url = (
+        "https://api.github.com/repos/OpenEVSE/ESP32_WiFi_V4.x/releases/latest"
+    )
+    mock_aioclient.get(
+        url,
+        exception=aiohttp.ContentTypeError(
+            request_info, (), message="content type error"
+        ),
+    )
     async with aiohttp.ClientSession() as session:
         charger = OpenEVSE(SERVER_URL, session=session)
         await charger.update()

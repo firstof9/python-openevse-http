@@ -143,6 +143,14 @@ class OpenEVSE:
                 self.url, self._update_status, self._user, self._pwd, self._session
             )
 
+    def _extract_msg(self, response: Any) -> str | None:
+        """Safely extract the 'msg' field from a response."""
+        if isinstance(response, dict):
+            return response.get("msg")
+        if isinstance(response, str):
+            return response
+        return None
+
     async def test_and_get(self) -> dict:
         """Test connection.
 
@@ -151,15 +159,17 @@ class OpenEVSE:
         url = f"{self.url}config"
 
         response = await self.process_request(url, method="get")
-        if "wifi_serial" in response:
-            serial = response["wifi_serial"]
-        else:
-            _LOGGER.debug("Older firmware detected, missing serial.")
+        serial = response.get("wifi_serial") if isinstance(response, dict) else None
+        if serial is None:
+            _LOGGER.debug(
+                "Older firmware detected, missing serial. Response: %s", response
+            )
             raise MissingSerial
-        if "buildenv" in response:
-            model = response["buildenv"]
-        else:
-            model = "unknown"
+        model = (
+            response.get("buildenv", "unknown")
+            if isinstance(response, dict)
+            else "unknown"
+        )
 
         data = {"serial": serial, "model": model}
         return data
@@ -175,6 +185,12 @@ class OpenEVSE:
 
     def _start_listening(self):
         """Start the websocket listener."""
+        if not self.websocket:
+            _LOGGER.debug("Websocket not initialized, creating...")
+            self.websocket = OpenEVSEWebsocket(
+                self.url, self._update_status, self._user, self._pwd, self._session
+            )
+
         if not self._loop:
             try:
                 _LOGGER.debug("Attempting to find running loop...")
@@ -185,8 +201,10 @@ class OpenEVSE:
 
         if not self._ws_listening:
             _LOGGER.debug("Setting up websocket ping...")
-            self._loop.create_task(self.websocket.listen())
-            self._loop.create_task(self.repeat(300, self.websocket.keepalive))
+            self.tasks = [
+                self._loop.create_task(self.websocket.listen()),
+                self._loop.create_task(self.repeat(300, self.websocket.keepalive)),
+            ]
             self._ws_listening = True
 
     async def _update_status(self, msgtype, data, error):
@@ -232,6 +250,12 @@ class OpenEVSE:
     async def ws_disconnect(self) -> None:
         """Disconnect the websocket listener."""
         self._ws_listening = False
+        if self.tasks:
+            for task in self.tasks:
+                task.cancel()
+            await asyncio.gather(*self.tasks, return_exceptions=True)
+            self.tasks = None
+
         assert self.websocket
         await self.websocket.close()
 
@@ -281,7 +305,7 @@ class OpenEVSE:
         max_current: int | None = None,
         energy_limit: int | None = None,
         time_limit: int | None = None,
-        auto_release: bool = True,
+        auto_release: bool | None = None,
     ) -> Any:
         """Proxy to override module."""
         return await self.override.set(
@@ -396,9 +420,9 @@ class OpenEVSE:
 
         _LOGGER.debug("Setting charge mode to %s", mode)
         response = await self.process_request(url=url, method="post", data=data)
-        result = response["msg"]
+        result = self._extract_msg(response)
         if result not in ["done", "no change"]:
-            _LOGGER.error("Problem issuing command: %s", response["msg"])
+            _LOGGER.error("Problem issuing command. Response: %s", response)
             raise UnknownError
 
     async def divert_mode(self) -> dict[str, str] | dict[str, Any]:
@@ -462,9 +486,9 @@ class OpenEVSE:
         _LOGGER.debug("Set service level to: %s", level)
         response = await self.process_request(url=url, method="post", data=data)
         _LOGGER.debug("service response: %s", response)
-        result = response["msg"]
+        result = self._extract_msg(response)
         if result not in ["done", "no change"]:
-            _LOGGER.error("Problem issuing command: %s", response["msg"])
+            _LOGGER.error("Problem issuing command. Response: %s", response)
             raise UnknownError
 
     async def restart_wifi(self) -> None:
@@ -473,7 +497,11 @@ class OpenEVSE:
         data = {"device": "gateway"}
 
         response = await self.process_request(url=url, method="post", data=data)
-        _LOGGER.debug("WiFi Restart response: %s", response["msg"])
+        result = self._extract_msg(response)
+        _LOGGER.debug("WiFi Restart response: %s", result)
+        if result not in ["done", "no change", "restart gateway"]:
+            _LOGGER.error("Problem issuing command. Response: %s", response)
+            raise UnknownError
 
     async def restart_evse(self) -> None:
         """Restart EVSE module."""
@@ -482,7 +510,7 @@ class OpenEVSE:
             url = f"{self.url}restart"
             data = {"device": "evse"}
             reply = await self.process_request(url=url, method="post", data=data)
-            response = reply["msg"]
+            response = self._extract_msg(reply)
 
         else:
             _LOGGER.debug("Restarting EVSE module via RAPI")
@@ -490,6 +518,11 @@ class OpenEVSE:
             _, response = await self.send_command(command)
 
         _LOGGER.debug("EVSE Restart response: %s", response)
+        if response not in ["done", "no change", "OK", "restart evse"] and not str(
+            response
+        ).startswith("$OK"):
+            _LOGGER.error("Problem issuing command. Response: %s", response)
+            raise UnknownError
 
     async def set_led_brightness(self, level: int) -> None:
         """Set LED brightness level."""
@@ -517,8 +550,9 @@ class OpenEVSE:
         data = f"divertmode={new_mode}"
 
         response = await self.process_request(url=url, method="post", rapi=data)
-        if response != "Divert Mode changed":
-            _LOGGER.error("Problem issuing command: %s", response)
+        result = self._extract_msg(response)
+        if result != "Divert Mode changed":
+            _LOGGER.error("Problem issuing command. Response: %s", response)
             raise UnknownError
 
     # Properties
@@ -592,8 +626,7 @@ class OpenEVSE:
             return self._config.get("max_current_soft")
         return self._status.get("pilot")
 
-    @property
-    async def async_charge_current(self) -> int | None:
+    async def get_charge_current(self) -> int | None:
         """Return the charge current."""
         try:
             claims = None
@@ -661,12 +694,18 @@ class OpenEVSE:
     @property
     def status(self) -> str:
         """Return charger's state."""
-        return self._status.get("status", states[int(self._status.get("state", 0))])
+        return self._status.get("status", self.state)
 
     @property
     def state(self) -> str:
         """Return charger's state."""
-        return states[int(self._status.get("state", 0))]
+        state_idx = self._status.get("state", 0)
+        try:
+            state_idx = int(state_idx)
+        except (ValueError, TypeError):
+            _LOGGER.debug("Invalid state value: %s", state_idx)
+            return "unknown"
+        return states.get(state_idx, "unknown")
 
     @property
     def state_raw(self) -> int | None:
@@ -707,7 +746,7 @@ class OpenEVSE:
     def ambient_temperature(self) -> float | None:
         """Return the temperature of the ambient sensor, in degrees Celsius."""
         temp = self._status.get("temp")
-        if temp:
+        if temp is not None:
             return temp / 10
         return self._status.get("temp1", 0) / 10
 
@@ -958,8 +997,7 @@ class OpenEVSE:
             counts["stuckcount"] = self._status["stuckcount"]
         return counts
 
-    @property
-    async def async_override_state(self) -> str | None:
+    async def get_override_state(self) -> str | None:
         """Return the unit override state."""
         try:
             override = await self.get_override()

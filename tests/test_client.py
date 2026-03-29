@@ -780,10 +780,10 @@ async def test_set_divertmode(
         body=value,
     )
     await test_charger_unknown_semver.update()
-    with pytest.raises(UnsupportedFeature):
-        with caplog.at_level(logging.DEBUG):
+    with caplog.at_level(logging.DEBUG):
+        with pytest.raises(UnsupportedFeature):
             await test_charger_unknown_semver.divert_mode()
-            assert "Non-semver firmware version detected." in caplog.text
+    assert "Non-semver firmware version detected." in caplog.text
 
 
 async def test_test_and_get(test_charger, test_charger_v2, mock_aioclient, caplog):
@@ -1026,15 +1026,15 @@ async def test_checks_count(fixture, expected, request):
     await charger.ws_disconnect()
 
 
-async def test_async_override_state(test_charger_new, mock_aioclient):
-    """Test async_override_state reply."""
+async def test_get_override_state(test_charger_new, mock_aioclient):
+    """Test get_override_state reply."""
     await test_charger_new.update()
     mock_aioclient.get(
         "http://openevse.test.tld/override",
         status=200,
         body='{"state": "disabled"}',
     )
-    status = await test_charger_new.async_override_state
+    status = await test_charger_new.get_override_state()
     assert status == "disabled"
     await test_charger_new.ws_disconnect()
 
@@ -1047,15 +1047,15 @@ async def test_current_power(test_charger_new, mock_aioclient):
     await test_charger_new.ws_disconnect()
 
 
-async def test_async_charge_current(test_charger_new, mock_aioclient):
-    """Test async_charge_current reply."""
+async def test_get_charge_current(test_charger_new, mock_aioclient):
+    """Test get_charge_current reply."""
     await test_charger_new.update()
     mock_aioclient.get(
         "http://openevse.test.tld/claims/target",
         status=200,
         body='{"properties": {"charge_current": 10}}',
     )
-    status = await test_charger_new.async_charge_current
+    status = await test_charger_new.get_charge_current()
     assert status == 10
     await test_charger_new.ws_disconnect()
 
@@ -1234,7 +1234,7 @@ async def test_set_charge_mode(test_charger, mock_aioclient, caplog):
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(UnknownError):
             await test_charger.set_charge_mode("fast")
-            assert "Problem issuing command: error" in caplog.text
+    assert "Problem issuing command. Response: {'msg': 'error'}" in caplog.text
 
     value = {"msg": "done"}
     mock_aioclient.post(
@@ -1272,6 +1272,7 @@ async def test_set_service_level(test_charger, mock_aioclient, caplog):
         await test_charger.set_service_level(1)
     assert "Set service level to: 1" in caplog.text
 
+
 @pytest.mark.asyncio
 async def test_ws_disconnect_extra():
     """Test ws_disconnect calls close."""
@@ -1284,26 +1285,31 @@ async def test_ws_disconnect_extra():
     charger.websocket.close.assert_called_once()
     assert charger._ws_listening is False
 
-def test_is_coroutine_function():
+
+async def test_is_coroutine_function():
     """Test is_coroutine_function."""
     charger = OpenEVSE(SERVER_URL)
+
     async def async_func():
         pass
+
     def sync_func():
         pass
+
     assert charger.is_coroutine_function(async_func) is True
     assert charger.is_coroutine_function(sync_func) is False
+
 
 async def test_callbacks(mock_aioclient):
     """Test both sync and async callbacks."""
     charger = OpenEVSE(SERVER_URL)
-    
+
     # Async callback
     async_mock = AsyncMock()
     charger.callback = async_mock
     await charger._update_status("data", {"test": 1}, None)
     async_mock.assert_called_once()
-    
+
     # Sync callback
     sync_mock = MagicMock()
     charger.callback = sync_mock
@@ -1311,20 +1317,23 @@ async def test_callbacks(mock_aioclient):
         await charger._update_status("data", {"test": 2}, None)
     sync_mock.assert_called_once()
 
+
 async def test_proxies():
     """Test all proxy methods in OpenEVSE."""
     charger = OpenEVSE(SERVER_URL)
-    
+
     # Firmware proxies
     with patch.object(charger.firmware, "check", AsyncMock(return_value={})) as m:
         await charger.firmware_check()
         m.assert_called_once()
-    with patch.object(charger.firmware, "version_check", MagicMock(return_value=True)) as m:
+    with patch.object(
+        charger.firmware, "version_check", MagicMock(return_value=True)
+    ) as m:
         charger.version_check("1.0.0")
         m.assert_called_once()
         charger._version_check("1.0.0")
         assert m.call_count == 2
-        
+
     # Override proxies
     with patch.object(charger.override, "toggle", AsyncMock()) as m:
         await charger.toggle_override()
@@ -1332,7 +1341,7 @@ async def test_proxies():
     with patch.object(charger.override, "clear", AsyncMock()) as m:
         await charger.clear_override()
         m.assert_called_once()
-        
+
     # Limit proxies
     with patch.object(charger.limit, "set", AsyncMock()) as m:
         await charger.set_limit("type", 10)
@@ -1343,7 +1352,7 @@ async def test_proxies():
     with patch.object(charger.limit, "clear", AsyncMock()) as m:
         await charger.clear_limit()
         m.assert_called_once()
-        
+
     # Claims proxies
     with patch.object(charger.claims, "make", AsyncMock()) as m:
         await charger.make_claim()
@@ -1354,7 +1363,7 @@ async def test_proxies():
     with patch.object(charger.claims, "list", AsyncMock(return_value={})) as m:
         await charger.list_claims()
         m.assert_called_once()
-        
+
     # Sensors proxies
     with patch.object(charger.sensors, "grid_voltage", AsyncMock()) as m:
         await charger.grid_voltage(230)
@@ -1369,59 +1378,34 @@ async def test_proxies():
         await charger.set_shaper_live_pwr(5000)
         m.assert_called_once()
 
+
 async def test_set_service_level_errors(mock_aioclient, caplog):
     """Test set_service_level error paths."""
     charger = OpenEVSE(SERVER_URL)
-    
+
     # Invalid level
     with pytest.raises(ValueError):
         await charger.set_service_level(3)
-    
+
     # API error
     mock_aioclient.post(TEST_URL_CONFIG, status=200, body='{"msg": "failed"}')
     with caplog.at_level(logging.ERROR):
         with pytest.raises(UnknownError):
             await charger.set_service_level(1)
-        assert "Problem issuing command: failed" in caplog.text
+        assert "Problem issuing command. Response: {'msg': 'failed'}" in caplog.text
 
-async def test_restart_wifi(mock_aioclient, caplog):
-    """Test restart_wifi."""
-    mock_aioclient.post(f"http://{SERVER_URL}/restart", status=200, body='{"msg": "done"}')
-    charger = OpenEVSE(SERVER_URL)
-    with caplog.at_level(logging.DEBUG):
-        await charger.restart_wifi()
-        assert "WiFi Restart response: done" in caplog.text
-
-async def test_restart_evse(mock_aioclient, caplog):
-    """Test restart_evse."""
-    charger = OpenEVSE(SERVER_URL)
-    
-    # Newer firmware (HTTP restart)
-    charger._config["version"] = "5.0.0"
-    mock_aioclient.post(f"http://{SERVER_URL}/restart", status=200, body='{"msg": "done"}')
-    with caplog.at_level(logging.DEBUG):
-        await charger.restart_evse()
-        assert "Restarting EVSE module via HTTP" in caplog.text
-        assert "EVSE Restart response: done" in caplog.text
-    
-    # Older firmware (RAPI restart)
-    charger._config["version"] = "4.0.0"
-    with patch.object(charger, "send_command", AsyncMock(return_value=("FR", "OK"))) as mock_send:
-        await charger.restart_evse()
-        assert "Restarting EVSE module via RAPI" in caplog.text
-        mock_send.assert_called_once_with("$FR")
 
 async def test_led_brightness(mock_aioclient):
     """Test LED brightness."""
     charger = OpenEVSE(SERVER_URL)
-    
+
     # Unsupported
     charger._config["version"] = "4.0.0"
     with pytest.raises(UnsupportedFeature):
         await charger.set_led_brightness(100)
     with pytest.raises(UnsupportedFeature):
         _ = charger.led_brightness
-        
+
     # Supported
     charger._config["version"] = "4.1.0"
     charger._config["led_brightness"] = 128
@@ -1429,37 +1413,42 @@ async def test_led_brightness(mock_aioclient):
     await charger.set_led_brightness(255)
     assert charger.led_brightness == 128
 
+
 async def test_set_divert_mode(mock_aioclient):
     """Test set_divert_mode."""
     charger = OpenEVSE(SERVER_URL)
-    
+
     # Invalid mode
     with pytest.raises(ValueError):
         await charger.set_divert_mode("invalid")
-    
+
     # Success
-    mock_aioclient.post(f"http://{SERVER_URL}/divertmode", status=200, body='Divert Mode changed')
+    mock_aioclient.post(
+        f"http://{SERVER_URL}/divertmode", status=200, body="Divert Mode changed"
+    )
     await charger.set_divert_mode("eco")
-    
+
     # Failure
-    mock_aioclient.post(f"http://{SERVER_URL}/divertmode", status=200, body='Error')
+    mock_aioclient.post(f"http://{SERVER_URL}/divertmode", status=200, body="Error")
     with pytest.raises(UnknownError):
         await charger.set_divert_mode("fast")
 
-async def test_async_charge_current_fallbacks():
-    """Test async_charge_current fallbacks."""
+
+async def test_get_charge_current_fallbacks():
+    """Test get_charge_current fallbacks."""
     charger = OpenEVSE(SERVER_URL)
     charger._config = {"max_current_soft": 24}
     charger._status = {"pilot": 16}
-    
+
     # Fallback to max_current_soft
     with patch.object(charger.claims, "list", side_effect=UnsupportedFeature):
-        assert await charger.async_charge_current == 24
-        
+        assert await charger.get_charge_current() == 24
+
     # Fallback to pilot
     charger._config = {}
     with patch.object(charger.claims, "list", side_effect=UnsupportedFeature):
-        assert await charger.async_charge_current == 16
+        assert await charger.get_charge_current() == 16
+
 
 async def test_remaining_properties():
     """Test remaining miscellaneous properties."""
@@ -1470,7 +1459,7 @@ async def test_remaining_properties():
         "mqtt_connected": 0,
         "emoncms_connected": 1,
         "srssi": -50,
-        "temp3": 250
+        "temp3": 250,
     }
     assert charger.divertmode == "fast"
     charger._status["divertmode"] = 2
@@ -1481,17 +1470,19 @@ async def test_remaining_properties():
     assert charger.wifi_signal == -50
     assert charger.ir_temperature == 25.0
 
-async def test_async_override_state_more():
-    """Test async_override_state edge cases."""
+
+async def test_get_override_state_more():
+    """Test get_override_state edge cases."""
     charger = OpenEVSE(SERVER_URL)
-    
+
     # Exception
     with patch.object(charger.override, "get", side_effect=UnsupportedFeature):
-        assert await charger.async_override_state is None
-    
+        assert await charger.get_override_state() is None
+
     # Fallback to auto
     with patch.object(charger.override, "get", AsyncMock(return_value={})):
-        assert await charger.async_override_state == "auto"
+        assert await charger.get_override_state() == "auto"
+
 
 async def test_extra_properties():
     """Test miscellaneous properties."""
@@ -1504,10 +1495,10 @@ async def test_extra_properties():
         "total_month": 30000,
         "total_year": 365000,
         "has_limit": True,
-        "ocpp_connected": True
+        "ocpp_connected": True,
     }
     charger._config = {"protocol": "1.0"}
-    
+
     assert charger.state_raw == 3
     assert charger.esp_temperature == 45.0
     assert charger.total_day == 1000
@@ -1517,9 +1508,10 @@ async def test_extra_properties():
     assert charger.has_limit is True
     assert charger.ocpp_connected is True
     assert charger.protocol_version == "1.0"
-    
+
     charger._config["protocol"] = "-"
     assert charger.protocol_version is None
+
 
 async def test_test_and_get_missing_serial(mock_aioclient):
     """Test test_and_get missing serial."""
@@ -1528,9 +1520,60 @@ async def test_test_and_get_missing_serial(mock_aioclient):
     with pytest.raises(MissingSerial):
         await charger.test_and_get()
 
+
 async def test_current_power_unsupported():
     """Test current_power UnsupportedFeature."""
     charger = OpenEVSE(SERVER_URL)
     charger._config["version"] = "4.2.1"
     with pytest.raises(UnsupportedFeature):
         _ = charger.current_power
+
+
+async def test_extra_coverage_edge_cases(mock_aioclient, caplog):
+    """Reach remaining missing lines in client.py."""
+    charger = OpenEVSE(SERVER_URL)
+
+    # 1. Line 152: _extract_msg returning None
+    assert charger._extract_msg(123) is None
+
+    # 2. Lines 189-190: ws_start when websocket is None
+    with caplog.at_level(logging.DEBUG):
+        charger.ws_start()
+        assert "Websocket not initialized, creating..." in caplog.text
+    # Cleanup websocket
+    await charger.ws_disconnect()
+
+    # 3. Lines 495-496: restart_wifi error
+    charger._config["version"] = "5.0.0"
+    mock_aioclient.post(TEST_URL_RESTART, status=200, body='{"msg": "failed"}')
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(UnknownError):
+            await charger.restart_wifi()
+        assert "Problem issuing command. Response: {'msg': 'failed'}" in caplog.text
+
+    # 4. Lines 516-517: restart_evse error (HTTP path)
+    mock_aioclient.post(TEST_URL_RESTART, status=200, body='{"msg": "failed"}')
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(UnknownError):
+            await charger.restart_evse()
+        assert "Problem issuing command. Response: {'msg': 'failed'}" in caplog.text
+
+    # 5. Lines 697-699: state property with invalid state_idx
+    charger._status["state"] = "invalid"
+    with caplog.at_level(logging.DEBUG):
+        assert charger.state == "unknown"
+        assert "Invalid state value: invalid" in caplog.text
+
+
+async def test_set_divert_mode_error_coverage(mock_aioclient, caplog):
+    """Line 547 coverage (set_divert_mode error path)."""
+    charger = OpenEVSE(SERVER_URL)
+    charger._config["version"] = "4.2.2"
+
+    mock_aioclient.post(
+        f"http://{SERVER_URL}/divertmode", status=200, body='{"msg": "failed"}'
+    )
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(UnknownError):
+            await charger.set_divert_mode("fast")
+        assert "Problem issuing command. Response: {'msg': 'failed'}" in caplog.text

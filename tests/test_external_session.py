@@ -1,7 +1,7 @@
 """Test external session management."""
 
 import json
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiohttp
 import pytest
@@ -34,17 +34,18 @@ async def test_external_session_provided():
     mock_session.get = MagicMock(return_value=mock_get)
 
     # Create OpenEVSE instance with external session
-    charger = OpenEVSE(TEST_TLD, session=mock_session)
+    with patch("openevsehttp.__main__.OpenEVSE.repeat", return_value=AsyncMock()):
+        charger = OpenEVSE(TEST_TLD, session=mock_session)
 
-    # Verify the session is stored
-    assert charger._session is mock_session
-    assert charger._session_external is True
+        # Verify the session is stored
+        assert charger._session is mock_session
+        assert charger._session_external is True
 
-    # Make a request
-    await charger.process_request(TEST_URL_STATUS, method="get")
+        # Make a request
+        await charger.process_request(TEST_URL_STATUS, method="get")
 
-    # Verify the external session was used
-    mock_session.get.assert_called_once()
+        # Verify the external session was used
+        mock_session.get.assert_called_once()
 
 
 async def test_no_external_session(mock_aioclient):
@@ -56,14 +57,15 @@ async def test_no_external_session(mock_aioclient):
     )
 
     # Create OpenEVSE instance without external session
-    charger = OpenEVSE(TEST_TLD)
+    with patch("openevsehttp.__main__.OpenEVSE.repeat", return_value=AsyncMock()):
+        charger = OpenEVSE(TEST_TLD)
 
-    # Verify no session is stored
-    assert charger._session is None
-    assert charger._session_external is False
+        # Verify no session is stored
+        assert charger._session is None
+        assert charger._session_external is False
 
-    # Make a request - should create a temporary session
-    await charger.process_request(TEST_URL_STATUS, method="get")
+        # Make a request - should create a temporary session
+        await charger.process_request(TEST_URL_STATUS, method="get")
 
 
 async def test_external_session_with_update(mock_aioclient):
@@ -82,18 +84,19 @@ async def test_external_session_with_update(mock_aioclient):
     # Create a real session for testing
     async with aiohttp.ClientSession() as session:
         # Create OpenEVSE instance with external session
-        charger = OpenEVSE(TEST_TLD, session=session)
+        with patch("openevsehttp.__main__.OpenEVSE.repeat", return_value=AsyncMock()):
+            charger = OpenEVSE(TEST_TLD, session=session)
 
-        # Verify the session is stored
-        assert charger._session is session
-        assert charger._session_external is True
+            # Verify the session is stored
+            assert charger._session is session
+            assert charger._session_external is True
 
-        # Update should use the external session
-        await charger.update()
+            # Update should use the external session
+            await charger.update()
 
-        # Verify status was updated
-        assert charger._status is not None
-        assert charger._config is not None
+            # Verify status was updated
+            assert charger._status is not None
+            assert charger._config is not None
 
 
 async def test_websocket_uses_external_session(mock_aioclient):
@@ -112,18 +115,19 @@ async def test_websocket_uses_external_session(mock_aioclient):
     # Create a real session for testing
     async with aiohttp.ClientSession() as session:
         # Create OpenEVSE instance with external session
-        charger = OpenEVSE(TEST_TLD, session=session)
+        with patch("openevsehttp.__main__.OpenEVSE.repeat", return_value=AsyncMock()):
+            charger = OpenEVSE(TEST_TLD, session=session)
 
-        # Update to initialize websocket
-        await charger.update()
+            # Update to initialize websocket
+            await charger.update()
 
-        # Verify websocket was created with the session
-        assert charger.websocket is not None
-        assert charger.websocket.session is session
-        assert charger.websocket._session_external is True
+            # Verify websocket was created with the session
+            assert charger.websocket is not None
+            assert charger.websocket.session is session
+            assert charger.websocket._session_external is True
 
-        # Cleanup
-        await charger.ws_disconnect()
+            # Cleanup
+            await charger.ws_disconnect()
 
 
 async def test_firmware_check_with_external_session(mock_aioclient):
@@ -152,17 +156,18 @@ async def test_firmware_check_with_external_session(mock_aioclient):
     )
 
     # Create OpenEVSE instance without external session (use mocked responses)
-    charger = OpenEVSE(TEST_TLD)
+    with patch("openevsehttp.__main__.OpenEVSE.repeat", return_value=AsyncMock()):
+        charger = OpenEVSE(TEST_TLD)
 
-    # Load config first
-    await charger.update()
+        # Load config first
+        await charger.update()
 
-    # Check firmware - should use mocked session
-    result = await charger.firmware_check()
+        # Check firmware - should use mocked session
+        result = await charger.firmware_check()
 
-    # Verify result
-    assert result is not None
-    assert result["latest_version"] == "v4.2.0"
+        # Verify result
+        assert result is not None
+        assert result["latest_version"] == "v4.2.0"
 
 
 async def test_session_not_closed_when_external(mock_aioclient):
@@ -183,16 +188,17 @@ async def test_session_not_closed_when_external(mock_aioclient):
 
     try:
         # Create OpenEVSE instance with external session
-        charger = OpenEVSE(TEST_TLD, session=session)
+        with patch("openevsehttp.__main__.OpenEVSE.repeat", return_value=AsyncMock()):
+            charger = OpenEVSE(TEST_TLD, session=session)
 
-        # Update to initialize websocket
-        await charger.update()
+            # Update to initialize websocket
+            await charger.update()
 
-        # Disconnect websocket
-        await charger.ws_disconnect()
+            # Disconnect websocket
+            await charger.ws_disconnect()
 
-        # Session should still be open (not closed by library)
-        assert not session.closed
+            # Session should still be open (not closed by library)
+            assert not session.closed
 
     finally:
         # Clean up the session ourselves

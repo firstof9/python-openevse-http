@@ -12,12 +12,12 @@ from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
 from awesomeversion import AwesomeVersion
 from awesomeversion.exceptions import AwesomeVersionCompareException
 
+from .const import ERROR_TIMEOUT
+
 if TYPE_CHECKING:
     from .client import OpenEVSE
 
 _LOGGER = logging.getLogger(__name__)
-
-ERROR_TIMEOUT = "Timeout while updating"
 
 
 class Firmware:
@@ -121,11 +121,9 @@ class Firmware:
         firmware_filtered = None
 
         try:
-            firmware_search = re.search(
-                "\\d\\.\\d\\.\\d", self._evse._config["version"]
-            )
+            firmware_search = re.search(r"\d+\.\d+\.\d+", self._evse._config["version"])
             if firmware_search is not None:
-                firmware_filtered = firmware_search[0]
+                firmware_filtered = firmware_search.group(0)
         except Exception:  # pylint: disable=broad-exception-caught
             _LOGGER.warning("Non-standard versioning string.")
         _LOGGER.debug("Detected firmware: %s", self._evse._config["version"])

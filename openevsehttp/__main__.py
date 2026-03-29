@@ -11,6 +11,7 @@ from .client import (
 from .client import (
     divert_mode_map as divert_mode,
 )
+from .const import ERROR_TIMEOUT
 from .exceptions import (
     AlreadyListening,
     AuthenticationError,
@@ -21,8 +22,6 @@ from .exceptions import (
     UnknownError,
     UnsupportedFeature,
 )
-
-ERROR_TIMEOUT = "Timeout while updating"
 
 __all__ = [
     "AlreadyListening",

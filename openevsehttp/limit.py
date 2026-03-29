@@ -37,19 +37,17 @@ class Limit:
         self, limit_type: str, value: int, release: bool | None = None
     ) -> Any:
         """Set charge limit."""
-        if not self._evse._version_check("5.0.0"):
-            _LOGGER.debug("Feature not supported for older firmware.")
-            raise UnsupportedFeature
-
-        url = f"{self._evse.url}limit"
-        data: dict[str, Any] = await self.get()
         valid_types = ["time", "energy", "soc", "range"]
 
         if limit_type not in valid_types:
             raise InvalidType
 
-        data[TYPE] = limit_type
-        data[VALUE] = value
+        if not self._evse._version_check("5.0.0"):
+            _LOGGER.debug("Feature not supported for older firmware.")
+            raise UnsupportedFeature
+
+        url = f"{self._evse.url}limit"
+        data = {TYPE: limit_type, VALUE: value}
         if release is not None:
             data[RELEASE] = release
 

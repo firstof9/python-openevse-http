@@ -29,19 +29,16 @@ async def test_set_limit(
     )
     with caplog.at_level(logging.DEBUG):
         await test_charger_modified_ver.set_limit("energy", 15, True)
-        assert (
-            "Limit data: {'type': 'energy', 'value': 15, 'release': True}"
-            in caplog.text
-        )
-        assert "Setting limit config on http://openevse.test.tld/limit" in caplog.text
+    assert "Limit data: {'type': 'energy', 'value': 15, 'release': True}" in caplog.text
+    assert "Setting limit config on http://openevse.test.tld/limit" in caplog.text
 
     with pytest.raises(InvalidType):
         await test_charger_modified_ver.set_limit("invalid", 15)
 
-    with pytest.raises(UnsupportedFeature):
-        with caplog.at_level(logging.DEBUG):
+    with caplog.at_level(logging.DEBUG):
+        with pytest.raises(UnsupportedFeature):
             await test_charger.set_limit("energy", 15)
-            assert "Feature not supported for older firmware." in caplog.text
+    assert "Feature not supported for older firmware." in caplog.text
 
 
 async def test_get_limit(
@@ -56,8 +53,8 @@ async def test_get_limit(
     )
     with caplog.at_level(logging.DEBUG):
         response = await test_charger_modified_ver.get_limit()
-        assert response == {"type": "energy", "value": 10}
-        assert "Getting limit config on http://openevse.test.tld/limit" in caplog.text
+    assert response == {"type": "energy", "value": 10}
+    assert "Getting limit config on http://openevse.test.tld/limit" in caplog.text
 
     mock_aioclient.get(
         TEST_URL_LIMIT,
@@ -66,12 +63,12 @@ async def test_get_limit(
     )
     with caplog.at_level(logging.DEBUG):
         response = await test_charger_modified_ver.get_limit()
-        assert response == {"msg": "No limit"}
+    assert response == {"msg": "No limit"}
 
-    with pytest.raises(UnsupportedFeature):
-        with caplog.at_level(logging.DEBUG):
+    with caplog.at_level(logging.DEBUG):
+        with pytest.raises(UnsupportedFeature):
             await test_charger.get_limit()
-            assert "Feature not supported for older firmware." in caplog.text
+    assert "Feature not supported for older firmware." in caplog.text
 
 
 async def test_clear_limit(
@@ -86,8 +83,8 @@ async def test_clear_limit(
     )
     with caplog.at_level(logging.DEBUG):
         response = await test_charger_modified_ver.clear_limit()
-        assert response == {"msg": "Deleted"}
-        assert "Clearing limit config on http://openevse.test.tld/limit" in caplog.text
+    assert response == {"msg": "Deleted"}
+    assert "Clearing limit config on http://openevse.test.tld/limit" in caplog.text
 
     mock_aioclient.delete(
         TEST_URL_LIMIT,
@@ -96,9 +93,9 @@ async def test_clear_limit(
     )
     with caplog.at_level(logging.DEBUG):
         response = await test_charger_modified_ver.clear_limit()
-        assert response == {"msg": "No limit to clear"}
+    assert response == {"msg": "No limit to clear"}
 
-    with pytest.raises(UnsupportedFeature):
-        with caplog.at_level(logging.DEBUG):
+    with caplog.at_level(logging.DEBUG):
+        with pytest.raises(UnsupportedFeature):
             await test_charger.clear_limit()
-            assert "Feature not supported for older firmware." in caplog.text
+    assert "Feature not supported for older firmware." in caplog.text

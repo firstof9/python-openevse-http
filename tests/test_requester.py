@@ -11,7 +11,7 @@ from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
 
 import openevsehttp.__main__ as main
 from openevsehttp.__main__ import OpenEVSE
-from openevsehttp.exceptions import AuthenticationError, ParseJSONError
+from openevsehttp.exceptions import AuthenticationError, MissingMethod, ParseJSONError
 from tests.common import load_fixture
 from tests.const import SERVER_URL, TEST_URL_CONFIG, TEST_URL_RAPI, TEST_URL_STATUS
 
@@ -184,6 +184,7 @@ async def test_process_request_missing_method_raise():
     """Test process_request with method=None raises MissingMethod."""
     charger = OpenEVSE(SERVER_URL)
     from openevsehttp.exceptions import MissingMethod
+
     with pytest.raises(MissingMethod):
         await charger.process_request(TEST_URL_STATUS, method=None)
 
@@ -550,3 +551,18 @@ async def test_external_session_content_type_error():
 
             with pytest.raises(ContentTypeError):
                 await charger.process_request(TEST_URL_STATUS, method="get")
+
+
+async def test_process_request_invalid_methods(mock_aioclient):
+    """Test process_request with invalid and uppercase methods."""
+    charger = OpenEVSE(SERVER_URL)
+    with pytest.raises(MissingMethod):
+        await charger.process_request(TEST_URL_STATUS, method="INVALID")
+
+    with pytest.raises(MissingMethod):
+        # Test non-string method
+        await charger.process_request(TEST_URL_STATUS, method=123)
+
+    # Upper case should be normalized and succeed
+    mock_aioclient.get(TEST_URL_STATUS, status=200, body='{"msg": "done"}')
+    await charger.process_request(TEST_URL_STATUS, method="GET")

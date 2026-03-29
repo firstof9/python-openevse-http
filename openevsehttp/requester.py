@@ -9,6 +9,7 @@ from typing import Any
 import aiohttp
 from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
 
+from .const import ERROR_TIMEOUT
 from .exceptions import (
     AuthenticationError,
     MissingMethod,
@@ -16,8 +17,6 @@ from .exceptions import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-
-ERROR_TIMEOUT = "Timeout while updating"
 
 
 class Requester:
@@ -50,8 +49,10 @@ class Requester:
     ) -> dict[str, str] | dict[str, Any]:
         """Return result of processed HTTP request."""
         auth = None
-        if method is None:
+        allowed_methods = ["get", "post", "put", "delete", "patch", "head", "options"]
+        if not isinstance(method, str) or method.lower() not in allowed_methods:
             raise MissingMethod
+        method = method.lower()
 
         if self._user and self._pwd:
             auth = aiohttp.BasicAuth(self._user, self._pwd)
