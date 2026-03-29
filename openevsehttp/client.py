@@ -199,7 +199,12 @@ class OpenEVSE:
                 self._loop = asyncio.get_event_loop()
                 _LOGGER.debug("Using new event loop...")
 
-        if not self._ws_listening:
+        # Check for existing active tasks to avoid duplicates
+        active_tasks = []
+        if self.tasks:
+            active_tasks = [t for t in self.tasks if not t.done()]
+
+        if not self._ws_listening or not active_tasks:
             _LOGGER.debug("Setting up websocket ping...")
             self.tasks = [
                 self._loop.create_task(self.websocket.listen()),
@@ -248,16 +253,25 @@ class OpenEVSE:
                     self.callback()  # pylint: disable=not-callable
 
     async def ws_disconnect(self) -> None:
-        """Disconnect the websocket listener."""
+        """Disconnect the websocket listener (idempotent)."""
+        if not self._ws_listening and not self.tasks and self.websocket is None:
+            return
+
         self._ws_listening = False
         if self.tasks:
             for task in self.tasks:
-                task.cancel()
+                if not task.done():
+                    task.cancel()
             await asyncio.gather(*self.tasks, return_exceptions=True)
             self.tasks = None
 
-        assert self.websocket
-        await self.websocket.close()
+        if self.websocket is not None:
+            await self.websocket.close()
+            # We don't nullify self.websocket here as it may be reused by ws_start
+            # unless the user expects it to be recreated.
+            # But the requirement says 'set self.websocket to None so repeated calls are safe'
+            # Let's keep it consistent.
+            self.websocket = None
 
     def is_coroutine_function(self, callback):
         """Check if a callback is a coroutine function."""
@@ -535,7 +549,12 @@ class OpenEVSE:
 
         data["led_brightness"] = level
         _LOGGER.debug("Setting LED brightness to %s", level)
-        await self.process_request(url=url, method="post", data=data)
+        response = await self.process_request(url=url, method="post", data=data)
+        _LOGGER.debug("led_brightness response: %s", response)
+        result = self._extract_msg(response)
+        if result not in ["done", "no change"]:
+            _LOGGER.error("Problem issuing command. Response: %s", response)
+            raise UnknownError
 
     async def set_divert_mode(self, mode: str = "fast") -> None:
         """Set the divert mode."""
@@ -694,7 +713,9 @@ class OpenEVSE:
     @property
     def status(self) -> str:
         """Return charger's state."""
-        return self._status.get("status", self.state)
+        if "status" in self._status:
+            return self._status["status"]
+        return self.state
 
     @property
     def state(self) -> str:

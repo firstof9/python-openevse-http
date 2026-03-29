@@ -102,6 +102,7 @@ class Requester:
                     message = json.loads(message)
                 except ValueError:
                     _LOGGER.warning("Non JSON response: %s", message)
+                    message = {"msg": message}
 
                 if resp.status == 400:
                     if isinstance(message, dict) and "msg" in message:

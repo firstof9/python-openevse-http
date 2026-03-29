@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
-from .exceptions import UnsupportedFeature
+from .exceptions import UnknownError, UnsupportedFeature
 
 if TYPE_CHECKING:
     from .client import OpenEVSE
@@ -86,7 +86,10 @@ class Override:
             # Older firmware use RAPI commands
             _LOGGER.debug("Toggling manual override via RAPI")
             command = "$FE" if self._evse._status["state"] == 254 else "$FS"
-            _, msg = await self._evse.send_command(command)
+            success, msg = await self._evse.send_command(command)
+            if not success:
+                _LOGGER.error("Problem issuing command. Response: %s", msg)
+                raise UnknownError
             _LOGGER.debug("Toggle response: %s", msg)
 
     async def clear(self) -> None:

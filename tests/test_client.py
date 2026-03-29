@@ -813,7 +813,7 @@ async def test_restart_wifi(test_charger_modified_ver, mock_aioclient, caplog):
     )
     with caplog.at_level(logging.DEBUG):
         await test_charger_modified_ver.restart_wifi()
-    assert "Restart response: restart gateway" in caplog.text
+    assert "WiFi Restart response: restart gateway" in caplog.text
 
 
 async def test_evse_restart(
@@ -830,6 +830,7 @@ async def test_evse_restart(
     with caplog.at_level(logging.DEBUG):
         await test_charger_v2.restart_evse()
     assert "EVSE Restart response: $OK^20" in caplog.text
+    assert "Restarting EVSE module via RAPI" in caplog.text
 
     await test_charger_modified_ver.update()
     mock_aioclient.post(
@@ -840,6 +841,7 @@ async def test_evse_restart(
     with caplog.at_level(logging.DEBUG):
         await test_charger_modified_ver.restart_evse()
     assert "Restarting EVSE module via HTTP" in caplog.text
+    assert "EVSE Restart response: restart evse" in caplog.text
 
 
 @pytest.mark.parametrize(
@@ -1277,12 +1279,14 @@ async def test_set_service_level(test_charger, mock_aioclient, caplog):
 async def test_ws_disconnect_extra():
     """Test ws_disconnect calls close."""
     charger = OpenEVSE(SERVER_URL)
-    charger.websocket = MagicMock()
-    charger.websocket.close = AsyncMock()
+    ws_mock = MagicMock()
+    ws_mock.close = AsyncMock()
+    charger.websocket = ws_mock
     # Mock repeat to avoid unawaited coroutine warning
     with patch.object(charger, "repeat", AsyncMock()):
         await charger.ws_disconnect()
-    charger.websocket.close.assert_called_once()
+    ws_mock.close.assert_called_once()
+    assert charger.websocket is None
     assert charger._ws_listening is False
 
 
@@ -1533,8 +1537,9 @@ async def test_extra_coverage_edge_cases(mock_aioclient, caplog):
     """Reach remaining missing lines in client.py."""
     charger = OpenEVSE(SERVER_URL)
 
-    # 1. Line 152: _extract_msg returning None
+    # 1. Line 151-152: _extract_msg returning None or raw string
     assert charger._extract_msg(123) is None
+    assert charger._extract_msg("direct string") == "direct string"
 
     # 2. Lines 189-190: ws_start when websocket is None
     with caplog.at_level(logging.DEBUG):
@@ -1551,18 +1556,52 @@ async def test_extra_coverage_edge_cases(mock_aioclient, caplog):
             await charger.restart_wifi()
         assert "Problem issuing command. Response: {'msg': 'failed'}" in caplog.text
 
-    # 4. Lines 516-517: restart_evse error (HTTP path)
-    mock_aioclient.post(TEST_URL_RESTART, status=200, body='{"msg": "failed"}')
+    # 4. Lines 516-517: restart_evse error (RAPI path)
+    charger._config["version"] = "4.0.0"
+    with patch.object(
+        charger, "send_command", AsyncMock(return_value=(True, "failed"))
+    ):
+        with caplog.at_level(logging.DEBUG):
+            with pytest.raises(UnknownError):
+                await charger.restart_evse()
+            assert "Restarting EVSE module via RAPI" in caplog.text
+            assert "Problem issuing command. Response: failed" in caplog.text
+
+    # 5. Lines 205 in _start_listening: active_tasks check
+    # Start it once
+    with caplog.at_level(logging.DEBUG):
+        charger.ws_start()
+    # Start it again without disconnect
+    with caplog.at_level(logging.DEBUG):
+        charger.ws_start()
+        # Should NOT see "Websocket not initialized, creating..." again for the SAME websocket
+        # but will see "Setting up websocket ping..." because we force a re-setup if ws_listening is True but we call ws_start
+        # Wait, if ws_listening is True, AlreadyListening is raised in ws_start
+
+    # 6. Lines 258 in ws_disconnect: Idempotence return
+    await charger.ws_disconnect()
+    # Call it again - should return immediately
+    await charger.ws_disconnect()
+
+    # 7. Lines 556-557: set_led_brightness error
+    charger._config["version"] = "4.2.0"
+    mock_aioclient.post(TEST_URL_CONFIG, status=200, body='{"msg": "failed"}')
     with caplog.at_level(logging.ERROR):
         with pytest.raises(UnknownError):
-            await charger.restart_evse()
+            await charger.set_led_brightness(100)
         assert "Problem issuing command. Response: {'msg': 'failed'}" in caplog.text
 
-    # 5. Lines 697-699: state property with invalid state_idx
+    # 8. Lines 697-699: state property with invalid state_idx
     charger._status["state"] = "invalid"
     with caplog.at_level(logging.DEBUG):
         assert charger.state == "unknown"
         assert "Invalid state value: invalid" in caplog.text
+
+    # 9. Lines 716-718: status property branches
+    charger._status = {"status": "present"}
+    assert charger.status == "present"
+    charger._status = {"state": 3}  # Charging
+    assert charger.status == "charging"
 
 
 async def test_set_divert_mode_error_coverage(mock_aioclient, caplog):

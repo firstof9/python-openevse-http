@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import aiohttp
 import pytest
 from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
+from aioresponses import aioresponses
 
 import openevsehttp.__main__ as main
 from openevsehttp.__main__ import OpenEVSE
@@ -106,6 +107,24 @@ async def test_send_command_parse_err(test_charger_auth, mock_aioclient):
     with pytest.raises(main.ParseJSONError):
         status = await test_charger_auth.send_command("test")
         assert status is None
+
+
+async def test_non_json_response():
+    """Test non-JSON response is wrapped in dict."""
+    with aioresponses() as m:
+        m.get(
+            f"http://{SERVER_URL}/status",
+            status=200,
+            body="Plain text message",
+        )
+        m.get(
+            f"http://{SERVER_URL}/config",
+            status=200,
+            body='{"firmware": "5.0.0"}',
+        )
+        c = OpenEVSE(SERVER_URL)
+        await c.update()
+        assert c._status == {"msg": "Plain text message"}
 
 
 async def test_send_command_auth_err(test_charger_auth, mock_aioclient):
@@ -225,7 +244,7 @@ async def test_process_request_non_json_response(mock_aioclient):
     )
     charger = OpenEVSE(SERVER_URL)
     result = await charger.process_request(TEST_URL_STATUS, method="get")
-    assert result == "Not JSON"
+    assert result == {"msg": "Not JSON"}
 
 
 async def test_process_request_400_error_with_msg(mock_aioclient):
@@ -285,7 +304,7 @@ async def test_process_request_405_error(mock_aioclient):
     )
     charger = OpenEVSE(SERVER_URL)
     result = await charger.process_request(TEST_URL_STATUS, method="get")
-    assert result == ""
+    assert result == {"msg": ""}
 
 
 async def test_process_request_500_error(mock_aioclient):
@@ -296,7 +315,7 @@ async def test_process_request_500_error(mock_aioclient):
     )
     charger = OpenEVSE(SERVER_URL)
     result = await charger.process_request(TEST_URL_STATUS, method="get")
-    assert result == ""
+    assert result == {"msg": ""}
 
 
 async def test_process_request_timeout_error():
@@ -387,7 +406,7 @@ async def test_external_session_non_json_response():
             charger = OpenEVSE(SERVER_URL, session=session)
             result = await charger.process_request(TEST_URL_STATUS, method="get")
 
-            assert result == "Not JSON"
+            assert result == {"msg": "Not JSON"}
 
 
 async def test_external_session_400_error_with_msg():

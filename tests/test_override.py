@@ -7,7 +7,7 @@ from unittest import mock
 import pytest
 from aiohttp.client_exceptions import ContentTypeError
 
-from openevsehttp.exceptions import UnsupportedFeature
+from openevsehttp.exceptions import UnknownError, UnsupportedFeature
 from tests.const import TEST_URL_OVERRIDE, TEST_URL_RAPI
 
 pytestmark = pytest.mark.asyncio
@@ -142,6 +142,23 @@ async def test_toggle_override_v2_err(test_charger_v2, mock_aioclient, caplog):
         "Content error: Attempt to decode JSON with unexpected mimetype: text/html"
         in caplog.text
     )
+
+
+async def test_toggle_override_v2_fail(test_charger_v2, mock_aioclient, caplog):
+    """Test v4 toggle fail."""
+    await test_charger_v2.update()
+    # Mock send_command returning success=False
+    # Requester returns (False, msg) if 'ret' is missing but 'msg' is present
+    value = {"msg": "toggle failed"}
+    mock_aioclient.post(
+        TEST_URL_RAPI,
+        status=200,
+        body=json.dumps(value),
+    )
+    with caplog.at_level(logging.DEBUG):
+        with pytest.raises(UnknownError):
+            await test_charger_v2.toggle_override()
+    assert "Problem issuing command. Response: toggle failed" in caplog.text
 
 
 async def test_set_override(
