@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import aiohttp
 import pytest
@@ -129,6 +129,18 @@ async def test_version_check(test_charger_new, mock_aioclient, caplog):
 
     result = test_charger_new._version_check("4.0.0", "4.1.7")
     assert not result
+
+    # Test version_check with dev version
+    test_charger_new._config["version"] = "4.2.0.dev"
+    with caplog.at_level(logging.DEBUG):
+        assert test_charger_new.version_check("4.0.0") is True
+    assert "Stripping 'dev' from version." in caplog.text
+
+    # Test version_check with missing version
+    test_charger_new._config = {}
+    with caplog.at_level(logging.DEBUG):
+        assert test_charger_new.version_check("4.0.0") is False
+    assert "Unable to find firmware version." in caplog.text
 
 
 async def test_firmware_check_no_config():
@@ -280,6 +292,24 @@ async def test_firmware_check_errors(mock_aioclient):
 
     # Timeout from github
     mock_aioclient.get(url, exception=asyncio.TimeoutError())
+    async with aiohttp.ClientSession() as session:
+        charger = OpenEVSE(SERVER_URL, session=session)
+        await charger.update()
+        charger._config["version"] = "4.0.1"
+        assert await charger.firmware_check() is None
+
+    # ContentTypeError from github
+    request_info = MagicMock()
+    request_info.real_url = "https://api.github.com/repos/OpenEVSE/ESP32_WiFi_V4.x/releases/latest"
+    mock_aioclient.get(url, exception=aiohttp.ContentTypeError(request_info, (), message="content type error"))
+    async with aiohttp.ClientSession() as session:
+        charger = OpenEVSE(SERVER_URL, session=session)
+        await charger.update()
+        charger._config["version"] = "4.0.1"
+        assert await charger.firmware_check() is None
+
+    # JSONDecodeError from github
+    mock_aioclient.get(url, status=200, body="invalid json")
     async with aiohttp.ClientSession() as session:
         charger = OpenEVSE(SERVER_URL, session=session)
         await charger.update()

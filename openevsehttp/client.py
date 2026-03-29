@@ -116,16 +116,7 @@ class OpenEVSE:
 
     async def send_command(self, command: str) -> tuple:
         """Send a RAPI command to the charger and parses the response."""
-        url = f"{self.url}r"
-        data = {"json": 1, "rapi": command}
-
-        _LOGGER.debug("Posting data: %s to %s", command, url)
-        value = await self.process_request(url=url, method="post", rapi=data)
-        if "ret" not in value:
-            if "msg" in value:
-                return (False, value["msg"])
-            return (False, "")
-        return (value["cmd"], value["ret"])
+        return await self.requester.send_command(command)
 
     async def update(self) -> None:
         """Update the values."""

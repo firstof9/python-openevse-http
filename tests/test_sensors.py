@@ -47,6 +47,10 @@ async def test_self_production(test_charger, test_charger_v2, mock_aioclient, ca
         assert "Posting self-production: {'grid_ie': -210}" in caplog.text
         assert "Self-production response: {'grid_ie': 210}" in caplog.text
 
+        # Test solar and voltage
+        await test_charger.self_production(solar=500, voltage=230)
+        assert "Posting self-production: {'solar': 500, 'voltage': 230}" in caplog.text
+
         await test_charger.self_production(None)
         assert "No sensor data to send to device." in caplog.text
 
@@ -69,6 +73,10 @@ async def test_soc(test_charger, test_charger_v2, mock_aioclient, caplog):
         await test_charger.soc(210)
         assert "Posting SOC data: {'battery_level': 210}" in caplog.text
         assert "SOC response: {'vehicle_soc': 210}" in caplog.text
+
+        # Test battery_range and time_to_full and voltage
+        await test_charger.soc(battery_range=100, time_to_full=60, voltage=230)
+        assert "Posting SOC data: {'battery_range': 100, 'time_to_full_charge': 60, 'voltage': 230}" in caplog.text
 
         await test_charger.soc(None)
         assert "No SOC data to send to device." in caplog.text

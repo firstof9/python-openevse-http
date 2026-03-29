@@ -174,10 +174,18 @@ async def test_send_command_empty_fallback():
     charger = OpenEVSE(SERVER_URL)
 
     # Mock response with neither 'msg' nor 'ret'
-    with patch.object(charger, "process_request", return_value={}):
+    with patch.object(charger.requester, "process_request", return_value={}):
         cmd, ret = await charger.send_command("$ST")
         assert cmd is False
         assert ret == ""
+
+
+async def test_process_request_missing_method_raise():
+    """Test process_request with method=None raises MissingMethod."""
+    charger = OpenEVSE(SERVER_URL)
+    from openevsehttp.exceptions import MissingMethod
+    with pytest.raises(MissingMethod):
+        await charger.process_request(TEST_URL_STATUS, method=None)
 
 
 async def test_process_request_missing_method():
