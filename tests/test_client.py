@@ -1082,7 +1082,7 @@ async def test_ws_start_already_listening():
     charger._ws_listening = True
 
     with pytest.raises(AlreadyListening):
-        charger.ws_start()
+        await charger.ws_start()
 
 
 async def test_ws_start_reset_listening():
@@ -1092,8 +1092,8 @@ async def test_ws_start_reset_listening():
     charger.websocket.state = "disconnected"
     charger._ws_listening = True
 
-    with patch.object(charger, "_start_listening"):
-        charger.ws_start()
+    with patch.object(charger, "_start_listening", AsyncMock()):
+        await charger.ws_start()
         assert charger._ws_listening is False
 
 
@@ -1106,7 +1106,7 @@ async def test_start_listening_no_loop():
         with patch("asyncio.get_event_loop") as mock_get_loop:
             mock_loop = MagicMock()
             mock_get_loop.return_value = mock_loop
-            charger._start_listening()
+            await charger._start_listening()
             assert charger._loop == mock_loop
 
 
@@ -1543,7 +1543,7 @@ async def test_extra_coverage_edge_cases(mock_aioclient, caplog):
 
     # 2. Lines 189-190: ws_start when websocket is None
     with caplog.at_level(logging.DEBUG):
-        charger.ws_start()
+        await charger.ws_start()
         assert "Websocket not initialized, creating..." in caplog.text
     # Cleanup websocket
     await charger.ws_disconnect()
@@ -1570,18 +1570,18 @@ async def test_extra_coverage_edge_cases(mock_aioclient, caplog):
     # 5. Lines 205 in _start_listening: active_tasks check
     # Start it once - sets self.tasks
     with caplog.at_level(logging.DEBUG):
-        charger.ws_start()
+        await charger.ws_start()
 
     # State is NOT "connected", so calling ws_start AGAIN will NOT raise AlreadyListening
     # but WILL call _start_listening again, hitting line 205 because self.tasks is set.
     with caplog.at_level(logging.DEBUG):
-        charger.ws_start()
+        await charger.ws_start()
         # Ensure we hit the "Checking for existing active tasks..." area indirectly
 
     # Now mock it as connected to finally hit AlreadyListening at line 181
     charger.websocket.state = "connected"
     with pytest.raises(AlreadyListening):
-        charger.ws_start()
+        await charger.ws_start()
 
     # 6. Lines 258 in ws_disconnect: Idempotence return on a FRESH instance
     charger_fresh = OpenEVSE(SERVER_URL)
@@ -1620,3 +1620,27 @@ async def test_set_divert_mode_error_coverage(mock_aioclient, caplog):
         with pytest.raises(UnknownError):
             await charger.set_divert_mode("fast")
         assert "Problem issuing command. Response: {'msg': 'failed'}" in caplog.text
+
+
+async def test_set_current_rapi_error(test_charger, caplog):
+    """Test set_current with RAPI error ($NK)."""
+    # Force RAPI path (no override endpoint)
+    test_charger._config["version"] = "2.9.0"
+
+    # Mock send_command to return $NK
+    with patch.object(
+        test_charger, "send_command", AsyncMock(return_value=(True, "$NK^21"))
+    ):
+        with caplog.at_level(logging.ERROR):
+            result = await test_charger.set_current(15)
+            assert result is False
+            assert "Problem setting current limit. Response: $NK^21" in caplog.text
+
+    # Mock send_command to return success=False
+    with patch.object(
+        test_charger, "send_command", AsyncMock(return_value=(False, "timeout"))
+    ):
+        with caplog.at_level(logging.ERROR):
+            result = await test_charger.set_current(15)
+            assert result is False
+            assert "Problem setting current limit. Response: timeout" in caplog.text

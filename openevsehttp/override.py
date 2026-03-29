@@ -69,6 +69,9 @@ class Override:
         _LOGGER.debug("Override data: %s", data)
         _LOGGER.debug("Setting override config on %s", url)
         response = await self._evse.process_request(url=url, method="post", data=data)
+        if not response.get("ok", True):
+            _LOGGER.error("Problem setting override. Response: %s", response)
+            raise UnknownError
         return response
 
     async def toggle(self) -> None:
@@ -81,16 +84,25 @@ class Override:
 
             _LOGGER.debug("Toggling manual override %s", url)
             response = await self._evse.process_request(url=url, method="patch")
+            if not response.get("ok", True):
+                _LOGGER.error("Problem toggling override. Response: %s", response)
+                raise UnknownError
             _LOGGER.debug("Toggle response: %s", response)
         else:
             # Older firmware use RAPI commands
-            _LOGGER.debug("Toggling manual override via RAPI")
-            command = "$FE" if self._evse._status["state"] == 254 else "$FS"
-            success, msg = await self._evse.send_command(command)
-            if not success:
-                _LOGGER.error("Problem issuing command. Response: %s", msg)
+            if not self._evse._status:
+                await self._evse.update()
+
+            state = self._evse._status.get("state", 0)
+            _LOGGER.debug("Toggling manual override via RAPI. Current state: %s", state)
+            command = "$FE" if state == 254 else "$FS"
+            cmd_sent, resp = await self._evse.send_command(command)
+            if not resp.startswith("$OK"):
+                _LOGGER.error(
+                    "Problem issuing command %s. Response: %s", cmd_sent, resp
+                )
                 raise UnknownError
-            _LOGGER.debug("Toggle response: %s", msg)
+            _LOGGER.debug("Toggle response: %s", resp)
 
     async def clear(self) -> None:
         """Clear the manual override status."""
@@ -101,5 +113,8 @@ class Override:
 
         _LOGGER.debug("Clearing manual override %s", url)
         response = await self._evse.process_request(url=url, method="delete")
+        if not response.get("ok", True):
+            _LOGGER.error("Problem clearing override. Response: %s", response)
+            raise UnknownError
         msg = response.get("msg") if isinstance(response, dict) else response
         _LOGGER.debug("Clear response: %s", msg)

@@ -118,8 +118,8 @@ class Requester:
                 if resp.status == 401:
                     _LOGGER.error("Authentication error: %s", message)
                     raise AuthenticationError
-                if resp.status in [404, 405, 500]:
-                    _LOGGER.warning("%s", message)
+                if resp.status >= 400:
+                    _LOGGER.warning("HTTP Error %s: %s", resp.status, message)
                     if isinstance(message, dict):
                         message.update({"ok": False, "status": resp.status})
                     else:
@@ -149,8 +149,7 @@ class Requester:
 
         _LOGGER.debug("Posting data: %s to %s", command, url)
         value = await self.process_request(url=url, method="post", rapi=data)
+        cmd = value.get("cmd", command)
         if "ret" not in value:
-            if "msg" in value:
-                return (False, value["msg"])
-            return (False, "")
-        return (value["cmd"], value["ret"])
+            return (cmd, value.get("msg", ""))
+        return (cmd, value["ret"])

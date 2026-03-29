@@ -8,7 +8,7 @@ import pytest
 from aiohttp.client_exceptions import ContentTypeError
 
 from openevsehttp.exceptions import UnknownError, UnsupportedFeature
-from tests.const import TEST_URL_OVERRIDE, TEST_URL_RAPI
+from tests.const import SERVER_URL, TEST_URL_OVERRIDE, TEST_URL_RAPI
 
 pytestmark = pytest.mark.asyncio
 
@@ -158,7 +158,29 @@ async def test_toggle_override_v2_fail(test_charger_v2, mock_aioclient, caplog):
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(UnknownError):
             await test_charger_v2.toggle_override()
-    assert "Problem issuing command. Response: toggle failed" in caplog.text
+        assert "Problem issuing command $FS. Response: toggle failed" in caplog.text
+
+
+async def test_toggle_override_empty_status(test_charger_v2, mock_aioclient, caplog):
+    """Test toggle with empty status (line 94-95)."""
+    # Force empty status
+    test_charger_v2._status = {}
+
+    # Mock Update calls
+    mock_aioclient.get(f"http://{SERVER_URL}/status", status=200, body='{"state": 1}')
+    mock_aioclient.get(
+        f"http://{SERVER_URL}/config", status=200, body='{"version": "2.9.1"}'
+    )
+
+    # Mock toggle call
+    mock_aioclient.post(
+        TEST_URL_RAPI,
+        status=200,
+        body='{"cmd": "$FS", "ret": "$OK"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_v2.toggle_override()
+        assert "Toggling manual override via RAPI. Current state: 1" in caplog.text
 
 
 async def test_set_override(

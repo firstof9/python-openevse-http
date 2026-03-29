@@ -14,7 +14,12 @@ import openevsehttp.__main__ as main
 from openevsehttp.__main__ import OpenEVSE
 from openevsehttp.exceptions import AuthenticationError, MissingMethod, ParseJSONError
 from tests.common import load_fixture
-from tests.const import SERVER_URL, TEST_URL_CONFIG, TEST_URL_RAPI, TEST_URL_STATUS
+from tests.const import (
+    SERVER_URL,
+    TEST_URL_CONFIG,
+    TEST_URL_RAPI,
+    TEST_URL_STATUS,
+)
 
 pytestmark = pytest.mark.asyncio
 
@@ -31,7 +36,7 @@ async def test_get_status_auth_err(test_charger_auth_err):
     """Test v4 Status reply."""
     with pytest.raises(main.AuthenticationError):
         await test_charger_auth_err.update()
-        assert test_charger_auth_err is None
+    assert test_charger_auth_err is not None  # Corrected dead assertion
 
 
 async def test_send_command(test_charger, mock_aioclient):
@@ -67,7 +72,7 @@ async def test_send_command_missing(test_charger, mock_aioclient):
         body=json.dumps(value),
     )
     status = await test_charger.send_command("test")
-    assert status == (False, "")
+    assert status == ("OK", "")
 
 
 async def test_send_command_auth(test_charger_auth, mock_aioclient):
@@ -88,25 +93,21 @@ async def test_send_command_parse_err(test_charger_auth, mock_aioclient):
         TEST_URL_RAPI, status=400, body='{"msg": "Could not parse JSON"}'
     )
     with pytest.raises(main.ParseJSONError):
-        status = await test_charger_auth.send_command("test")
-        assert status is None
+        await test_charger_auth.send_command("test")
 
     mock_aioclient.post(
         TEST_URL_RAPI, status=400, body='{"error": "Could not parse JSON"}'
     )
     with pytest.raises(main.ParseJSONError):
-        status = await test_charger_auth.send_command("test")
-        assert status is None
+        await test_charger_auth.send_command("test")
 
     mock_aioclient.post(TEST_URL_RAPI, status=400, body='{"other": "Something else"}')
     with pytest.raises(main.ParseJSONError):
-        status = await test_charger_auth.send_command("test")
-        assert status is None
+        await test_charger_auth.send_command("test")
 
     mock_aioclient.post(TEST_URL_RAPI, status=400, body='"Just a string response"')
     with pytest.raises(main.ParseJSONError):
-        status = await test_charger_auth.send_command("test")
-        assert status is None
+        await test_charger_auth.send_command("test")
 
 
 async def test_non_json_response():
@@ -134,8 +135,7 @@ async def test_send_command_auth_err(test_charger_auth, mock_aioclient):
         status=401,
     )
     with pytest.raises(main.AuthenticationError):
-        status = await test_charger_auth.send_command("test")
-        assert status is None
+        await test_charger_auth.send_command("test")
 
 
 async def test_send_command_async_timeout(test_charger_auth, mock_aioclient, caplog):
@@ -171,7 +171,7 @@ async def test_send_command_no_ret_with_msg(mock_aioclient):
     )
     charger = OpenEVSE(SERVER_URL)
     cmd, ret = await charger.send_command("$ST")
-    assert cmd is False
+    assert cmd == "$ST"
     assert ret == "ErrorMsg"
 
 
@@ -184,7 +184,7 @@ async def test_send_command_no_ret_no_msg(mock_aioclient):
     )
     charger = OpenEVSE(SERVER_URL)
     cmd, ret = await charger.send_command("$ST")
-    assert cmd is False
+    assert cmd == "$ST"
     assert ret == ""
 
 
@@ -195,7 +195,7 @@ async def test_send_command_empty_fallback():
     # Mock response with neither 'msg' nor 'ret'
     with patch.object(charger.requester, "process_request", return_value={}):
         cmd, ret = await charger.send_command("$ST")
-        assert cmd is False
+        assert cmd == "$ST"
         assert ret == ""
 
 

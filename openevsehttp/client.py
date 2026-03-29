@@ -174,17 +174,17 @@ class OpenEVSE:
         data = {"serial": serial, "model": model}
         return data
 
-    def ws_start(self) -> None:
+    async def ws_start(self) -> None:
         """Start the websocket listener."""
         if self.websocket:
             if self._ws_listening and self.websocket.state == "connected":
                 raise AlreadyListening
             if self._ws_listening and self.websocket.state != "connected":
                 self._ws_listening = False
-        self._start_listening()
+        await self._start_listening()
 
-    def _start_listening(self):
-        """Start the websocket listener."""
+    async def _start_listening(self):
+        """Websocket setup."""
         if not self.websocket:
             _LOGGER.debug("Websocket not initialized, creating...")
             self.websocket = OpenEVSEWebsocket(
@@ -204,8 +204,19 @@ class OpenEVSE:
         if self.tasks:
             active_tasks = [t for t in self.tasks if not t.done()]
 
-        if not self._ws_listening or not active_tasks:
+        if not self._ws_listening and not active_tasks:
             _LOGGER.debug("Setting up websocket ping...")
+            self.tasks = [
+                self._loop.create_task(self.websocket.listen()),
+                self._loop.create_task(self.repeat(300, self.websocket.keepalive)),
+            ]
+            self._ws_listening = True
+        elif active_tasks:
+            _LOGGER.debug("Cleaning up orphaned websocket tasks before restart...")
+            for task in active_tasks:
+                if not task.done():
+                    task.cancel()
+            await asyncio.gather(*active_tasks, return_exceptions=True)
             self.tasks = [
                 self._loop.create_task(self.websocket.listen()),
                 self._loop.create_task(self.repeat(300, self.websocket.keepalive)),
@@ -215,13 +226,16 @@ class OpenEVSE:
     async def _update_status(self, msgtype, data, error):
         """Update data from websocket listener."""
         if msgtype == SIGNAL_CONNECTION_STATE:
+            uri = (
+                getattr(self.websocket, "uri", "unknown") if self.websocket else "None"
+            )
             if data == STATE_CONNECTED:
-                _LOGGER.debug("Websocket to %s successful", self.websocket.uri)
+                _LOGGER.debug("Websocket to %s successful", uri)
                 self._ws_listening = True
             elif data == STATE_DISCONNECTED:
                 _LOGGER.debug(
                     "Websocket to %s disconnected, retrying",
-                    self.websocket.uri,
+                    uri,
                 )
                 _LOGGER.debug("Disconnect message: %s", error)
                 self._ws_listening = False
@@ -231,7 +245,7 @@ class OpenEVSE:
             elif data == STATE_STOPPED and error:
                 _LOGGER.debug(
                     "Websocket to %s failed, aborting [Error: %s]",
-                    self.websocket.uri,
+                    uri,
                     error,
                 )
                 self._ws_listening = False
@@ -462,7 +476,7 @@ class OpenEVSE:
         _LOGGER.debug("divert_mode response: %s", response)
         return response
 
-    async def set_current(self, amps: int = 6) -> None:
+    async def set_current(self, amps: int = 6) -> Any:
         """Set the soft current limit."""
         amps = int(amps)
 
@@ -485,7 +499,10 @@ class OpenEVSE:
             # Different parameters for older firmware
             if self._version_check("2.9.1"):
                 command = f"$SC {amps} V"
-            _, msg = await self.send_command(command)
+            success, msg = await self.send_command(command)
+            if not success or (isinstance(msg, str) and msg.startswith("$NK")):
+                _LOGGER.error("Problem setting current limit. Response: %s", msg)
+                return False
             _LOGGER.debug("Set current response: %s", msg)
 
     async def set_service_level(self, level: int = 2) -> None:
