@@ -221,18 +221,16 @@ async def test_process_request_missing_method():
 
 async def test_process_request_unicode_decode_error(mock_aioclient):
     """Test process_request handles UnicodeDecodeError."""
+    # Use non-UTF-8 bytes to trigger UnicodeDecodeError inside process_request
     mock_aioclient.get(
         TEST_URL_STATUS,
         status=200,
-        body=b'{"status": "ok"}',
+        body=b"\xff",
     )
-    with patch(
-        "aiohttp.ClientResponse.text",
-        side_effect=UnicodeDecodeError("utf-8", b"", 0, 1, ""),
-    ):
-        charger = OpenEVSE(SERVER_URL)
-        result = await charger.process_request(TEST_URL_STATUS, method="get")
-        assert result == {"status": "ok"}
+    charger = OpenEVSE(SERVER_URL)
+    result = await charger.process_request(TEST_URL_STATUS, method="get")
+    # Result will be {"msg": "\ufffd"} because json.loads("\ufffd") fails
+    assert result == {"msg": "\ufffd"}
 
 
 async def test_process_request_non_json_response(mock_aioclient):

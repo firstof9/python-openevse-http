@@ -120,7 +120,7 @@ class OpenEVSE:
 
     async def update(self) -> None:
         """Update the values."""
-        # TODO: add addiontal endpoints to update
+        # TODO: add additional endpoints to update
         urls = [f"{self.url}config"]
 
         if not self._ws_listening:
@@ -294,7 +294,8 @@ class OpenEVSE:
     @property
     def ws_state(self) -> Any:
         """Return the status of the websocket listener."""
-        assert self.websocket
+        if self.websocket is None:
+            return "stopped"
         return self.websocket.state
 
     async def repeat(self, interval, func, *args, **kwargs):
@@ -455,11 +456,13 @@ class OpenEVSE:
 
     async def divert_mode(self) -> dict[str, str] | dict[str, Any]:
         """Set the divert mode to either Normal or Eco modes."""
+        if self._config is None:  # In case it is somehow set to None
+            _LOGGER.debug("Configuration is missing.")
+            raise UnsupportedFeature
+
         if not self._version_check("2.9.1"):
             _LOGGER.debug("Feature not supported for older firmware.")
             raise UnsupportedFeature
-
-        assert self._config
 
         if "divert_enabled" in self._config:
             _LOGGER.debug("Divert Enabled: %s", self._config["divert_enabled"])

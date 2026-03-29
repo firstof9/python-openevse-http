@@ -1644,3 +1644,17 @@ async def test_set_current_rapi_error(test_charger, caplog):
             result = await test_charger.set_current(15)
             assert result is False
             assert "Problem setting current limit. Response: timeout" in caplog.text
+
+
+async def test_client_none_safeguards(mock_aioclient):
+    """Test safety paths when websocket or config is None."""
+    charger = OpenEVSE(SERVER_URL)
+
+    # 1. ws_state when websocket is None (line 298)
+    charger.websocket = None
+    assert charger.ws_state == "stopped"
+
+    # 2. divert_mode when _config is None (line 464)
+    charger._config = None
+    with pytest.raises(UnsupportedFeature):
+        await charger.divert_mode()
