@@ -157,6 +157,10 @@ class OpenEVSE:
         url = f"{self.url}config"
 
         response = await self.process_request(url, method="get")
+        if isinstance(response, dict) and response.get("ok") is False:
+            _LOGGER.error("Problem getting config for serial detection: %s", response)
+            raise MissingSerial
+
         serial = response.get("wifi_serial") if isinstance(response, dict) else None
         if serial is None:
             _LOGGER.debug(

@@ -200,6 +200,30 @@ async def test_send_command_empty_fallback():
         assert ret == ""
 
 
+async def test_requester_refresh_exception(mock_aioclient, caplog):
+    """Test exception during write-refresh in Requester."""
+    charger = OpenEVSE(SERVER_URL)
+
+    # Mock update_callback to raise
+    mock_refresh = AsyncMock(side_effect=Exception("Refresh failed"))
+    charger.requester.set_update_callback(mock_refresh)
+
+    # Trigger a POST that has config_version (triggers refresh)
+    mock_aioclient.post(
+        TEST_URL_CONFIG,
+        status=200,
+        body='{"msg": "done", "ok": true, "config_version": 123}',
+    )
+
+    with caplog.at_level(logging.ERROR):
+        response = await charger.requester.process_request(
+            TEST_URL_CONFIG, method="post"
+        )
+        # Should NOT raise, should just log
+        assert "Exception during write-refresh: Refresh failed" in caplog.text
+        assert response["ok"] is True
+
+
 async def test_process_request_missing_method_raise():
     """Test process_request with method=None raises MissingMethod."""
     charger = OpenEVSE(SERVER_URL)

@@ -137,6 +137,8 @@ class Requester:
                     self._invoking_callback = True
                     try:
                         await self._update_callback()
+                    except Exception as err:  # pylint: disable=broad-exception-caught
+                        _LOGGER.exception("Exception during write-refresh: %s", err)
                     finally:
                         self._invoking_callback = False
                 return message

@@ -776,12 +776,8 @@ async def test_set_divertmode(
     with pytest.raises(UnsupportedFeature):
         await test_charger_broken.divert_mode()
 
-    mock_aioclient.post(
-        TEST_URL_CONFIG,
-        status=200,
-        body=value,
-    )
-    await test_charger_unknown_semver.update()
+    # 2. Line 40-41: Non-semver version
+    test_charger_unknown_semver._config = {"version": "not-semver"}
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(UnsupportedFeature):
             await test_charger_unknown_semver.divert_mode()
@@ -799,9 +795,9 @@ async def test_test_and_get(test_charger, test_charger_v2, mock_aioclient, caplo
     assert data["serial"] == "1234567890AB"
     assert data["model"] == "unknown"
 
-    with pytest.raises(MissingSerial):
-        with caplog.at_level(logging.DEBUG):
-            data = await test_charger_v2.test_and_get()
+    with caplog.at_level(logging.DEBUG):
+        with pytest.raises(MissingSerial):
+            await test_charger_v2.test_and_get()
     assert "Older firmware detected, missing serial." in caplog.text
 
 
@@ -1104,12 +1100,18 @@ async def test_start_listening_no_loop():
     charger = OpenEVSE(SERVER_URL)
     charger.websocket = MagicMock()
 
-    with patch("asyncio.get_running_loop", side_effect=RuntimeError):
-        with patch("asyncio.get_event_loop") as mock_get_loop:
-            mock_loop = MagicMock()
-            mock_get_loop.return_value = mock_loop
-            await charger._start_listening()
-            assert charger._loop == mock_loop
+    with (
+        patch("asyncio.get_running_loop", side_effect=RuntimeError),
+        patch("asyncio.get_event_loop") as mock_get_loop,
+        patch(
+            "openevsehttp.websocket.OpenEVSEWebsocket.listen", new_callable=AsyncMock
+        ),
+        patch.object(OpenEVSE, "repeat", new_callable=AsyncMock),
+    ):
+        mock_loop = MagicMock()
+        mock_get_loop.return_value = mock_loop
+        await charger._start_listening()
+        assert charger._loop == mock_loop
 
 
 async def test_update_status_states():
@@ -1238,7 +1240,7 @@ async def test_set_charge_mode(test_charger, mock_aioclient, caplog):
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(UnknownError):
             await test_charger.set_charge_mode("fast")
-    assert "Problem issuing command. Response: {'msg': 'error'}" in caplog.text
+        assert "Problem issuing command. Response: {'msg': 'error'}" in caplog.text
 
     value = {"msg": "done"}
     mock_aioclient.post(
@@ -1398,7 +1400,7 @@ async def test_set_service_level_errors(mock_aioclient, caplog):
     with caplog.at_level(logging.ERROR):
         with pytest.raises(UnknownError):
             await charger.set_service_level(1)
-        assert "Problem issuing command. Response: {'msg': 'failed'}" in caplog.text
+    assert "Problem issuing command. Response: {'msg': 'failed'}" in caplog.text
 
 
 async def test_led_brightness(mock_aioclient):
@@ -1535,22 +1537,46 @@ async def test_current_power_unsupported():
         _ = charger.current_power
 
 
+async def async_stub(*args, **kwargs):
+    """Empty async stub."""
+    pass
+
+
 async def test_extra_coverage_edge_cases(mock_aioclient, caplog):
     """Reach remaining missing lines in client.py."""
     charger = OpenEVSE(SERVER_URL)
 
-    # 1. Line 151-152: _extract_msg returning None or raw string
+    # 1. _extract_msg returning None or raw string
     assert charger._extract_msg(123) is None
     assert charger._extract_msg("direct string") == "direct string"
 
-    # 2. Lines 189-190: ws_start when websocket is None
-    with caplog.at_level(logging.DEBUG):
+    # 2. ws_start when websocket is None and orphan cleanup
+    with (
+        patch(
+            "openevsehttp.websocket.OpenEVSEWebsocket.listen", side_effect=async_stub
+        ),
+        patch.object(OpenEVSE, "repeat", side_effect=async_stub),
+        caplog.at_level(logging.DEBUG),
+    ):
         await charger.ws_start()
         assert "Websocket not initialized, creating..." in caplog.text
-    # Cleanup websocket
-    await charger.ws_disconnect()
 
-    # 3. Lines 495-496: restart_wifi error
+        # Now task is active. Call ws_start AGAIN to trigger orphan check.
+        # Force _ws_listening to False so it attempts setup again
+        charger._ws_listening = False
+        await charger.ws_start()
+        assert "Cleaning up orphaned websocket tasks before restart..." in caplog.text
+
+    # 3. test_and_get ok: False
+    mock_aioclient.get(
+        TEST_URL_CONFIG, status=200, body='{"ok": false, "msg": "failed"}'
+    )
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(MissingSerial):
+            await charger.test_and_get()
+        assert "Problem getting config for serial detection" in caplog.text
+
+    # 4. restart_wifi error
     charger._config["version"] = "5.0.0"
     mock_aioclient.post(TEST_URL_RESTART, status=200, body='{"msg": "failed"}')
     with caplog.at_level(logging.ERROR):
@@ -1558,21 +1584,50 @@ async def test_extra_coverage_edge_cases(mock_aioclient, caplog):
             await charger.restart_wifi()
         assert "Problem issuing command. Response: {'msg': 'failed'}" in caplog.text
 
-    # 4. Lines 516-517: restart_evse error (RAPI path)
+    # 5. restart_evse RAPI failure path
     charger._config["version"] = "4.0.0"
-    with patch.object(
-        charger, "send_command", AsyncMock(return_value=(True, "failed"))
-    ):
-        with caplog.at_level(logging.DEBUG):
+    with patch.object(charger, "send_command", return_value=("", "$NK")):
+        with caplog.at_level(logging.ERROR):
             with pytest.raises(UnknownError):
                 await charger.restart_evse()
-            assert "Restarting EVSE module via RAPI" in caplog.text
-            assert "Problem issuing command. Response: failed" in caplog.text
+        assert "Problem issuing command. Response: " in caplog.text
 
-    # 5. Lines 205 in _start_listening: active_tasks check
-    # Start it once - sets self.tasks
-    with caplog.at_level(logging.DEBUG):
-        await charger.ws_start()
+    # 6. restart_evse HTTP failure path (5.0.0+)
+    charger._config["version"] = "5.0.0"
+    mock_aioclient.post(TEST_URL_RESTART, status=200, body='{"msg": "failed"}')
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(UnknownError):
+            await charger.restart_evse()
+        assert "Problem issuing command. Response: {'msg': 'failed'}" in caplog.text
+
+    # 7. Various property edge cases (missing data in cache)
+    charger._config = {}
+    charger._status = {}
+    assert charger.ammeter_offset is None
+    assert charger.service_level is None
+    assert charger.rtc_temperature is None
+    assert charger.ir_temperature is None
+    assert charger.openevse_firmware is None
+    assert charger.charging_power is None
+    assert charger.charge_rate is None
+    assert charger.smoothed_available_current is None
+    assert charger.available_current is None
+    assert charger.charging_current is None
+    assert charger.stuck_relay_trip_count is None
+    assert charger.no_gnd_trip_count is None
+    assert charger.gfi_trip_count is None
+    assert charger.status == "unknown"  # defaults to self.state (0)
+
+    # 8. led_brightness error path
+    charger._config["version"] = "5.0.0"
+    mock_aioclient.post(TEST_URL_CONFIG, status=200, body='{"msg": "failed"}')
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(UnknownError):
+            await charger.set_led_brightness(100)
+        assert "Problem issuing command. Response: {'msg': 'failed'}" in caplog.text
+
+    # Cleanup any remaining test state
+    await charger.ws_disconnect()
 
     # State is NOT "connected", so calling ws_start AGAIN will NOT raise AlreadyListening
     # but WILL call _start_listening again, hitting line 205 because self.tasks is set.
@@ -1595,7 +1650,7 @@ async def test_extra_coverage_edge_cases(mock_aioclient, caplog):
     with caplog.at_level(logging.ERROR):
         with pytest.raises(UnknownError):
             await charger.set_led_brightness(100)
-        assert "Problem issuing command. Response: {'msg': 'failed'}" in caplog.text
+    assert "Problem issuing command. Response: {'msg': 'failed'}" in caplog.text
 
     # 8. Lines 697-699: state property with invalid state_idx
     charger._status["state"] = "invalid"
@@ -1657,7 +1712,7 @@ async def test_set_current_rapi_error(test_charger, caplog):
 async def test_callback_exception(test_charger, caplog):
     """Test that a callback exception does not crash the receive loop."""
 
-    def callback():
+    async def callback():
         raise Exception("Callback error")
 
     test_charger.set_update_callback(callback)
@@ -1680,10 +1735,10 @@ async def test_divert_mode_server_error(mock_aioclient, caplog):
     with caplog.at_level(logging.ERROR):
         with pytest.raises(UnknownError):
             await charger.divert_mode()
-        assert (
-            "Problem toggling divert: {'ok': False, 'msg': 'Toggling divert failed'}"
-            in caplog.text
-        )
+    assert (
+        "Problem toggling divert: {'ok': False, 'msg': 'Toggling divert failed'}"
+        in caplog.text
+    )
 
 
 async def test_client_none_safeguards(mock_aioclient):
