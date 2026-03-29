@@ -40,7 +40,7 @@ async def test_websocket_coverage_gaps():
         yield msg  # Should break before this is processed if we use it,
         # but the iterator loop itself checks state
 
-    mock_ws.__aiter__.side_effect = async_iter_stop
+    mock_ws.__aiter__.side_effect = lambda: async_iter_stop()
 
     with (
         patch("aiohttp.ClientSession.ws_connect", return_value=mock_ws),
@@ -62,7 +62,7 @@ async def test_websocket_coverage_gaps():
         # Stop after one message
         ws.state = STATE_STOPPED
 
-    mock_ws.__aiter__.side_effect = async_iter_pong
+    mock_ws.__aiter__.side_effect = lambda: async_iter_pong()
     ws.state = STATE_CONNECTED  # Reset state
 
     with (
@@ -115,3 +115,6 @@ async def test_override_failure_logic():
         )
         with pytest.raises(UnknownError):
             await charger.clear_override()
+
+        # Cleanup
+        await charger.ws_disconnect()

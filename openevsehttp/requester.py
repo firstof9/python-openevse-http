@@ -36,6 +36,7 @@ class Requester:
         self.url = f"http://{host}/"
         self._session = session
         self._update_callback: Callable[[], Awaitable[None]] | None = None
+        self._invoking_callback = False
 
     def set_update_callback(
         self, callback: Callable[[], Awaitable[None]] | None
@@ -131,8 +132,13 @@ class Requester:
                     and isinstance(message, dict)
                     and "config_version" in message
                     and self._update_callback
+                    and not self._invoking_callback
                 ):
-                    await self._update_callback()
+                    self._invoking_callback = True
+                    try:
+                        await self._update_callback()
+                    finally:
+                        self._invoking_callback = False
                 return message
 
         except (TimeoutError, ServerTimeoutError):
