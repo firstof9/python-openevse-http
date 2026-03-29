@@ -63,7 +63,7 @@ async def test_get_limit(
     )
     with caplog.at_level(logging.DEBUG):
         response = await test_charger_modified_ver.get_limit()
-    assert response == {"msg": "No limit"}
+    assert response == {"msg": "No limit", "ok": False, "status": 404}
 
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(UnsupportedFeature):
@@ -93,7 +93,7 @@ async def test_clear_limit(
     )
     with caplog.at_level(logging.DEBUG):
         response = await test_charger_modified_ver.clear_limit()
-    assert response == {"msg": "No limit to clear"}
+    assert response == {"msg": "No limit to clear", "ok": False, "status": 404}
 
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(UnsupportedFeature):

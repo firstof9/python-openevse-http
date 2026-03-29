@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 import aiohttp
@@ -34,9 +35,11 @@ class Requester:
         self._pwd = pwd
         self.url = f"http://{host}/"
         self._session = session
-        self._update_callback = None
+        self._update_callback: Callable[[], Awaitable[None]] | None = None
 
-    def set_update_callback(self, callback):
+    def set_update_callback(
+        self, callback: Callable[[], Awaitable[None]] | None
+    ) -> None:
         """Set the update callback."""
         self._update_callback = callback
 
@@ -117,6 +120,11 @@ class Requester:
                     raise AuthenticationError
                 if resp.status in [404, 405, 500]:
                     _LOGGER.warning("%s", message)
+                    if isinstance(message, dict):
+                        message.update({"ok": False, "status": resp.status})
+                    else:
+                        message = {"msg": message, "ok": False, "status": resp.status}
+                    return message
 
                 if (
                     method == "post"

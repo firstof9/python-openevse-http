@@ -272,7 +272,7 @@ async def test_clear_override(test_charger, test_charger_v2, mock_aioclient, cap
     )
     with caplog.at_level(logging.DEBUG):
         await test_charger.clear_override()
-        assert "Toggle response: OK" in caplog.text
+        assert "Clear response: OK" in caplog.text
 
     with pytest.raises(UnsupportedFeature):
         with caplog.at_level(logging.DEBUG):
@@ -353,4 +353,4 @@ async def test_clear_override_non_dict(test_charger, mock_aioclient, caplog):
     )
     with caplog.at_level(logging.DEBUG):
         await test_charger.clear_override()
-        assert "Toggle response: Clear successful" in caplog.text
+        assert "Clear response: Clear successful" in caplog.text

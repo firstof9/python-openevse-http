@@ -292,7 +292,7 @@ async def test_process_request_404_error(mock_aioclient, caplog):
     charger = OpenEVSE(SERVER_URL)
     with caplog.at_level(logging.WARNING):
         result = await charger.process_request(TEST_URL_STATUS, method="get")
-        assert result == {"error": "Not found"}
+        assert result == {"error": "Not found", "ok": False, "status": 404}
         assert "{'error': 'Not found'}" in caplog.text
 
 
@@ -301,10 +301,11 @@ async def test_process_request_405_error(mock_aioclient):
     mock_aioclient.get(
         TEST_URL_STATUS,
         status=405,
+        body="Method not allowed",
     )
     charger = OpenEVSE(SERVER_URL)
     result = await charger.process_request(TEST_URL_STATUS, method="get")
-    assert result == {"msg": ""}
+    assert result == {"msg": "Method not allowed", "ok": False, "status": 405}
 
 
 async def test_process_request_500_error(mock_aioclient):
@@ -312,10 +313,11 @@ async def test_process_request_500_error(mock_aioclient):
     mock_aioclient.get(
         TEST_URL_STATUS,
         status=500,
+        body="[]",
     )
     charger = OpenEVSE(SERVER_URL)
     result = await charger.process_request(TEST_URL_STATUS, method="get")
-    assert result == {"msg": ""}
+    assert result == {"msg": [], "ok": False, "status": 500}
 
 
 async def test_process_request_timeout_error():
@@ -470,7 +472,7 @@ async def test_external_session_404_error():
             charger = OpenEVSE(SERVER_URL, session=session)
             result = await charger.process_request(TEST_URL_STATUS, method="get")
 
-            assert result == {"error": "Not found"}
+            assert result == {"error": "Not found", "ok": False, "status": 404}
 
 
 async def test_external_session_405_error():
@@ -486,7 +488,7 @@ async def test_external_session_405_error():
             charger = OpenEVSE(SERVER_URL, session=session)
             result = await charger.process_request(TEST_URL_STATUS, method="get")
 
-            assert result == {"error": "Method not allowed"}
+            assert result == {"error": "Method not allowed", "ok": False, "status": 405}
 
 
 async def test_external_session_500_error():
@@ -502,7 +504,11 @@ async def test_external_session_500_error():
             charger = OpenEVSE(SERVER_URL, session=session)
             result = await charger.process_request(TEST_URL_STATUS, method="get")
 
-            assert result == {"error": "Internal server error"}
+            assert result == {
+                "error": "Internal server error",
+                "ok": False,
+                "status": 500,
+            }
 
 
 async def test_external_session_post_with_config_version(mock_aioclient):
@@ -585,3 +591,18 @@ async def test_process_request_invalid_methods(mock_aioclient):
     # Upper case should be normalized and succeed
     mock_aioclient.get(TEST_URL_STATUS, status=200, body='{"msg": "done"}')
     await charger.process_request(TEST_URL_STATUS, method="GET")
+
+
+async def test_process_request_post_no_callback(mock_aioclient):
+    """Test POST with config_version and no callback."""
+    mock_aioclient.post(
+        TEST_URL_CONFIG,
+        status=200,
+        body='{"config_version": 1}',
+    )
+    from openevsehttp.requester import Requester
+
+    req = Requester(SERVER_URL)
+    # req._update_callback is None by default
+    await req.process_request(TEST_URL_CONFIG, method="post", data={})
+    # Should not crash on line 125/127

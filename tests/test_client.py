@@ -1568,20 +1568,24 @@ async def test_extra_coverage_edge_cases(mock_aioclient, caplog):
             assert "Problem issuing command. Response: failed" in caplog.text
 
     # 5. Lines 205 in _start_listening: active_tasks check
-    # Start it once
+    # Start it once - sets self.tasks
     with caplog.at_level(logging.DEBUG):
         charger.ws_start()
-    # Start it again without disconnect
-    with caplog.at_level(logging.DEBUG):
-        charger.ws_start()
-        # Should NOT see "Websocket not initialized, creating..." again for the SAME websocket
-        # but will see "Setting up websocket ping..." because we force a re-setup if ws_listening is True but we call ws_start
-        # Wait, if ws_listening is True, AlreadyListening is raised in ws_start
 
-    # 6. Lines 258 in ws_disconnect: Idempotence return
-    await charger.ws_disconnect()
-    # Call it again - should return immediately
-    await charger.ws_disconnect()
+    # State is NOT "connected", so calling ws_start AGAIN will NOT raise AlreadyListening
+    # but WILL call _start_listening again, hitting line 205 because self.tasks is set.
+    with caplog.at_level(logging.DEBUG):
+        charger.ws_start()
+        # Ensure we hit the "Checking for existing active tasks..." area indirectly
+
+    # Now mock it as connected to finally hit AlreadyListening at line 181
+    charger.websocket.state = "connected"
+    with pytest.raises(AlreadyListening):
+        charger.ws_start()
+
+    # 6. Lines 258 in ws_disconnect: Idempotence return on a FRESH instance
+    charger_fresh = OpenEVSE(SERVER_URL)
+    await charger_fresh.ws_disconnect()  # Hits line 258 immediately
 
     # 7. Lines 556-557: set_led_brightness error
     charger._config["version"] = "4.2.0"
