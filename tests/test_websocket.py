@@ -313,9 +313,7 @@ async def test_state_setter_threadsafe_fallback(ws_client):
     ws_client._error_reason = "Previous Error"
 
     with (
-        patch(
-            "asyncio.create_task", side_effect=RuntimeError("No running loop")
-        ) as mock_create_task,
+        patch("asyncio.create_task", side_effect=RuntimeError("No running loop")),
         patch("asyncio.get_event_loop", return_value=mock_loop),
     ):
         ws_client.state = STATE_CONNECTED
