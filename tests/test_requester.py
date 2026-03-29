@@ -224,6 +224,53 @@ async def test_requester_refresh_exception(mock_aioclient, caplog):
         assert response["ok"] is True
 
 
+async def test_requester_coalesced_refresh(mock_aioclient):
+    """Test that overlapping refreshes are coalesced in Requester."""
+    charger = OpenEVSE(SERVER_URL)
+
+    refresh_count = 0
+
+    async def slow_refresh():
+        nonlocal refresh_count
+        refresh_count += 1
+        await asyncio.sleep(0.1)
+
+    charger.requester.set_update_callback(slow_refresh)
+
+    # Trigger POSTs that have config_version (triggers refresh)
+    mock_aioclient.post(
+        TEST_URL_CONFIG,
+        status=200,
+        body='{"msg": "done", "ok": true, "config_version": 123}',
+        repeat=True,
+    )
+
+    # Start POST 1
+    task1 = asyncio.ensure_future(
+        charger.requester.process_request(TEST_URL_CONFIG, method="post")
+    )
+    # Ensure POST 1 has started the refresh loop
+    await asyncio.sleep(0.01)
+
+    # Start POST 2 whilst POST 1 is in refresh
+    task2 = asyncio.ensure_future(
+        charger.requester.process_request(TEST_URL_CONFIG, method="post")
+    )
+
+    # Start POST 3 whilst POST 1 is in refresh
+    task3 = asyncio.ensure_future(
+        charger.requester.process_request(TEST_URL_CONFIG, method="post")
+    )
+
+    responses = await asyncio.gather(task1, task2, task3)
+    for resp in responses:
+        assert resp["ok"] is True
+        assert resp["config_version"] == 123
+
+    # One for POST 1, one coalesced for POST 2+3
+    assert refresh_count == 2
+
+
 async def test_process_request_missing_method_raise():
     """Test process_request with method=None raises MissingMethod."""
     charger = OpenEVSE(SERVER_URL)

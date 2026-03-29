@@ -1782,21 +1782,21 @@ async def test_update_failure_cache_preservation(mock_aioclient):
     assert charger.state == "sleeping"
 
 
-async def test_websocket_update_exception_handling():
+async def test_websocket_update_exception_handling(caplog):
     """Test update failure during websocket push (Lines 260-261)."""
     charger = OpenEVSE(SERVER_URL)
-    await charger.ws_start()
 
     # Trigger key present
     trigger_key = list(UPDATE_TRIGGERS)[0]
     data = {trigger_key: "value"}
 
-    with patch.object(charger, "update", side_effect=Exception("Update failed")):
-        # This calls _update_status internally - it expects (msgtype, data, error)
+    with (
+        patch.object(charger, "update", side_effect=Exception("Update failed")),
+        caplog.at_level(logging.ERROR),
+    ):
+        # Directly call _update_status - it expects (msgtype, data, error)
         await charger._update_status("data", data, None)
-        # Should not raise, just log
-
-    await charger.ws_disconnect()
+        assert "Update failed during websocket push" in caplog.text
 
 
 async def test_set_current_rapi_dict_error(mock_aioclient):

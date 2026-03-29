@@ -37,6 +37,7 @@ class Requester:
         self._session = session
         self._update_callback: Callable[[], Awaitable[None]] | None = None
         self._invoking_callback = False
+        self._pending_refresh = False
 
     def set_update_callback(
         self, callback: Callable[[], Awaitable[None]] | None
@@ -132,15 +133,24 @@ class Requester:
                     and isinstance(message, dict)
                     and "config_version" in message
                     and self._update_callback
-                    and not self._invoking_callback
                 ):
-                    self._invoking_callback = True
-                    try:
-                        await self._update_callback()
-                    except Exception as err:  # pylint: disable=broad-exception-caught
-                        _LOGGER.exception("Exception during write-refresh: %s", err)
-                    finally:
-                        self._invoking_callback = False
+                    if self._invoking_callback:
+                        self._pending_refresh = True
+                    else:
+                        self._invoking_callback = True
+                        try:
+                            while True:
+                                self._pending_refresh = False
+                                try:
+                                    await self._update_callback()
+                                except Exception as err:  # pylint: disable=broad-exception-caught
+                                    _LOGGER.exception(
+                                        "Exception during write-refresh: %s", err
+                                    )
+                                if not self._pending_refresh:
+                                    break
+                        finally:
+                            self._invoking_callback = False
                 return message
 
         except (TimeoutError, ServerTimeoutError):

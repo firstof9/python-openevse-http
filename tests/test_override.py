@@ -41,6 +41,7 @@ async def test_toggle_override(
     await test_charger.ws_disconnect()
 
     await test_charger_dev.update()
+    caplog.clear()
     with caplog.at_level(logging.DEBUG):
         await test_charger_dev.toggle_override()
     assert "Stripping 'dev' from version." in caplog.text
@@ -62,6 +63,7 @@ async def test_toggle_override(
     )
 
     await test_charger_new.update()
+    caplog.clear()
     with caplog.at_level(logging.DEBUG):
         await test_charger_new.toggle_override()
     assert "Toggling manual override http" in caplog.text
@@ -81,6 +83,7 @@ async def test_toggle_override(
         body=json.dumps(value),
     )
 
+    caplog.clear()
     with caplog.at_level(logging.DEBUG):
         await test_charger_new.toggle_override()
     assert "Toggling manual override http" in caplog.text
@@ -101,6 +104,7 @@ async def test_toggle_override(
         body=json.dumps(value),
     )
 
+    caplog.clear()
     with caplog.at_level(logging.DEBUG):
         await test_charger_modified_ver.toggle_override()
         assert "Detected firmware: v5.0.1_modified" in caplog.text
@@ -272,12 +276,14 @@ async def test_set_override(
     assert "Invalid override state: invalid" in caplog.text
 
     await test_charger_v2.update()
+    caplog.clear()
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(UnsupportedFeature):
             await test_charger_v2.set_override("active")
     assert "Feature not supported for older firmware." in caplog.text
 
     await test_charger_unknown_semver.update()
+    caplog.clear()
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(UnsupportedFeature):
             await test_charger_unknown_semver.set_override("active")
@@ -296,6 +302,7 @@ async def test_clear_override(test_charger, test_charger_v2, mock_aioclient, cap
         await test_charger.clear_override()
         assert "Clear response: OK" in caplog.text
 
+    caplog.clear()
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(UnsupportedFeature):
             await test_charger_v2.update()
@@ -323,6 +330,7 @@ async def test_get_override(test_charger, test_charger_v2, mock_aioclient, caplo
         status = await test_charger.get_override()
         assert status == value
 
+    caplog.clear()
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(UnsupportedFeature):
             await test_charger_v2.update()
@@ -359,6 +367,7 @@ async def test_set_override_partial(test_charger, mock_aioclient, caplog):
         assert "'state': 'disabled'" in caplog.text
         assert "'auto_release': False" in caplog.text
 
+    caplog.clear()
     with caplog.at_level(logging.DEBUG):
         # Change auto_release to True
         await test_charger.set_override(auto_release=True)
