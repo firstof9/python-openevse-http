@@ -1,6 +1,5 @@
 """Tests for remaining coverage gaps."""
 
-import asyncio
 import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -38,8 +37,8 @@ async def test_websocket_coverage_gaps():
         # Yield one message, then change state to STOPPED
         yield msg
         ws.state = STATE_STOPPED
-        yield msg  # Should break before this is processed if we use it, 
-                   # but the iterator loop itself checks state
+        yield msg  # Should break before this is processed if we use it,
+        # but the iterator loop itself checks state
 
     mock_ws.__aiter__.side_effect = async_iter_stop
 
@@ -93,7 +92,7 @@ async def test_override_failure_logic():
         # 1. set() failure (Line 73-74)
         m.post(
             f"http://{SERVER_URL}/override",
-            status=200, # or 500, doesn't matter as long as ok=False
+            status=200,  # or 500, doesn't matter as long as ok=False
             body='{"msg": "error", "ok": false}',
         )
         with pytest.raises(UnknownError):
