@@ -96,7 +96,11 @@ class Override:
             if not self._evse._status:
                 await self._evse.update()
 
-            state = self._evse._status.get("state", 0)
+            if "state" not in self._evse._status or self._evse._status["state"] is None:
+                _LOGGER.error("Cannot toggle override: current state is unknown")
+                raise UnknownError
+
+            state = self._evse._status["state"]
             _LOGGER.debug("Toggling manual override via RAPI. Current state: %s", state)
             command = "$FE" if state == 254 else "$FS"
             rapi_response = await self._evse.send_command(command)

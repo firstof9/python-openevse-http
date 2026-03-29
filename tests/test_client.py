@@ -1798,6 +1798,31 @@ async def test_update_failure_cache_preservation(mock_aioclient):
     assert charger.state == "sleeping"
 
 
+async def test_get_override_state_fail(mock_aioclient, caplog):
+    """Test get_override_state with failed response."""
+    charger = OpenEVSE(SERVER_URL)
+    charger._config["version"] = "4.2.0"
+    mock_aioclient.get(
+        f"http://{SERVER_URL}/override",
+        status=200,
+        body='{"ok": false, "msg": "failed"}',
+    )
+    with caplog.at_level(logging.ERROR):
+        result = await charger.get_override_state()
+        assert result is None
+    assert "Problem getting status for override state" in caplog.text
+
+
+async def test_set_current_transport_fail(caplog):
+    """Test set_current with transport failure (False, msg)."""
+    charger = OpenEVSE(SERVER_URL)
+    charger._config["version"] = "2.9.0"
+    with patch.object(charger, "send_command", return_value=(False, "timeout")):
+        with caplog.at_level(logging.ERROR):
+            assert await charger.set_current(16) is False
+        assert "Problem setting current limit. Trace: timeout" in caplog.text
+
+
 async def test_websocket_update_exception_handling(caplog):
     """Test update failure during websocket push (Lines 260-261)."""
     charger = OpenEVSE(SERVER_URL)

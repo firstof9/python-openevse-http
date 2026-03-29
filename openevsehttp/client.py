@@ -528,7 +528,12 @@ class OpenEVSE:
             if isinstance(results, dict):
                 _LOGGER.error("Problem setting current limit. Response: %s", results)
                 return False
+
             cmd, msg = results
+            if cmd is False:
+                _LOGGER.error("Problem setting current limit. Trace: %s", msg)
+                return False
+
             if (isinstance(cmd, str) and cmd.startswith("$NK")) or (
                 isinstance(msg, str) and (msg.startswith("$NK") or msg == "")
             ):
@@ -1081,7 +1086,11 @@ class OpenEVSE:
         except UnsupportedFeature:
             _LOGGER.debug("Override state unavailable on older firmware.")
             return None
-        if "state" in override.keys():
+        if not override.get("ok", True):
+            _LOGGER.error("Problem getting status for override state: %s", override)
+            return None
+
+        if "state" in override:
             return override["state"]
         return "auto"
 

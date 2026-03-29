@@ -7,6 +7,7 @@ from unittest import mock
 import pytest
 from aiohttp.client_exceptions import ContentTypeError
 
+from openevsehttp.__main__ import OpenEVSE
 from openevsehttp.exceptions import UnknownError, UnsupportedFeature
 from tests.const import SERVER_URL, TEST_URL_OVERRIDE, TEST_URL_RAPI
 
@@ -206,6 +207,22 @@ async def test_toggle_override_empty_status(test_charger_v2, mock_aioclient, cap
     with caplog.at_level(logging.DEBUG):
         await test_charger_v2.toggle_override()
         assert "Toggling manual override via RAPI. Current state: 1" in caplog.text
+
+
+async def test_toggle_override_missing_state_after_update(mock_aioclient, caplog):
+    """Test toggle when state is still missing after update."""
+    charger = OpenEVSE(SERVER_URL)
+    charger._config["version"] = "2.9.0"
+    charger._status = {}
+    # Mock Update calls with NO state
+    mock_aioclient.get(f"http://{SERVER_URL}/status", status=200, body='{"other": 1}')
+    mock_aioclient.get(
+        f"http://{SERVER_URL}/config", status=200, body='{"version": "2.9.0"}'
+    )
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(UnknownError):
+            await charger.toggle_override()
+    assert "Cannot toggle override: current state is unknown" in caplog.text
 
 
 async def test_set_override(
