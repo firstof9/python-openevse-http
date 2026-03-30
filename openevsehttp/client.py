@@ -163,6 +163,9 @@ class OpenEVSE:
 
         serial = response.get("wifi_serial")
         if serial is None:
+            if "msg" in response:
+                _LOGGER.error("Non-JSON response received: %s", response)
+                raise UnknownError
             _LOGGER.debug(
                 "Older firmware detected, missing serial. Response: %s", response
             )
@@ -707,7 +710,12 @@ class OpenEVSE:
             claims = await self.list_claims(target=True)
         except UnsupportedFeature:
             pass
-        if claims is not None and "charge_current" in claims["properties"].keys():
+        if (
+            isinstance(claims, dict)
+            and isinstance(claims.get("properties"), dict)
+            and "charge_current" in claims["properties"]
+            and "max_current_hard" in self._config
+        ):
             return min(
                 claims["properties"]["charge_current"], self._config["max_current_hard"]
             )
@@ -912,18 +920,18 @@ class OpenEVSE:
 
     @property
     def vehicle(self) -> bool:
-        """Return if a vehicle is connected dto the EVSE."""
-        return self._status.get("vehicle", False)
+        """Return if a vehicle is connected to the EVSE."""
+        return bool(self._status.get("vehicle", False))
 
     @property
     def ota_update(self) -> bool:
         """Return if an OTA update is active."""
-        return self._status.get("ota_update", False)
+        return bool(self._status.get("ota_update", False))
 
     @property
     def manual_override(self) -> bool:
         """Return if Manual Override is set."""
-        return self._status.get("manual_override", False)
+        return bool(self._status.get("manual_override", False))
 
     @property
     def divertmode(self) -> str:

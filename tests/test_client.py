@@ -444,7 +444,7 @@ async def test_get_max_amps(fixture, expected, request):
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
+    "fixture, expected", [("test_charger", False), ("test_charger_v2", False)]
 )
 async def test_get_ota_update(fixture, expected, request):
     """Test v4 Status reply."""
@@ -455,7 +455,7 @@ async def test_get_ota_update(fixture, expected, request):
     await charger.ws_disconnect()
 
 
-@pytest.mark.parametrize("fixture, expected", [("test_charger", 1)])
+@pytest.mark.parametrize("fixture, expected", [("test_charger", True)])
 async def test_get_vehicle(fixture, expected, request):
     """Test v4 Status reply."""
     charger = request.getfixturevalue(fixture)
@@ -1909,3 +1909,54 @@ async def test_restart_evse_rapi_dict_error(mock_aioclient):
     )
     with pytest.raises(UnknownError):
         await charger.restart_evse()
+
+
+async def test_test_and_get_html_response(mock_aioclient):
+    """Test test_and_get when receiving an HTML response."""
+    mock_aioclient.get(
+        "http://openevse.test.tld/config",
+        status=200,
+        body="<html><body>Not JSON</body></html>",
+    )
+    charger = OpenEVSE(SERVER_URL)
+    with pytest.raises(UnknownError):
+        await charger.test_and_get()
+
+
+async def test_get_charge_current_malformed_claim(mock_aioclient):
+    """Test get_charge_current with malformed claims response."""
+    charger = OpenEVSE(SERVER_URL)
+    charger._config["max_current_hard"] = 32
+    charger._config["max_current_soft"] = 16
+    charger._status["pilot"] = 10
+
+    # Mock list_claims returning empty dict
+    with patch.object(charger, "list_claims", AsyncMock(return_value={})):
+        assert await charger.get_charge_current() == 16
+
+    # Mock list_claims returning non-dict properties
+    with patch.object(
+        charger, "list_claims", AsyncMock(return_value={"properties": None})
+    ):
+        assert await charger.get_charge_current() == 16
+
+    # Mock list_claims returning missing charge_current
+    with patch.object(
+        charger, "list_claims", AsyncMock(return_value={"properties": {}})
+    ):
+        assert await charger.get_charge_current() == 16
+
+
+async def test_get_charge_current_missing_max_current_hard(mock_aioclient):
+    """Test get_charge_current when max_current_hard is missing."""
+    charger = OpenEVSE(SERVER_URL)
+    charger._config = {"max_current_soft": 16}
+    charger._status["pilot"] = 10
+
+    # Mock list_claims success, but config missing key
+    with patch.object(
+        charger,
+        "list_claims",
+        AsyncMock(return_value={"properties": {"charge_current": 24}}),
+    ):
+        assert await charger.get_charge_current() == 16
