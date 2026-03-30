@@ -129,7 +129,9 @@ class OpenEVSE:
         for url in urls:
             _LOGGER.debug("Updating data from %s", url)
             response = await self.process_request(url, method="get")
-            if isinstance(response, dict) and response.get("ok") is False:
+            if isinstance(response, dict) and (
+                response.get("ok") is False or list(response.keys()) == ["msg"]
+            ):
                 _LOGGER.debug("Update failed for %s, keeping previous cache.", url)
                 continue
 

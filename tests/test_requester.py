@@ -126,7 +126,8 @@ async def test_non_json_response():
         )
         c = OpenEVSE(SERVER_URL)
         await c.update()
-        assert c._status == {"msg": "Plain text message"}
+        # The update() method now skips caching dicts with only 'msg' key
+        assert c._status == {}
 
 
 async def test_send_command_auth_err(test_charger_auth, mock_aioclient):
@@ -681,3 +682,23 @@ async def test_process_request_post_no_callback(mock_aioclient):
     # req._update_callback is None by default
     await req.process_request(TEST_URL_CONFIG, method="post", data={})
     # Should not crash on line 125/127
+
+
+async def test_json_list_response():
+    """Test that JSON list response is wrapped in dict."""
+    with aioresponses() as m:
+        m.get(
+            f"http://{SERVER_URL}/status",
+            status=200,
+            body="[1, 2, 3]",
+        )
+        m.get(
+            f"http://{SERVER_URL}/config",
+            status=200,
+            body='{"firmware": "5.0.0"}',
+        )
+        c = OpenEVSE(SERVER_URL)
+        # update() currently crashes if it gets a list
+        await c.update()
+        # update() now ignores message-only dicts, so _status remains empty
+        assert c._status == {}

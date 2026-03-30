@@ -109,6 +109,9 @@ class Requester:
                     _LOGGER.warning("Non JSON response: %s", message)
                     message = {"msg": message}
 
+                if not isinstance(message, dict):
+                    message = {"msg": message}
+
                 if resp.status == 400:
                     if isinstance(message, dict) and "msg" in message:
                         _LOGGER.error("Error 400: %s", message["msg"])

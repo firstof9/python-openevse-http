@@ -1687,6 +1687,12 @@ async def test_extra_coverage_edge_cases(mock_aioclient, caplog):
         await charger.ws_start()
         assert "Cleaning up orphaned websocket tasks before restart..." in caplog.text
 
+    # Cancel background tasks to avoid leak, but keep mocked websocket for next check
+    for task in list(charger.tasks):
+        task.cancel()
+    await asyncio.gather(*charger.tasks, return_exceptions=True)
+    charger.tasks = set()
+
     # Now mock it as connected to finally hit AlreadyListening at line 191 (was 181)
     charger.websocket.state = "connected"
     charger._ws_listening = True
@@ -1963,3 +1969,24 @@ async def test_get_charge_current_missing_max_current_hard(mock_aioclient):
         AsyncMock(return_value={"properties": {"charge_current": 24}}),
     ):
         assert await charger.get_charge_current() == 16
+
+
+async def test_update_ignores_message_only_response(mock_aioclient):
+    """Test update() ignores "message-only" envelopes (e.g. from Requester error)."""
+    charger = OpenEVSE(SERVER_URL)
+    # Success first
+    mock_aioclient.get(
+        TEST_URL_STATUS, status=200, body='{"status": "present", "state": 3}'
+    )
+    mock_aioclient.get(TEST_URL_CONFIG, status=200, body='{"version": "5.0.0"}')
+    await charger.update()
+    assert charger.status == "present"
+
+    # Now mock status returning non-JSON (HTML/Plain text), which Requester wraps in {"msg": ...}
+    # Current behavior will assign it to _status
+    mock_aioclient.get(TEST_URL_STATUS, status=200, body="not JSON")
+    mock_aioclient.get(TEST_URL_CONFIG, status=200, body='{"version": "5.0.0"}')
+    await charger.update()
+
+    # We want it to stay as 'present' instead of being corrupted
+    assert charger.status == "present"
