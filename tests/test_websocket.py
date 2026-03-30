@@ -1,5 +1,6 @@
 """Tests for OpenEVSE Websocket."""
 
+import asyncio
 import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -67,13 +68,17 @@ async def test_run_success(ws_client, mock_callback):
 
     mock_ws.__aiter__.side_effect = async_iter
 
-    with patch("aiohttp.ClientSession.ws_connect", return_value=mock_ws):
+    with (
+        patch("aiohttp.ClientSession.ws_connect", return_value=mock_ws),
+        patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep,
+    ):
         await ws_client.running()
 
         # Check that state transitions and data callbacks occurred
         mock_callback.assert_any_call(SIGNAL_CONNECTION_STATE, STATE_STARTING, None)
         mock_callback.assert_any_call(SIGNAL_CONNECTION_STATE, STATE_CONNECTED, None)
         mock_callback.assert_any_call("data", {"key": "value"}, None)
+        mock_sleep.assert_called_with(5)
 
 
 @pytest.mark.asyncio
@@ -83,7 +88,10 @@ async def test_auth_failure(ws_client, mock_callback):
         request_info=MagicMock(), history=MagicMock(), status=401
     )
 
-    with patch("aiohttp.ClientSession.ws_connect", side_effect=error):
+    with (
+        patch("aiohttp.ClientSession.ws_connect", side_effect=error),
+        patch("asyncio.sleep", new_callable=AsyncMock),
+    ):
         await ws_client.running()
 
         assert ws_client.state == STATE_STOPPED
@@ -115,7 +123,10 @@ async def test_max_retries(ws_client, mock_callback):
     ws_client.failed_attempts = 6  # MAX_FAILED_ATTEMPTS is 5
     error = aiohttp.ClientConnectionError("Connection lost")
 
-    with patch("aiohttp.ClientSession.ws_connect", side_effect=error):
+    with (
+        patch("aiohttp.ClientSession.ws_connect", side_effect=error),
+        patch("asyncio.sleep", new_callable=AsyncMock),
+    ):
         await ws_client.running()
 
         assert ws_client.state == STATE_STOPPED
@@ -175,9 +186,10 @@ async def test_websocket_auth(ws_client_auth):
 
     mock_ws.__aiter__.side_effect = empty_iter
 
-    with patch(
-        "aiohttp.ClientSession.ws_connect", return_value=mock_ws
-    ) as mock_connect:
+    with (
+        patch("aiohttp.ClientSession.ws_connect", return_value=mock_ws) as mock_connect,
+        patch("asyncio.sleep", new_callable=AsyncMock),
+    ):
         await ws_client_auth.running()
 
         # Verify BasicAuth was created and passed
@@ -204,7 +216,10 @@ async def test_websocket_message_types(ws_client_auth):
 
     mock_ws.__aiter__.side_effect = async_iter_closed
 
-    with patch("aiohttp.ClientSession.ws_connect", return_value=mock_ws):
+    with (
+        patch("aiohttp.ClientSession.ws_connect", return_value=mock_ws),
+        patch("asyncio.sleep", new_callable=AsyncMock),
+    ):
         await ws_client_auth.running()
         # Should stop running naturally on closed
 
@@ -217,7 +232,10 @@ async def test_websocket_message_types(ws_client_auth):
 
     mock_ws.__aiter__.side_effect = async_iter_error
 
-    with patch("aiohttp.ClientSession.ws_connect", return_value=mock_ws):
+    with (
+        patch("aiohttp.ClientSession.ws_connect", return_value=mock_ws),
+        patch("asyncio.sleep", new_callable=AsyncMock),
+    ):
         await ws_client_auth.running()
         # Should stop running on error
 
@@ -225,7 +243,10 @@ async def test_websocket_message_types(ws_client_auth):
 @pytest.mark.asyncio
 async def test_websocket_exceptions_generic(ws_client_auth):
     """Test generic exception during run."""
-    with patch("aiohttp.ClientSession.ws_connect", side_effect=Exception("Boom")):
+    with (
+        patch("aiohttp.ClientSession.ws_connect", side_effect=Exception("Boom")),
+        patch("asyncio.sleep", new_callable=AsyncMock),
+    ):
         await ws_client_auth.running()
         assert ws_client_auth.state == STATE_STOPPED
 
@@ -238,7 +259,10 @@ async def test_websocket_unexpected_response_error(ws_client_auth):
         request_info=MagicMock(), history=MagicMock(), status=500
     )
 
-    with patch("aiohttp.ClientSession.ws_connect", side_effect=error):
+    with (
+        patch("aiohttp.ClientSession.ws_connect", side_effect=error),
+        patch("asyncio.sleep", new_callable=AsyncMock),
+    ):
         await ws_client_auth.running()
 
         # We cannot assert ws_client_auth._error_reason because the state setter clears it.
@@ -289,9 +313,7 @@ async def test_state_setter_threadsafe_fallback(ws_client):
     ws_client._error_reason = "Previous Error"
 
     with (
-        patch(
-            "asyncio.create_task", side_effect=RuntimeError("No running loop")
-        ) as mock_create_task,
+        patch("asyncio.create_task", side_effect=RuntimeError("No running loop")),
         patch("asyncio.get_event_loop", return_value=mock_loop),
     ):
         ws_client.state = STATE_CONNECTED
@@ -300,6 +322,8 @@ async def test_state_setter_threadsafe_fallback(ws_client):
         mock_loop.call_soon_threadsafe.assert_called_once()
 
         args, _ = mock_loop.call_soon_threadsafe.call_args
-        assert args[0] is mock_create_task
+        assert args[0] is asyncio.create_task
+        # Await the coroutine to resolve unawaited coroutine warning
+        await args[1]
 
         assert ws_client._error_reason is None

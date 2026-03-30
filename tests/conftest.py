@@ -205,6 +205,22 @@ def test_charger_v2(mock_aioclient):
     return main.OpenEVSE(TEST_TLD)
 
 
+@pytest.fixture(name="test_charger_legacy")
+def test_charger_legacy(mock_aioclient):
+    """Load the charger data for legacy firmware."""
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=200,
+        body=load_fixture("v_legacy_json/status.json"),
+    )
+    mock_aioclient.get(
+        TEST_URL_CONFIG,
+        status=200,
+        body=load_fixture("v_legacy_json/config.json"),
+    )
+    return main.OpenEVSE(TEST_TLD)
+
+
 @pytest.fixture
 def aioclient_mock():
     """Fixture to mock aioclient calls."""

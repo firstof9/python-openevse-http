@@ -16,3 +16,5 @@ VALUE = "value"
 RELEASE = "release"
 # https://github.com/OpenEVSE/openevse_esp32_firmware/blob/master/src/evse_man.h#L28
 CLIENT = 20
+
+ERROR_TIMEOUT = "Timeout while updating"
