@@ -1838,18 +1838,8 @@ async def test_set_current_transport_fail(caplog):
 async def test_websocket_update_exception_handling(caplog):
     """Test update failure during websocket push (Lines 260-261)."""
     charger = OpenEVSE(SERVER_URL)
-
-    # Trigger key present
     charger._config["version"] = "4.0.0"
-
-
-async def test_websocket_non_mapping_payload(caplog):
-    """Test websocket with non-mapping payload."""
-    charger = OpenEVSE(SERVER_URL)
-    with caplog.at_level(logging.WARNING):
-        await charger._update_status("data", "not a dict", None)
-    assert "Non-mapping websocket payload: not a dict" in caplog.text
-    trigger_key = list(UPDATE_TRIGGERS)[0]
+    trigger_key = next(iter(UPDATE_TRIGGERS))
     data = {trigger_key: "value"}
 
     with (
@@ -1859,6 +1849,14 @@ async def test_websocket_non_mapping_payload(caplog):
         # Directly call _update_status - it expects (msgtype, data, error)
         await charger._update_status("data", data, None)
         assert "Update failed during websocket push" in caplog.text
+
+
+async def test_websocket_non_mapping_payload(caplog):
+    """Test websocket with non-mapping payload."""
+    charger = OpenEVSE(SERVER_URL)
+    with caplog.at_level(logging.WARNING):
+        await charger._update_status("data", "not a dict", None)
+    assert "Non-mapping websocket payload: not a dict" in caplog.text
 
 
 async def test_set_current_rapi_dict_error(mock_aioclient):
