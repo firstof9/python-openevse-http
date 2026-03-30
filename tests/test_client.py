@@ -1638,6 +1638,7 @@ async def test_extra_coverage_edge_cases(mock_aioclient, caplog):
         with pytest.raises(UnknownError):
             await charger.restart_evse()
     assert "Problem issuing command. Response: failed" in caplog.text
+    caplog.clear()
 
     # 7. Various property edge cases (missing data in cache)
     charger._config = {}
@@ -1664,6 +1665,7 @@ async def test_extra_coverage_edge_cases(mock_aioclient, caplog):
         with pytest.raises(UnknownError):
             await charger.set_led_brightness(100)
     assert "Problem issuing command. Response: {'msg': 'failed'}" in caplog.text
+    caplog.clear()
 
     # Cleanup any remaining test state
     await charger.ws_disconnect()
@@ -1702,6 +1704,7 @@ async def test_extra_coverage_edge_cases(mock_aioclient, caplog):
         with pytest.raises(UnknownError):
             await charger.set_led_brightness(100)
     assert "Problem issuing command. Response: {'msg': 'failed'}" in caplog.text
+    caplog.clear()
 
     # 8. Lines 697-699: state property with invalid state_idx
     charger._status["state"] = "invalid"

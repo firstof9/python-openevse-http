@@ -163,7 +163,7 @@ async def test_toggle_override_v2_fail(test_charger_legacy, mock_aioclient, capl
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(UnknownError):
             await test_charger_legacy.toggle_override()
-        assert "Problem issuing command $FS. Response: toggle failed" in caplog.text
+    assert "Problem issuing command $FS. Response: toggle failed" in caplog.text
 
 
 async def test_toggle_override_v2_transport_fail(
@@ -392,10 +392,9 @@ async def test_clear_override(
         await test_charger.clear_override()
         assert "Clear response: OK" in caplog.text
 
-    caplog.clear()
+    await test_charger_legacy.update()
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(UnsupportedFeature):
-            await test_charger_legacy.update()
             await test_charger_legacy.clear_override()
         assert "Feature not supported for older firmware." in caplog.text
 
@@ -420,10 +419,9 @@ async def test_get_override(test_charger, test_charger_legacy, mock_aioclient, c
         status = await test_charger.get_override()
         assert status == value
 
-    caplog.clear()
+    await test_charger_legacy.update()
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(UnsupportedFeature):
-            await test_charger_legacy.update()
             await test_charger_legacy.get_override()
         assert "Feature not supported for older firmware." in caplog.text
 
