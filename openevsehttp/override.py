@@ -144,8 +144,12 @@ class Override:
 
         _LOGGER.debug("Clearing manual override %s", url)
         response = await self._evse.process_request(url=url, method="delete")
-        if not response.get("ok", True):
+        if not response.get("ok", True) or response.get("msg") in (
+            "failed",
+            "error",
+        ):
             _LOGGER.error("Problem clearing override. Response: %s", response)
             raise UnknownError
+
         msg = response.get("msg") if isinstance(response, dict) else response
         _LOGGER.debug("Clear response: %s", msg)

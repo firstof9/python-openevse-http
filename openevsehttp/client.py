@@ -15,6 +15,7 @@ from .const import (
     CLIENT,
     MAX_AMPS,
     MIN_AMPS,
+    UPDATE_TRIGGERS,
 )
 from .exceptions import (
     AlreadyListening,
@@ -59,14 +60,6 @@ divert_mode_map = {
 }
 
 INFO_LOOP_RUNNING = "Event loop already running, not creating new one."
-UPDATE_TRIGGERS = [
-    "config_version",
-    "claims_version",
-    "override_version",
-    "schedule_version",
-    "schedule_plan_version",
-    "limit_version",
-]
 
 
 class OpenEVSE:
@@ -172,11 +165,7 @@ class OpenEVSE:
                 "Older firmware detected, missing serial. Response: %s", response
             )
             raise MissingSerial
-        model = (
-            response.get("buildenv", "unknown")
-            if isinstance(response, dict)
-            else "unknown"
-        )
+        model = response.get("buildenv", "unknown")
 
         data = {"serial": serial, "model": model}
         return data
@@ -203,7 +192,9 @@ class OpenEVSE:
                 _LOGGER.debug("Attempting to find running loop...")
                 self._loop = asyncio.get_running_loop()
             except RuntimeError:
-                self._loop = asyncio.get_event_loop()
+                new_loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(new_loop)
+                self._loop = new_loop
                 _LOGGER.debug("Using new event loop...")
 
         # Check for existing active tasks to avoid duplicates
@@ -525,12 +516,22 @@ class OpenEVSE:
         amps = int(amps)
 
         if self._version_check("4.1.2"):
-            if (
-                amps < self._config["min_current_hard"]
-                or amps > self._config["max_current_hard"]
-            ):
-                _LOGGER.error("Invalid value for current limit: %s", amps)
-                raise ValueError
+            min_cur = self._config.get("min_current_hard")
+            max_cur = self._config.get("max_current_hard")
+            if min_cur is None or max_cur is None:
+                _LOGGER.error(
+                    "Missing current limits in config: min=%s, max=%s", min_cur, max_cur
+                )
+                raise RuntimeError("Hard current limits are missing from configuration")
+
+            if amps < min_cur or amps > max_cur:
+                _LOGGER.error(
+                    "Invalid value for current limit: %s (min: %s, max: %s)",
+                    amps,
+                    min_cur,
+                    max_cur,
+                )
+                raise ValueError(f"Current limit {amps} is out of range")
 
             _LOGGER.debug("Setting current limit to %s", amps)
             response = await self.set_override(charge_current=amps)

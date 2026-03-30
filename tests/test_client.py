@@ -1130,16 +1130,18 @@ async def test_start_listening_no_loop():
 
     with (
         patch("asyncio.get_running_loop", side_effect=RuntimeError),
-        patch("asyncio.get_event_loop") as mock_get_loop,
+        patch("asyncio.new_event_loop") as mock_new_loop,
+        patch("asyncio.set_event_loop") as mock_set_loop,
         patch(
             "openevsehttp.websocket.OpenEVSEWebsocket.listen", new_callable=AsyncMock
         ),
         patch.object(OpenEVSE, "repeat", new_callable=AsyncMock),
     ):
         mock_loop = MagicMock()
-        mock_get_loop.return_value = mock_loop
+        mock_new_loop.return_value = mock_loop
         await charger._start_listening()
         assert charger._loop == mock_loop
+        mock_set_loop.assert_called_once_with(mock_loop)
 
 
 async def test_update_status_states():

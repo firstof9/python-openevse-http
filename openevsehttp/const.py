@@ -17,4 +17,13 @@ RELEASE = "release"
 # https://github.com/OpenEVSE/openevse_esp32_firmware/blob/master/src/evse_man.h#L28
 CLIENT = 20
 
+
 ERROR_TIMEOUT = "Timeout while updating"
+UPDATE_TRIGGERS = (
+    "config_version",
+    "claims_version",
+    "override_version",
+    "schedule_version",
+    "schedule_plan_version",
+    "limit_version",
+)

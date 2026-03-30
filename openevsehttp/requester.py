@@ -10,7 +10,7 @@ from typing import Any
 import aiohttp
 from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
 
-from .const import ERROR_TIMEOUT
+from .const import ERROR_TIMEOUT, UPDATE_TRIGGERS
 from .exceptions import (
     AuthenticationError,
     MissingMethod,
@@ -136,17 +136,7 @@ class Requester:
                 if (
                     method in ("post", "patch", "put")
                     and isinstance(message, dict)
-                    and any(
-                        key in message
-                        for key in (
-                            "config_version",
-                            "claims_version",
-                            "override_version",
-                            "schedule_version",
-                            "schedule_plan_version",
-                            "limit_version",
-                        )
-                    )
+                    and any(key in message for key in UPDATE_TRIGGERS)
                     and self._update_callback
                 ):
                     if self._invoking_callback:
