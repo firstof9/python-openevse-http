@@ -328,6 +328,8 @@ class OpenEVSE:
         """
         while self.ws_state != "stopped":
             await asyncio.sleep(interval)
+            if self.ws_state == "stopped":
+                break
             await func(*args, **kwargs)
 
     # Legacy method names for backward compatibility
@@ -513,8 +515,13 @@ class OpenEVSE:
         self._config["divert_enabled"] = mode
         return response
 
-    async def set_current(self, amps: int = 6) -> Any:
-        """Set the soft current limit."""
+    async def set_current(self, amps: int = 6) -> bool:
+        """Set the soft current limit.
+
+        Returns:
+            bool: True if successful, False otherwise.
+
+        """
         amps = int(amps)
 
         if self._version_check("4.1.2"):

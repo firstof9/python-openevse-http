@@ -702,3 +702,18 @@ async def test_json_list_response():
         await c.update()
         # update() now ignores message-only dicts, so _status remains empty
         assert c._status == {}
+
+
+async def test_process_request_both_payloads():
+    """Test process_request with both data and rapi provided raises ValueError."""
+    charger = OpenEVSE(SERVER_URL)
+    with pytest.raises(
+        ValueError,
+        match=r"cannot pass both 'data' \(or 'json'\) and 'rapi' — choose one payload type",
+    ):
+        await charger.requester.process_request(
+            url=f"http://{SERVER_URL}/test",
+            method="post",
+            data={"foo": "bar"},
+            rapi="$GS",
+        )

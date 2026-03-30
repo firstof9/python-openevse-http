@@ -1213,7 +1213,7 @@ async def test_repeat():
     with patch(
         "openevsehttp.client.OpenEVSE.ws_state", new_callable=PropertyMock
     ) as mock_state:
-        mock_state.side_effect = ["connected", "stopped"]
+        mock_state.side_effect = ["connected", "connected", "stopped"]
 
         mock_func = AsyncMock()
         with patch("asyncio.sleep", AsyncMock()):
@@ -2090,3 +2090,28 @@ async def test_get_override_state_msg_only(mock_aioclient, caplog):
         result = await charger.get_override_state()
         assert result is None
     assert "Problem getting status for override state" in caplog.text
+
+
+async def test_repeat_exit_during_sleep():
+    """Test that repeat loop exits if state becomes stopped during sleep."""
+    charger = OpenEVSE(SERVER_URL)
+    func = AsyncMock()
+
+    # Set initial state via mocked websocket
+    charger.websocket = MagicMock()
+    charger.websocket.state = "connected"
+
+    # Start repeat in a task with a long sleep
+    task = asyncio.create_task(charger.repeat(0.5, func))
+
+    # Give it time to start sleeping
+    await asyncio.sleep(0.1)
+
+    # Stop it
+    charger.websocket.state = "stopped"
+
+    # Wait for task to finish
+    await task
+
+    # If fixed, func was never called because we stopped it during sleep.
+    func.assert_not_called()

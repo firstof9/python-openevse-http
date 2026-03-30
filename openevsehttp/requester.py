@@ -62,6 +62,11 @@ class Requester:
         if self._user and self._pwd:
             auth = aiohttp.BasicAuth(self._user, self._pwd)
 
+        if data is not None and rapi is not None:
+            raise ValueError(
+                "cannot pass both 'data' (or 'json') and 'rapi' — choose one payload type"
+            )
+
         # Use provided session or create a temporary one
         if (session := self._session) is None:
             async with aiohttp.ClientSession() as session:
