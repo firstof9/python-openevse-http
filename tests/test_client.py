@@ -36,14 +36,6 @@ from tests.const import (
 pytestmark = pytest.mark.asyncio
 
 
-async def test_ws_state(test_charger):
-    """Test v4 Status reply."""
-    await test_charger.update()
-    value = test_charger.ws_state
-    assert value == STATE_STOPPED
-    await test_charger.ws_disconnect()
-
-
 async def test_update_status(test_charger):
     """Test v4 Status reply."""
     data = json.loads(load_fixture("v4_json/status.json"))
@@ -1990,3 +1982,11 @@ async def test_update_ignores_message_only_response(mock_aioclient):
 
     # We want it to stay as 'present' instead of being corrupted
     assert charger.status == "present"
+
+
+async def test_ws_state(test_charger):
+    """Test ws_state property."""
+    assert test_charger.ws_state == "stopped"  # default when websocket is None
+    test_charger.websocket = MagicMock()
+    test_charger.websocket.state = "connected"
+    assert test_charger.ws_state == "connected"

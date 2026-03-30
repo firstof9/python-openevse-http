@@ -376,3 +376,24 @@ async def test_websocket_coverage_gaps(ws_client):
         await ws_client.running()
         assert ws_client._pong is not None
         assert isinstance(ws_client._pong, datetime.datetime)
+
+
+@pytest.mark.asyncio
+async def test_listen_break_immediately(ws_client):
+    """Test listen() breaks immediately if state is STOPPED."""
+    from openevsehttp.websocket import STATE_STOPPED
+
+    # 1. Test immediate break (hits 153-154)
+    ws_client.state = STATE_STOPPED
+    await ws_client.listen()
+    assert ws_client.failed_attempts == 0
+
+    # 2. Test loop execution then break (hits 155)
+    ws_client.state = "disconnected"
+
+    async def mock_run():
+        ws_client.state = STATE_STOPPED
+
+    with patch.object(ws_client, "running", side_effect=mock_run):
+        await ws_client.listen()
+    assert ws_client.state == STATE_STOPPED

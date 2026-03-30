@@ -125,10 +125,7 @@ class Requester:
                     raise AuthenticationError
                 if resp.status >= 400:
                     _LOGGER.warning("HTTP Error %s: %s", resp.status, message)
-                    if isinstance(message, dict):
-                        message.update({"ok": False, "status": resp.status})
-                    else:
-                        message = {"msg": message, "ok": False, "status": resp.status}
+                    message.update({"ok": False, "status": resp.status})
                     return message
 
                 if (
