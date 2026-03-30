@@ -143,10 +143,10 @@ async def test_toggle_override_v2_err(test_charger_legacy, mock_aioclient, caplo
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(ContentTypeError):
             await test_charger_legacy.toggle_override()
-    assert (
-        "Content error: Attempt to decode JSON with unexpected mimetype: text/html"
-        in caplog.text
-    )
+        assert (
+            "Content error: Attempt to decode JSON with unexpected mimetype: text/html"
+            in caplog.text
+        )
 
 
 async def test_toggle_override_v2_fail(test_charger_legacy, mock_aioclient, caplog):
@@ -163,7 +163,7 @@ async def test_toggle_override_v2_fail(test_charger_legacy, mock_aioclient, capl
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(UnknownError):
             await test_charger_legacy.toggle_override()
-    assert "Problem issuing command $FS. Response: toggle failed" in caplog.text
+        assert "Problem issuing command $FS. Response: toggle failed" in caplog.text
 
 
 async def test_toggle_override_v2_transport_fail(
@@ -181,10 +181,10 @@ async def test_toggle_override_v2_transport_fail(
     with caplog.at_level(logging.ERROR):
         with pytest.raises(UnknownError):
             await test_charger_legacy.toggle_override()
-    assert (
-        "Problem toggling override ($FS): {'ok': False, 'msg': 'transport fail'}"
-        in caplog.text
-    )
+        assert (
+            "Problem toggling override ($FS): {'ok': False, 'msg': 'transport fail'}"
+            in caplog.text
+        )
 
 
 async def test_toggle_override_empty_status(
@@ -224,7 +224,7 @@ async def test_toggle_override_missing_state_after_update(mock_aioclient, caplog
     with caplog.at_level(logging.ERROR):
         with pytest.raises(UnknownError):
             await charger.toggle_override()
-    assert "Cannot toggle override: current state is unknown" in caplog.text
+        assert "Cannot toggle override: current state is unknown" in caplog.text
 
 
 async def test_toggle_override_state_zero(mock_aioclient, caplog):
@@ -241,7 +241,7 @@ async def test_toggle_override_state_zero(mock_aioclient, caplog):
     with caplog.at_level(logging.ERROR):
         with pytest.raises(UnknownError):
             await charger.toggle_override()
-    assert "Cannot toggle override: current state is unknown" in caplog.text
+        assert "Cannot toggle override: current state is unknown" in caplog.text
 
 
 async def test_toggle_override_partial_status(mock_aioclient):
@@ -361,21 +361,21 @@ async def test_set_override(
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(ValueError):
             await test_charger.set_override("invalid")
-    assert "Invalid override state: invalid" in caplog.text
+        assert "Invalid override state: invalid" in caplog.text
 
     await test_charger_legacy.update()
     caplog.clear()
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(UnsupportedFeature):
             await test_charger_legacy.set_override("active")
-    assert "Feature not supported for older firmware." in caplog.text
+        assert "Feature not supported for older firmware." in caplog.text
 
     await test_charger_unknown_semver.update()
     caplog.clear()
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(UnsupportedFeature):
             await test_charger_unknown_semver.set_override("active")
-    assert "Feature not supported for older firmware." in caplog.text
+        assert "Feature not supported for older firmware." in caplog.text
 
 
 async def test_clear_override(
@@ -486,7 +486,7 @@ async def test_set_override_get_fail(test_charger, mock_aioclient, caplog):
     with caplog.at_level(logging.ERROR):
         with pytest.raises(UnknownError):
             await test_charger.set_override("active")
-    assert "Failed to retrieve current override state" in caplog.text
+        assert "Failed to retrieve current override state" in caplog.text
 
 
 async def test_set_override_get_missing_state(test_charger, mock_aioclient, caplog):
@@ -500,7 +500,7 @@ async def test_set_override_get_missing_state(test_charger, mock_aioclient, capl
     with caplog.at_level(logging.ERROR):
         with pytest.raises(UnknownError):
             await test_charger.set_override("active")
-    assert "Failed to retrieve current override state" in caplog.text
+        assert "Failed to retrieve current override state" in caplog.text
 
 
 async def test_toggle_override_v2_string_state(
@@ -531,7 +531,7 @@ async def test_toggle_override_v2_invalid_state(test_charger_legacy, caplog):
     with caplog.at_level(logging.ERROR):
         with pytest.raises(UnknownError):
             await test_charger_legacy.toggle_override()
-    assert "Cannot toggle override: current state is unknown" in caplog.text
+        assert "Cannot toggle override: current state is unknown" in caplog.text
 
 
 async def test_override_failure_logic(mock_aioclient):

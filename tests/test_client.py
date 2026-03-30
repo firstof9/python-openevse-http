@@ -2052,3 +2052,41 @@ async def test_set_current_failure_envelope(mock_aioclient):
     # This should now raise UnknownError
     with pytest.raises(UnknownError):
         await charger.set_current(10)
+
+
+async def test_mutator_ignoring_ok_false(mock_aioclient):
+    """Test that mutators (e.g. set_charge_mode) incorrectly succeed if 'ok' is False but 'msg' is 'done'."""
+    mock_aioclient.get(
+        f"http://{SERVER_URL}/status", status=200, body='{"status": "sleeping"}'
+    )
+    mock_aioclient.get(
+        f"http://{SERVER_URL}/config", status=200, body='{"version": "4.1.0"}'
+    )
+    charger = OpenEVSE(SERVER_URL)
+    await charger.update()
+
+    # Mock response with ok: False but message that looks successful
+    mock_aioclient.post(
+        f"http://{SERVER_URL}/config", status=200, body='{"ok": false, "msg": "done"}'
+    )
+
+    # We want this to raise UnknownError, and it now correctly does
+    with pytest.raises(UnknownError):
+        await charger.set_charge_mode("eco")
+
+
+async def test_get_override_state_msg_only(mock_aioclient, caplog):
+    """Test get_override_state when response is message-only (e.g. error)."""
+    charger = OpenEVSE(SERVER_URL)
+    charger._config["version"] = "4.2.0"
+    # Mock message-only response (e.g. from Requester normalization of non-JSON)
+    # This currently returns 'auto', but we want it to return None and log error.
+    mock_aioclient.get(
+        f"http://{SERVER_URL}/override",
+        status=200,
+        body='{"msg": "failed"}',
+    )
+    with caplog.at_level(logging.ERROR):
+        result = await charger.get_override_state()
+        assert result is None
+    assert "Problem getting status for override state" in caplog.text

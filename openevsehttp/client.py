@@ -469,6 +469,10 @@ class OpenEVSE:
 
         _LOGGER.debug("Setting charge mode to %s", mode)
         response = await self.process_request(url=url, method="post", data=data)
+        if response.get("ok") is False:
+            _LOGGER.error("Problem issuing command. Response: %s", response)
+            raise UnknownError
+
         result = self._extract_msg(response)
         if result not in ["done", "no change"]:
             _LOGGER.error("Problem issuing command. Response: %s", response)
@@ -555,6 +559,10 @@ class OpenEVSE:
         _LOGGER.debug("Set service level to: %s", level)
         response = await self.process_request(url=url, method="post", data=data)
         _LOGGER.debug("service response: %s", response)
+        if response.get("ok") is False:
+            _LOGGER.error("Problem issuing command. Response: %s", response)
+            raise UnknownError
+
         result = self._extract_msg(response)
         if result not in ["done", "no change"]:
             _LOGGER.error("Problem issuing command. Response: %s", response)
@@ -566,6 +574,10 @@ class OpenEVSE:
         data = {"device": "gateway"}
 
         response = await self.process_request(url=url, method="post", data=data)
+        if response.get("ok") is False:
+            _LOGGER.error("Problem issuing command. Response: %s", response)
+            raise UnknownError
+
         result = self._extract_msg(response)
         _LOGGER.debug("WiFi Restart response: %s", result)
         if result not in ["done", "no change", "restart gateway"]:
@@ -579,6 +591,9 @@ class OpenEVSE:
             url = f"{self.url}restart"
             data = {"device": "evse"}
             reply = await self.process_request(url=url, method="post", data=data)
+            if reply.get("ok") is False:
+                _LOGGER.error("Problem issuing command. Response: %s", reply)
+                raise UnknownError
             response = self._extract_msg(reply)
 
         else:
@@ -611,6 +626,10 @@ class OpenEVSE:
         _LOGGER.debug("Setting LED brightness to %s", level)
         response = await self.process_request(url=url, method="post", data=data)
         _LOGGER.debug("led_brightness response: %s", response)
+        if response.get("ok") is False:
+            _LOGGER.error("Problem issuing command. Response: %s", response)
+            raise UnknownError
+
         result = self._extract_msg(response)
         if result not in ["done", "no change"]:
             _LOGGER.error("Problem issuing command. Response: %s", response)
@@ -629,6 +648,10 @@ class OpenEVSE:
         data = f"divertmode={new_mode}"
 
         response = await self.process_request(url=url, method="post", rapi=data)
+        if response.get("ok") is False:
+            _LOGGER.error("Problem issuing command. Response: %s", response)
+            raise UnknownError
+
         result = self._extract_msg(response)
         if result != "Divert Mode changed":
             _LOGGER.error("Problem issuing command. Response: %s", response)
@@ -1094,7 +1117,9 @@ class OpenEVSE:
         except UnsupportedFeature:
             _LOGGER.debug("Override state unavailable on older firmware.")
             return None
-        if not override.get("ok", True):
+        if not override.get("ok", True) or (
+            "state" not in override and "msg" in override
+        ):
             _LOGGER.error("Problem getting status for override state: %s", override)
             return None
 
