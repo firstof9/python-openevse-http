@@ -301,10 +301,7 @@ class OpenEVSE:
 
         if self.websocket is not None:
             await self.websocket.close()
-            # We don't nullify self.websocket here as it may be reused by ws_start
-            # unless the user expects it to be recreated.
-            # But the requirement says 'set self.websocket to None so repeated calls are safe'
-            # Let's keep it consistent.
+            # Clear handle to ensure fresh initialization in ws_start
             self.websocket = None
 
     def is_coroutine_function(self, callback):
@@ -524,6 +521,7 @@ class OpenEVSE:
             _LOGGER.debug("Setting current limit to %s", amps)
             response = await self.set_override(charge_current=amps)
             _LOGGER.debug("Set current response: %s", response)
+            return True
 
         else:
             # RAPI commands
