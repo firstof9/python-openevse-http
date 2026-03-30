@@ -531,24 +531,14 @@ class OpenEVSE:
             if self._version_check("2.9.1"):
                 command = f"$SC {amps} V"
             results = await self.send_command(command)
-            if isinstance(results, dict):
-                _LOGGER.error("Problem setting current limit. Response: %s", results)
-                return False
+            if isinstance(results, tuple):
+                cmd, msg = results
+                if cmd == "$OK" or str(msg).startswith("$OK"):
+                    _LOGGER.debug("Set current response: %s", msg)
+                    return True
 
-            cmd, msg = results
-            if cmd is False:
-                _LOGGER.error("Problem setting current limit. Trace: %s", msg)
-                return False
-
-            if (isinstance(cmd, str) and cmd.startswith("$NK")) or (
-                isinstance(msg, str) and (msg.startswith("$NK") or msg == "")
-            ):
-                _LOGGER.error(
-                    "Problem setting current limit. Command: %s, Response: %s", cmd, msg
-                )
-                return False
-            _LOGGER.debug("Set current response: %s", msg)
-            return True
+            _LOGGER.error("Problem setting current limit. Response: %s", results)
+            return False
 
     async def set_service_level(self, level: int = 2) -> None:
         """Set the service level of the EVSE."""

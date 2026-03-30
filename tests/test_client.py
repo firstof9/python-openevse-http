@@ -670,7 +670,7 @@ async def test_set_current_error(
     mock_aioclient.post(
         "http://openevse.test.tld/r",
         status=200,
-        body='{"cmd": "OK", "ret": "$OK^20"}',
+        body='{"cmd": "OK", "ret": "$OK"}',
     )
     with caplog.at_level(logging.DEBUG):
         await test_charger_broken.set_current(24)
@@ -717,7 +717,7 @@ async def test_set_current_v2(
 ):
     """Test v4 Status reply."""
     await test_charger_v2.update()
-    value = {"cmd": "OK", "ret": "$OK^20"}
+    value = {"cmd": "OK", "ret": "$OK"}
     mock_aioclient.post(
         "http://openevse.test.tld/r",
         status=200,
@@ -855,7 +855,7 @@ async def test_evse_restart(
 ):
     """Test EVSE module restart."""
     await test_charger_v2.update()
-    value = {"cmd": "OK", "ret": "$OK^20"}
+    value = {"cmd": "OK", "ret": "$OK"}
     mock_aioclient.post(
         "http://openevse.test.tld/r",
         status=200,
@@ -863,7 +863,7 @@ async def test_evse_restart(
     )
     with caplog.at_level(logging.DEBUG):
         await test_charger_v2.restart_evse()
-    assert "EVSE Restart response: $OK^20" in caplog.text
+    assert "EVSE Restart response: $OK" in caplog.text
     assert "Restarting EVSE module via RAPI" in caplog.text
 
     await test_charger_modified_ver.update()
@@ -1742,7 +1742,7 @@ async def test_set_current_rapi_error(test_charger, caplog):
             result = await test_charger.set_current(15)
             assert result is False
             assert (
-                "Problem setting current limit. Command: $SC 15 V, Response: $NK^21"
+                "Problem setting current limit. Response: ('$SC 15 V', '$NK^21')"
                 in caplog.text
             )
 
@@ -1754,7 +1754,7 @@ async def test_set_current_rapi_error(test_charger, caplog):
             result = await test_charger.set_current(15)
             assert result is False
             assert (
-                "Problem setting current limit. Command: $NK, Response: timeout"
+                "Problem setting current limit. Response: ('$NK', 'timeout')"
                 in caplog.text
             )
 
@@ -1854,7 +1854,9 @@ async def test_set_current_transport_fail(caplog):
     with patch.object(charger, "send_command", return_value=(False, "timeout")):
         with caplog.at_level(logging.ERROR):
             assert await charger.set_current(16) is False
-        assert "Problem setting current limit. Trace: timeout" in caplog.text
+        assert (
+            "Problem setting current limit. Response: (False, 'timeout')" in caplog.text
+        )
 
 
 async def test_websocket_update_exception_handling(caplog):

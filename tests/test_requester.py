@@ -42,14 +42,14 @@ async def test_get_status_auth_err(test_charger_auth_err):
 
 async def test_send_command(test_charger, mock_aioclient):
     """Test v4 Status reply."""
-    value = {"cmd": "OK", "ret": "$OK^20"}
+    value = {"cmd": "OK", "ret": "$OK"}
     mock_aioclient.post(
         TEST_URL_RAPI,
         status=200,
         body=json.dumps(value),
     )
     status = await test_charger.send_command("test")
-    assert status == ("OK", "$OK^20")
+    assert status == ("OK", "$OK")
 
 
 async def test_send_command_failed(test_charger, mock_aioclient):
@@ -78,14 +78,14 @@ async def test_send_command_missing(test_charger, mock_aioclient):
 
 async def test_send_command_auth(test_charger_auth, mock_aioclient):
     """Test v4 Status reply."""
-    value = {"cmd": "OK", "ret": "$OK^20"}
+    value = {"cmd": "OK", "ret": "$OK"}
     mock_aioclient.post(
         TEST_URL_RAPI,
         status=200,
         body=json.dumps(value),
     )
     status = await test_charger_auth.send_command("test")
-    assert status == ("OK", "$OK^20")
+    assert status == ("OK", "$OK")
 
 
 async def test_send_command_parse_err(test_charger_auth, mock_aioclient):
