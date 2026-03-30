@@ -164,9 +164,7 @@ async def test_keepalive_timeout(ws_client, mock_callback):
 async def ws_client_auth():
     """Fixture for authenticated websocket client."""
     callback = AsyncMock()
-    client = OpenEVSEWebsocket(
-        f"http://{SERVER_URL}", callback, user="test", password="pw"
-    )
+    client = OpenEVSEWebsocket(SERVER_URL, callback, user="test", password="pw")
     yield client
     if client.session and not client.session.closed:
         await client.session.close()
@@ -194,6 +192,7 @@ async def test_websocket_auth(ws_client_auth):
 
         # Verify BasicAuth was created and passed
         call_args = mock_connect.call_args
+        assert call_args.args[0] == "ws://openevse.test.tld/ws"
         assert "auth" in call_args.kwargs
         assert isinstance(call_args.kwargs["auth"], aiohttp.BasicAuth)
         assert call_args.kwargs["auth"].login == "test"

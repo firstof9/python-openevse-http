@@ -719,9 +719,15 @@ class OpenEVSE:
         return bool(self._config.get("relayt", False))
 
     @property
-    def service_level(self) -> str | None:
+    def service_level(self) -> int | None:
         """Return the service level."""
-        return self._config.get("service")
+        val = self._config.get("service")
+        if val is None:
+            return None
+        try:
+            return int(val)
+        except (ValueError, TypeError):
+            return None
 
     @property
     def openevse_firmware(self) -> str | None:
@@ -835,9 +841,15 @@ class OpenEVSE:
         return self._status.get("elapsed")
 
     @property
-    def wifi_signal(self) -> str | None:
+    def wifi_signal(self) -> int | None:
         """Return charger's wifi signal."""
-        return self._status.get("srssi")
+        val = self._status.get("srssi")
+        if val is None:
+            return None
+        try:
+            return int(val)
+        except (ValueError, TypeError):
+            return None
 
     @property
     def charging_current(self) -> float | None:
@@ -1019,8 +1031,17 @@ class OpenEVSE:
 
     @property
     def shaper_active(self) -> bool | None:
-        """Return if shper is active."""
-        return self._status.get("shaper", None)
+        """Return if shaper is active."""
+        val = self._status.get("shaper")
+        if val is None:
+            return None
+        if isinstance(val, bool):
+            return val
+        if isinstance(val, int | float):
+            return bool(int(val))
+        if isinstance(val, str):
+            return val.lower() in ("1", "true")
+        return bool(val)
 
     @property
     def shaper_live_power(self) -> int | None:

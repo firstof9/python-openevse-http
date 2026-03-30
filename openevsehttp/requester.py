@@ -134,9 +134,19 @@ class Requester:
                     return message
 
                 if (
-                    method == "post"
+                    method in ("post", "patch", "put")
                     and isinstance(message, dict)
-                    and "config_version" in message
+                    and any(
+                        key in message
+                        for key in (
+                            "config_version",
+                            "claims_version",
+                            "override_version",
+                            "schedule_version",
+                            "schedule_plan_version",
+                            "limit_version",
+                        )
+                    )
                     and self._update_callback
                 ):
                     if self._invoking_callback:
