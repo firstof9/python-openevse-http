@@ -97,21 +97,23 @@ class Override:
                 not self._evse._status
                 or "state" not in self._evse._status
                 or self._evse._status["state"] is None
-                or self._evse._status["state"] == 0
             ):
                 await self._evse.update()
 
-            if (
-                "state" not in self._evse._status
-                or self._evse._status["state"] is None
-                or self._evse._status["state"] == 0
-            ):
+            try:
+                int_state = int(self._evse._status["state"])
+            except (ValueError, TypeError, KeyError):
+                _LOGGER.error("Cannot toggle override: current state is unknown")
+                raise UnknownError from None
+
+            if int_state == 0:
                 _LOGGER.error("Cannot toggle override: current state is unknown")
                 raise UnknownError
 
-            state = self._evse._status["state"]
-            _LOGGER.debug("Toggling manual override via RAPI. Current state: %s", state)
-            command = "$FE" if state == 254 else "$FS"
+            _LOGGER.debug(
+                "Toggling manual override via RAPI. Current state: %s", int_state
+            )
+            command = "$FE" if int_state == 254 else "$FS"
             rapi_response = await self._evse.send_command(command)
             if isinstance(rapi_response, dict):
                 _LOGGER.error(

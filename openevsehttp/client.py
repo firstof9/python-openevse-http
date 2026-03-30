@@ -212,7 +212,6 @@ class OpenEVSE:
                 self._loop.create_task(self.websocket.listen()),
                 self._loop.create_task(self.repeat(300, self.websocket.keepalive)),
             ]
-            self._ws_listening = True
         elif active_tasks:
             _LOGGER.debug("Cleaning up orphaned websocket tasks before restart...")
             for task in active_tasks:
@@ -223,7 +222,6 @@ class OpenEVSE:
                 self._loop.create_task(self.websocket.listen()),
                 self._loop.create_task(self.repeat(300, self.websocket.keepalive)),
             ]
-            self._ws_listening = True
 
     async def _update_status(self, msgtype, data, error):
         """Update data from websocket listener."""

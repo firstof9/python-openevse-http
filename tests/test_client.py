@@ -1687,6 +1687,7 @@ async def test_extra_coverage_edge_cases(mock_aioclient, caplog):
 
     # Now mock it as connected to finally hit AlreadyListening at line 191 (was 181)
     charger.websocket.state = "connected"
+    charger._ws_listening = True
     with pytest.raises(AlreadyListening):
         await charger.ws_start()
 

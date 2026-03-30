@@ -503,3 +503,34 @@ async def test_set_override_get_missing_state(test_charger, mock_aioclient, capl
         with pytest.raises(UnknownError):
             await test_charger.set_override("active")
     assert "Failed to retrieve current override state" in caplog.text
+
+
+async def test_toggle_override_v2_string_state(
+    test_charger_legacy, mock_aioclient, caplog
+):
+    """Test v4 Status reply with string-based state (coercion)."""
+    await test_charger_legacy.update()
+    # Mock state as a string
+    test_charger_legacy._status["state"] = "254"
+
+    value = {"cmd": "OK", "ret": "$OK"}
+    mock_aioclient.post(
+        TEST_URL_RAPI,
+        status=200,
+        body=json.dumps(value),
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_legacy.toggle_override()
+    assert "Toggling manual override via RAPI. Current state: 254" in caplog.text
+
+
+async def test_toggle_override_v2_invalid_state(test_charger_legacy, caplog):
+    """Test v4 Status reply with invalid state (coercion error)."""
+    await test_charger_legacy.update()
+    # Mock state as invalid string
+    test_charger_legacy._status["state"] = "not-an-int"
+
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(UnknownError):
+            await test_charger_legacy.toggle_override()
+    assert "Cannot toggle override: current state is unknown" in caplog.text
