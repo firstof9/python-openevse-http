@@ -991,7 +991,7 @@ async def test_max_current(fixture, expected, request):
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger_new", 0), ("test_charger_v2", 0)]
+    "fixture, expected", [("test_charger_new", False), ("test_charger_v2", False)]
 )
 async def test_emoncms_connected(fixture, expected, request):
     """Test emoncms_connected reply."""
@@ -1003,7 +1003,7 @@ async def test_emoncms_connected(fixture, expected, request):
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger_new", 0), ("test_charger_v2", None)]
+    "fixture, expected", [("test_charger_new", False), ("test_charger_v2", None)]
 )
 async def test_ocpp_connected(fixture, expected, request):
     """Test ocpp_connected reply."""
@@ -1502,7 +1502,7 @@ async def test_remaining_properties():
     assert charger.divertmode == "eco"
     assert charger.shaper_updated is True
     assert charger.mqtt_connected is False
-    assert charger.emoncms_connected == 1
+    assert charger.emoncms_connected is True
     assert charger.wifi_signal == -50
     assert charger.ir_temperature == 25.0
 
@@ -1570,6 +1570,11 @@ async def async_stub(*args, **kwargs):
     pass
 
 
+async def async_pending_stub(event: asyncio.Event, *args, **kwargs):
+    """Async stub that waits on an event."""
+    await event.wait()
+
+
 async def test_extra_coverage_edge_cases(mock_aioclient, caplog):
     """Reach remaining missing lines in client.py."""
     charger = OpenEVSE(SERVER_URL)
@@ -1579,11 +1584,17 @@ async def test_extra_coverage_edge_cases(mock_aioclient, caplog):
     assert charger._extract_msg("direct string") == "direct string"
 
     # 2. ws_start when websocket is None and orphan cleanup
+    stop_event = asyncio.Event()
+
+    async def pending_stub(*args, **kwargs):
+        await async_pending_stub(stop_event, *args, **kwargs)
+
     with (
         patch(
-            "openevsehttp.websocket.OpenEVSEWebsocket.listen", side_effect=async_stub
+            "openevsehttp.websocket.OpenEVSEWebsocket.listen",
+            side_effect=pending_stub,
         ),
-        patch.object(OpenEVSE, "repeat", side_effect=async_stub),
+        patch.object(OpenEVSE, "repeat", side_effect=pending_stub),
         caplog.at_level(logging.DEBUG),
     ):
         await charger.ws_start()
@@ -1594,6 +1605,10 @@ async def test_extra_coverage_edge_cases(mock_aioclient, caplog):
         charger._ws_listening = False
         await charger.ws_start()
         assert "Cleaning up orphaned websocket tasks before restart..." in caplog.text
+
+    # Signal tasks to finish and clean up
+    stop_event.set()
+    await charger.ws_disconnect()
 
     # 3. test_and_get ok: False
     mock_aioclient.get(
@@ -1990,3 +2005,50 @@ async def test_ws_state(test_charger):
     test_charger.websocket = MagicMock()
     test_charger.websocket.state = "connected"
     assert test_charger.ws_state == "connected"
+
+
+async def test_get_charge_current_ok_false(mock_aioclient):
+    """Test get_charge_current when claims return ok: False."""
+    charger = OpenEVSE(SERVER_URL)
+    charger._config["max_current_hard"] = 32
+    charger._config["max_current_soft"] = 16
+    charger._status["pilot"] = 10
+
+    # Mock list_claims returning 'ok: False' (failure) but with properties
+    # Current behavior will use '5', we want it to fall back to '16'
+    with patch.object(
+        charger,
+        "list_claims",
+        AsyncMock(return_value={"ok": False, "properties": {"charge_current": 5}}),
+    ):
+        assert await charger.get_charge_current() == 16
+
+
+async def test_set_current_failure_envelope(mock_aioclient):
+    """Test set_current when API returns failure envelope without 'ok' key."""
+    # Mock required endpoints for update() and initial state
+    mock_aioclient.get(
+        f"http://{SERVER_URL}/status",
+        status=200,
+        body='{"state": 1, "status": "sleeping"}',
+    )
+    mock_aioclient.get(
+        f"http://{SERVER_URL}/config",
+        status=200,
+        body='{"version": "4.1.2", "min_current_hard": 6, "max_current_hard": 32}',
+    )
+    mock_aioclient.get(
+        f"http://{SERVER_URL}/override", status=200, body='{"state": "disabled"}'
+    )
+
+    charger = OpenEVSE(SERVER_URL)
+    await charger.update()
+
+    # Mock response that doesn't have 'ok' but indicates failure
+    mock_aioclient.post(
+        f"http://{SERVER_URL}/override", status=200, body='{"msg": "failed"}'
+    )
+
+    # This should now raise UnknownError
+    with pytest.raises(UnknownError):
+        await charger.set_current(10)

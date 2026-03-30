@@ -714,6 +714,7 @@ class OpenEVSE:
             pass
         if (
             isinstance(claims, dict)
+            and claims.get("ok") is not False
             and isinstance(claims.get("properties"), dict)
             and "charge_current" in claims["properties"]
             and "max_current_hard" in self._config
@@ -910,7 +911,8 @@ class OpenEVSE:
     @property
     def has_limit(self) -> bool | None:
         """Return if a limit has been set."""
-        return self._status.get("has_limit", self._status.get("limit", None))
+        val = self._status.get("has_limit", self._status.get("limit", None))
+        return bool(val) if val is not None else None
 
     @property
     def protocol_version(self) -> str | None:
@@ -1055,12 +1057,14 @@ class OpenEVSE:
     @property
     def emoncms_connected(self) -> bool | None:
         """Return the status of the emoncms connection."""
-        return self._status.get("emoncms_connected", None)
+        val = self._status.get("emoncms_connected", None)
+        return bool(val) if val is not None else None
 
     @property
     def ocpp_connected(self) -> bool | None:
         """Return the status of the ocpp connection."""
-        return self._status.get("ocpp_connected", None)
+        val = self._status.get("ocpp_connected", None)
+        return bool(val) if val is not None else None
 
     @property
     def uptime(self) -> int | None:

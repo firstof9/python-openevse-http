@@ -72,7 +72,10 @@ class Override:
         _LOGGER.debug("Override data: %s", data)
         _LOGGER.debug("Setting override config on %s", url)
         response = await self._evse.process_request(url=url, method="post", data=data)
-        if not response.get("ok", True):
+        if not response.get("ok", True) or response.get("msg") in (
+            "failed",
+            "error",
+        ):
             _LOGGER.error("Problem setting override. Response: %s", response)
             raise UnknownError
         return response
@@ -87,7 +90,10 @@ class Override:
 
             _LOGGER.debug("Toggling manual override %s", url)
             response = await self._evse.process_request(url=url, method="patch")
-            if not response.get("ok", True):
+            if not response.get("ok", True) or response.get("msg") in (
+                "failed",
+                "error",
+            ):
                 _LOGGER.error("Problem toggling override. Response: %s", response)
                 raise UnknownError
             _LOGGER.debug("Toggle response: %s", response)
