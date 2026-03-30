@@ -693,6 +693,25 @@ async def test_divert_mode_missing_ok(mock_aioclient):
     assert charger._config["divert_enabled"] is True
 
 
+async def test_divert_mode_strict_fail(mock_aioclient, caplog):
+    """Test divert mode with strict success marker requirement."""
+    charger = OpenEVSE(SERVER_URL)
+    charger._config["version"] = "2.9.1"
+    charger._config["divert_enabled"] = False
+
+    # Mock success 'ok' but failing 'msg'
+    mock_aioclient.post(
+        f"http://{SERVER_URL}/config", status=200, body='{"ok": true, "msg": "failed"}'
+    )
+
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(UnknownError):
+            await charger.divert_mode()
+    assert "Problem toggling divert: {'ok': True, 'msg': 'failed'}" in caplog.text
+    # Ensure cache NOT flipped
+    assert charger._config["divert_enabled"] is False
+
+
 async def test_set_current_v2(
     test_charger_v2, test_charger_dev, mock_aioclient, caplog
 ):
@@ -755,7 +774,7 @@ async def test_set_divertmode(
 ):
     """Test v4 set divert mode."""
     await test_charger_new.update()
-    value = '{"ok": true, "msg": "Divert Mode changed"}'
+    value = '{"ok": true, "msg": "done"}'
     mock_aioclient.post(
         TEST_URL_CONFIG,
         status=200,
@@ -1592,6 +1611,7 @@ async def test_extra_coverage_edge_cases(mock_aioclient, caplog):
         with pytest.raises(UnknownError):
             await charger.test_and_get()
     assert "Problem getting config for serial detection" in caplog.text
+    caplog.clear()
 
     # 4. restart_wifi error
     charger._config["version"] = "5.0.0"
@@ -1600,6 +1620,7 @@ async def test_extra_coverage_edge_cases(mock_aioclient, caplog):
         with pytest.raises(UnknownError):
             await charger.restart_wifi()
     assert "Problem issuing command. Response: {'msg': 'failed'}" in caplog.text
+    caplog.clear()
 
     # 5. restart_evse RAPI failure path
     charger._config["version"] = "4.0.0"
@@ -1608,6 +1629,7 @@ async def test_extra_coverage_edge_cases(mock_aioclient, caplog):
             with pytest.raises(UnknownError):
                 await charger.restart_evse()
         assert "Problem issuing command. Response: " in caplog.text
+    caplog.clear()
 
     # 6. restart_evse HTTP failure path (5.0.0+)
     charger._config["version"] = "5.0.0"
@@ -1615,7 +1637,7 @@ async def test_extra_coverage_edge_cases(mock_aioclient, caplog):
     with caplog.at_level(logging.ERROR):
         with pytest.raises(UnknownError):
             await charger.restart_evse()
-    assert "Problem issuing command. Response: {'msg': 'failed'}" in caplog.text
+    assert "Problem issuing command. Response: failed" in caplog.text
 
     # 7. Various property edge cases (missing data in cache)
     charger._config = {}

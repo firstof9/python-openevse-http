@@ -97,10 +97,15 @@ class Override:
                 not self._evse._status
                 or "state" not in self._evse._status
                 or self._evse._status["state"] is None
+                or self._evse._status["state"] == 0
             ):
                 await self._evse.update()
 
-            if "state" not in self._evse._status or self._evse._status["state"] is None:
+            if (
+                "state" not in self._evse._status
+                or self._evse._status["state"] is None
+                or self._evse._status["state"] == 0
+            ):
                 _LOGGER.error("Cannot toggle override: current state is unknown")
                 raise UnknownError
 

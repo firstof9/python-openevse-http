@@ -225,6 +225,23 @@ async def test_toggle_override_missing_state_after_update(mock_aioclient, caplog
     assert "Cannot toggle override: current state is unknown" in caplog.text
 
 
+async def test_toggle_override_state_zero(mock_aioclient, caplog):
+    """Test toggle when state is 0 (Unknown)."""
+    charger = OpenEVSE(SERVER_URL)
+    charger._config["version"] = "2.9.0"
+    charger._status = {"state": 0}
+
+    # Mock Update calls with STILL 0 state
+    mock_aioclient.get(f"http://{SERVER_URL}/status", status=200, body='{"state": 0}')
+    mock_aioclient.get(
+        f"http://{SERVER_URL}/config", status=200, body='{"version": "2.9.0"}'
+    )
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(UnknownError):
+            await charger.toggle_override()
+    assert "Cannot toggle override: current state is unknown" in caplog.text
+
+
 async def test_toggle_override_partial_status(mock_aioclient):
     """Test toggle when status exists but state is missing."""
     charger = OpenEVSE(SERVER_URL)
@@ -279,6 +296,7 @@ async def test_set_override(
             "Override data: {'state': 'active', 'charge_current': 0, 'max_current': 0, 'energy_limit': 0, 'time_limit': 0, 'auto_release': True}"
             in caplog.text
         )
+        caplog.clear()
 
         mock_aioclient.post(
             TEST_URL_OVERRIDE,
@@ -290,6 +308,7 @@ async def test_set_override(
             "Override data: {'state': 'active', 'charge_current': 30, 'max_current': 0, 'energy_limit': 0, 'time_limit': 0, 'auto_release': True}"
             in caplog.text
         )
+        caplog.clear()
         mock_aioclient.post(
             TEST_URL_OVERRIDE,
             status=200,
@@ -310,6 +329,7 @@ async def test_set_override(
             "Override data: {'state': 'active', 'charge_current': 30, 'max_current': 32, 'energy_limit': 0, 'time_limit': 0, 'auto_release': True}"
             in caplog.text
         )
+        caplog.clear()
         mock_aioclient.post(
             TEST_URL_OVERRIDE,
             status=200,
@@ -320,6 +340,7 @@ async def test_set_override(
             "Override data: {'state': 'active', 'charge_current': 30, 'max_current': 32, 'energy_limit': 2000, 'time_limit': 0, 'auto_release': True}"
             in caplog.text
         )
+        caplog.clear()
         mock_aioclient.post(
             TEST_URL_OVERRIDE,
             status=200,

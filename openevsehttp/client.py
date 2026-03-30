@@ -497,7 +497,11 @@ class OpenEVSE:
         _LOGGER.debug("Toggling divert: %s", mode)
         response = await self.process_request(url=url, method="post", data=data)
         _LOGGER.debug("divert_mode response: %s", response)
-        if not isinstance(response, dict) or response.get("ok") is False:
+        if (
+            not isinstance(response, dict)
+            or response.get("ok") is False
+            or self._extract_msg(response) not in ["done", "no change"]
+        ):
             _LOGGER.error("Problem toggling divert: %s", response)
             raise UnknownError
 
