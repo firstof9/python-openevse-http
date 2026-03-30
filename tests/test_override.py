@@ -114,7 +114,7 @@ async def test_toggle_override(
 
 
 async def test_toggle_override_v2(test_charger_legacy, mock_aioclient, caplog):
-    """Test v4 Status reply."""
+    """Test legacy toggle override."""
     await test_charger_legacy.update()
     value = {"cmd": "OK", "ret": "$OK"}
     mock_aioclient.post(
@@ -128,7 +128,7 @@ async def test_toggle_override_v2(test_charger_legacy, mock_aioclient, caplog):
 
 
 async def test_toggle_override_v2_err(test_charger_legacy, mock_aioclient, caplog):
-    """Test v4 Status reply."""
+    """Test legacy toggle override error (content error)."""
     await test_charger_legacy.update()
     content_error = mock.Mock()
     content_error.real_url = f"{TEST_URL_RAPI}"
@@ -150,7 +150,7 @@ async def test_toggle_override_v2_err(test_charger_legacy, mock_aioclient, caplo
 
 
 async def test_toggle_override_v2_fail(test_charger_legacy, mock_aioclient, caplog):
-    """Test v4 toggle fail."""
+    """Test legacy toggle override failure."""
     await test_charger_legacy.update()
     # Mock send_command returning success=False
     # Requester returns (False, msg) if 'ret' is missing but 'msg' is present
@@ -169,7 +169,7 @@ async def test_toggle_override_v2_fail(test_charger_legacy, mock_aioclient, capl
 async def test_toggle_override_v2_transport_fail(
     test_charger_legacy, mock_aioclient, caplog
 ):
-    """Test v4 toggle transport fail (returns dict)."""
+    """Test legacy toggle override transport failure."""
     await test_charger_legacy.update()
     # Mock transport fail: ok=False in dict
     value = {"ok": False, "msg": "transport fail"}
@@ -532,3 +532,47 @@ async def test_toggle_override_v2_invalid_state(test_charger_legacy, caplog):
         with pytest.raises(UnknownError):
             await test_charger_legacy.toggle_override()
     assert "Cannot toggle override: current state is unknown" in caplog.text
+
+
+async def test_override_failure_logic(mock_aioclient):
+    """Test 'ok: False' paths in override.py via OpenEVSE client proxy methods."""
+    # Initial status/config/override calls for update()
+    mock_aioclient.get(
+        f"http://{SERVER_URL}/status", status=200, body='{"status": "sleeping"}'
+    )
+    mock_aioclient.get(
+        f"http://{SERVER_URL}/config", status=200, body='{"version": "4.1.0"}'
+    )
+    mock_aioclient.get(
+        f"http://{SERVER_URL}/override", status=200, body='{"state": "disabled"}'
+    )
+
+    charger = OpenEVSE(SERVER_URL)
+    await charger.update()
+
+    # 1. set() failure
+    mock_aioclient.post(
+        f"http://{SERVER_URL}/override",
+        status=200,
+        body='{"msg": "error", "ok": false}',
+    )
+    with pytest.raises(UnknownError):
+        await charger.set_override(charge_current=16)
+
+    # 2. toggle() failure
+    mock_aioclient.patch(
+        f"http://{SERVER_URL}/override",
+        status=200,
+        body='{"msg": "error", "ok": false}',
+    )
+    with pytest.raises(UnknownError):
+        await charger.toggle_override()
+
+    # 3. clear() failure
+    mock_aioclient.delete(
+        f"http://{SERVER_URL}/override",
+        status=200,
+        body='{"msg": "error", "ok": false}',
+    )
+    with pytest.raises(UnknownError):
+        await charger.clear_override()

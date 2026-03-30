@@ -327,3 +327,52 @@ async def test_state_setter_threadsafe_fallback(ws_client):
         await args[1]
 
         assert ws_client._error_reason is None
+
+
+@pytest.mark.asyncio
+async def test_websocket_coverage_gaps(ws_client):
+    """Test remaining lines in websocket.py."""
+    # 1. Line 102: break when STATE_STOPPED
+    msg = MagicMock()
+    msg.type = aiohttp.WSMsgType.TEXT
+    msg.json.return_value = {"key": "value"}
+
+    mock_ws = MagicMock()
+    mock_ws.__aenter__ = AsyncMock(return_value=mock_ws)
+    mock_ws.__aexit__ = AsyncMock(return_value=None)
+
+    async def async_iter_stop():
+        # Yield one message, then change state to STOPPED
+        yield msg
+        ws_client.state = STATE_STOPPED
+        yield msg  # Should break before this is processed if we use it
+
+    mock_ws.__aiter__.side_effect = lambda: async_iter_stop()
+
+    with (
+        patch("aiohttp.ClientSession.ws_connect", return_value=mock_ws),
+        patch("asyncio.sleep", new_callable=AsyncMock),
+    ):
+        await ws_client.running()
+        assert ws_client.state == STATE_STOPPED
+
+    # 2. Line 109: "pong" in msg.keys()
+    msg_pong = MagicMock()
+    msg_pong.type = aiohttp.WSMsgType.TEXT
+    msg_pong.json.return_value = {"pong": 1}
+
+    async def async_iter_pong():
+        yield msg_pong
+        # Stop after one message
+        ws_client.state = STATE_STOPPED
+
+    mock_ws.__aiter__.side_effect = lambda: async_iter_pong()
+    ws_client.state = STATE_CONNECTED  # Reset state
+
+    with (
+        patch("aiohttp.ClientSession.ws_connect", return_value=mock_ws),
+        patch("asyncio.sleep", new_callable=AsyncMock),
+    ):
+        await ws_client.running()
+        assert ws_client._pong is not None
+        assert isinstance(ws_client._pong, datetime.datetime)
