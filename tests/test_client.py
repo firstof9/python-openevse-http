@@ -2117,3 +2117,231 @@ async def test_repeat_exit_during_sleep():
 
     # If fixed, func was never called because we stopped it during sleep.
     func.assert_not_called()
+
+
+async def test_client_extract_msg_edge_cases():
+    """Test _extract_msg with various input types."""
+    charger = OpenEVSE("openevse.test.tld")
+    assert charger._extract_msg("direct string") == "direct string"
+    assert charger._extract_msg(123) is None
+
+
+async def test_client_set_current_error_handling(caplog):
+    """Test set_current error handling and logging."""
+    charger = OpenEVSE("openevse.test.tld")
+    charger.requester = MagicMock()
+    charger.send_command = AsyncMock(return_value="$EX")
+
+    # Path: Missing limits for lines 522-525
+    charger._version_check = lambda v: True
+    charger._config = {"min_current_hard": None, "max_current_hard": 40}
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(RuntimeError, match="Hard current limits are missing"):
+            await charger.set_current(10)
+    assert "Missing current limits in config" in caplog.text
+
+    # Path: Invalid value for lines 528-534
+    charger._config = {"min_current_hard": 6, "max_current_hard": 40}
+    with pytest.raises(ValueError):
+        await charger.set_current(5)
+
+    # Path: RAPI failure for lines 552-555
+    charger._version_check = lambda v: False
+    assert await charger.set_current(10) is False
+
+
+async def test_client_setter_unknown_errors():
+    """Test various setters raising UnknownError on failure."""
+    charger = OpenEVSE("openevse.test.tld")
+    charger.requester = MagicMock()
+    charger.requester.process_request = AsyncMock(
+        return_value={"ok": False, "msg": "failed"}
+    )
+
+    with pytest.raises(UnknownError):
+        await charger.set_charge_mode("fast")
+    with pytest.raises(UnknownError):
+        await charger.set_service_level(1)
+
+
+async def test_client_property_edge_cases():
+    """Test property accessors with malformed or missing status data."""
+    charger = OpenEVSE("openevse.test.tld")
+
+    # State with invalid index for lines 829-831
+    charger._status = {"state": "invalid"}
+    assert charger.state == "unknown"
+
+    # Wifi signal with invalid data for lines 849, 852-853
+    charger._status = {"srssi": "invalid"}
+    assert charger.wifi_signal is None
+    charger._status = {}
+    assert charger.wifi_signal is None
+
+    # Ambient temp with bools and fallback for line 885
+    charger._status = {"temp": True, "temp1": False}
+    assert charger.ambient_temperature is None
+
+    # Service level edge cases for lines 727, 730-731
+    charger._config = {"service": "invalid"}
+    assert charger.service_level is None
+    charger._config = {}
+    assert charger.service_level is None
+
+
+async def test_client_test_and_get_error():
+    """Test test_and_get raising UnknownError for lines 156-157."""
+    charger = OpenEVSE("openevse.test.tld")
+    charger.requester = MagicMock()
+    charger.requester.process_request = AsyncMock(return_value={"ok": False})
+    with pytest.raises(UnknownError):
+        await charger.test_and_get()
+
+
+async def test_client_update_failure_path(caplog):
+    """Test update method error path for line 146."""
+    charger = OpenEVSE("openevse.test.tld")
+    charger.requester = MagicMock()
+    charger.requester.process_request = AsyncMock(side_effect=Exception("Failed"))
+    with pytest.raises(Exception, match="Failed"):
+        await charger.update()
+
+
+async def test_client_ws_disconnect_task_cleanup():
+    """Test task cleanup during websocket disconnect for lines 290-294."""
+    charger = OpenEVSE("openevse.test.tld")
+    charger.websocket = MagicMock()
+    charger.websocket.close = AsyncMock()
+    charger._loop = asyncio.get_running_loop()
+
+    async def dummy():
+        try:
+            await asyncio.sleep(1)
+        except asyncio.CancelledError:
+            pass
+
+    task = asyncio.create_task(dummy())
+    charger.tasks = [task]
+    await charger.ws_disconnect()
+    assert task.cancelled() or task.done()
+
+
+async def test_client_rapi_fallback_errors():
+    """Test legacy RAPI fallback commands returning False (failure)."""
+    charger = OpenEVSE("openevse.test.tld")
+    charger.requester = MagicMock()
+    # set_current returns False on failure in RAPI path
+    charger.requester.send_command = AsyncMock(return_value="$EX")
+    charger._version_check = lambda v: False
+
+    assert await charger.set_current(10) is False
+
+
+async def test_client_restart_wifi_errors():
+    """Test restart_wifi for lines 586-587, 592-593."""
+    charger = OpenEVSE("openevse.test.tld")
+    charger.requester = MagicMock()
+    charger.requester.process_request = AsyncMock(return_value={"ok": False})
+    with pytest.raises(UnknownError):
+        await charger.restart_wifi()
+
+    charger.requester.process_request = AsyncMock(
+        return_value={"ok": True, "msg": "failed"}
+    )
+    with pytest.raises(UnknownError):
+        await charger.restart_wifi()
+
+
+async def test_client_restart_evse_errors():
+    """Test restart_evse for lines 603-604."""
+    charger = OpenEVSE("openevse.test.tld")
+    charger._config["version"] = "5.0.0"
+    charger.requester = MagicMock()
+    charger.requester.process_request = AsyncMock(return_value={"ok": False})
+    with pytest.raises(UnknownError):
+        await charger.restart_evse()
+
+
+async def test_client_led_brightness_errors():
+    """Test set_led_brightness for lines 638-639, 643-644."""
+    charger = OpenEVSE("openevse.test.tld")
+    charger._config["version"] = "4.1.0"
+    charger.requester = MagicMock()
+    charger.requester.process_request = AsyncMock(return_value={"ok": False})
+    with pytest.raises(UnknownError):
+        await charger.set_led_brightness(128)
+
+    charger.requester.process_request = AsyncMock(
+        return_value={"ok": True, "msg": "failed"}
+    )
+    with pytest.raises(UnknownError):
+        await charger.set_led_brightness(128)
+
+
+async def test_client_divert_mode_errors():
+    """Test set_divert_mode for lines 660-661."""
+    charger = OpenEVSE("openevse.test.tld")
+    charger.requester = MagicMock()
+    charger.requester.process_request = AsyncMock(return_value={"ok": False})
+    with pytest.raises(UnknownError):
+        await charger.set_divert_mode("fast")
+
+
+async def test_client_ws_start_active_tasks():
+    """Test ws_start with active tasks for line 203."""
+    charger = OpenEVSE("openevse.test.tld")
+    charger._loop = asyncio.get_running_loop()
+    charger.websocket = MagicMock()
+    charger.websocket.listen = AsyncMock()
+    charger.websocket.keepalive = AsyncMock()
+
+    task = asyncio.create_task(asyncio.sleep(0.1))
+    charger.tasks = [task]
+    # Hits elif active_tasks: path
+    await charger.ws_start()
+    assert task.cancelled()
+    assert len(charger.tasks) == 2  # listen and keepalive
+    for t in charger.tasks:
+        t.cancel()
+    await asyncio.gather(*charger.tasks, return_exceptions=True)
+    await asyncio.gather(task, return_exceptions=True)
+
+
+async def test_client_shaper_active_coverage():
+    """Test shaper_active property for coverage of lines 1044-1049."""
+    charger = OpenEVSE("openevse.test.tld")
+
+    # bool path (1044)
+    charger._status = {"shaper": True}
+    assert charger.shaper_active is True
+
+    # int path (1046)
+    charger._status = {"shaper": 1}
+    assert charger.shaper_active is True
+
+    # str path (1048)
+    charger._status = {"shaper": "true"}
+    assert charger.shaper_active is True
+    charger._status = {"shaper": "1"}
+    assert charger.shaper_active is True
+
+    # fallback path (1049)
+    charger._status = {"shaper": [123]}
+    assert charger.shaper_active is True
+
+
+async def test_client_lifecycle_branches():
+    """Test internal lifecycle branches for coverage of lines 211-217."""
+    charger = OpenEVSE("openevse.test.tld")
+    charger._loop = asyncio.get_running_loop()
+    charger.websocket = MagicMock()
+    charger.websocket.listen = AsyncMock()
+    charger.websocket.keepalive = AsyncMock()
+
+    # Trigger line 205-210 by having no tasks
+    charger.tasks = None
+    await charger.ws_start()
+    assert len(charger.tasks) == 2
+    for t in charger.tasks:
+        t.cancel()
+    await asyncio.gather(*charger.tasks, return_exceptions=True)
