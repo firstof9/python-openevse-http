@@ -267,14 +267,45 @@ async def test_toggle_override_partial_status(mock_aioclient):
     assert charger._status["state"] == 254
 
 
-async def test_set_override(
-    test_charger,
-    test_charger_legacy,
-    test_charger_unknown_semver,
-    mock_aioclient,
-    caplog,
+@pytest.mark.parametrize(
+    "args, kwargs, expected_log",
+    [
+        (
+            ("active",),
+            {},
+            "Override data: {'state': 'active', 'charge_current': 0, 'max_current': 0, 'energy_limit': 0, 'time_limit': 0, 'auto_release': True}",
+        ),
+        (
+            ("active", 30),
+            {},
+            "Override data: {'state': 'active', 'charge_current': 30, 'max_current': 0, 'energy_limit': 0, 'time_limit': 0, 'auto_release': True}",
+        ),
+        (
+            (),
+            {"charge_current": 30},
+            "Override data: {'state': 'active', 'charge_current': 30, 'max_current': 0, 'energy_limit': 0, 'time_limit': 0, 'auto_release': True}",
+        ),
+        (
+            ("active", 30, 32),
+            {},
+            "Override data: {'state': 'active', 'charge_current': 30, 'max_current': 32, 'energy_limit': 0, 'time_limit': 0, 'auto_release': True}",
+        ),
+        (
+            ("active", 30, 32, 2000),
+            {},
+            "Override data: {'state': 'active', 'charge_current': 30, 'max_current': 32, 'energy_limit': 2000, 'time_limit': 0, 'auto_release': True}",
+        ),
+        (
+            ("active", 30, 32, 2000, 5000),
+            {},
+            "Override data: {'state': 'active', 'charge_current': 30, 'max_current': 32, 'energy_limit': 2000, 'time_limit': 5000, 'auto_release': True}",
+        ),
+    ],
+)
+async def test_set_override_success(
+    test_charger, mock_aioclient, caplog, args, kwargs, expected_log
 ):
-    """Test set override function."""
+    """Test set override function with various parameters."""
     await test_charger.update()
     value = {
         "state": "active",
@@ -296,68 +327,34 @@ async def test_set_override(
         body='{"msg": "OK"}',
     )
     with caplog.at_level(logging.DEBUG):
-        status = await test_charger.set_override("active")
+        status = await test_charger.set_override(*args, **kwargs)
         assert status == {"msg": "OK"}
-        assert (
-            "Override data: {'state': 'active', 'charge_current': 0, 'max_current': 0, 'energy_limit': 0, 'time_limit': 0, 'auto_release': True}"
-            in caplog.text
-        )
-        caplog.clear()
+        assert expected_log in caplog.text
 
-        mock_aioclient.post(
-            TEST_URL_OVERRIDE,
-            status=200,
-            body='{"msg": "OK"}',
-        )
-        status = await test_charger.set_override("active", 30)
-        assert (
-            "Override data: {'state': 'active', 'charge_current': 30, 'max_current': 0, 'energy_limit': 0, 'time_limit': 0, 'auto_release': True}"
-            in caplog.text
-        )
-        caplog.clear()
-        mock_aioclient.post(
-            TEST_URL_OVERRIDE,
-            status=200,
-            body='{"msg": "OK"}',
-        )
-        status = await test_charger.set_override(charge_current=30)
-        assert (
-            "Override data: {'state': 'active', 'charge_current': 30, 'max_current': 0, 'energy_limit': 0, 'time_limit': 0, 'auto_release': True}"
-            in caplog.text
-        )
-        mock_aioclient.post(
-            TEST_URL_OVERRIDE,
-            status=200,
-            body='{"msg": "OK"}',
-        )
-        status = await test_charger.set_override("active", 30, 32)
-        assert (
-            "Override data: {'state': 'active', 'charge_current': 30, 'max_current': 32, 'energy_limit': 0, 'time_limit': 0, 'auto_release': True}"
-            in caplog.text
-        )
-        caplog.clear()
-        mock_aioclient.post(
-            TEST_URL_OVERRIDE,
-            status=200,
-            body='{"msg": "OK"}',
-        )
-        status = await test_charger.set_override("active", 30, 32, 2000)
-        assert (
-            "Override data: {'state': 'active', 'charge_current': 30, 'max_current': 32, 'energy_limit': 2000, 'time_limit': 0, 'auto_release': True}"
-            in caplog.text
-        )
-        caplog.clear()
-        mock_aioclient.post(
-            TEST_URL_OVERRIDE,
-            status=200,
-            body='{"msg": "OK"}',
-        )
-        status = await test_charger.set_override("active", 30, 32, 2000, 5000)
-        assert (
-            "Override data: {'state': 'active', 'charge_current': 30, 'max_current': 32, 'energy_limit': 2000, 'time_limit': 5000, 'auto_release': True}"
-            in caplog.text
-        )
 
+async def test_set_override_errors(
+    test_charger,
+    test_charger_legacy,
+    test_charger_unknown_semver,
+    mock_aioclient,
+    caplog,
+):
+    """Test set override function errors."""
+    await test_charger.update()
+    value = {
+        "state": "active",
+        "charge_current": 0,
+        "max_current": 0,
+        "energy_limit": 0,
+        "time_limit": 0,
+        "auto_release": True,
+    }
+    mock_aioclient.get(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body=json.dumps(value),
+        repeat=True,
+    )
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(ValueError):
             await test_charger.set_override("invalid")

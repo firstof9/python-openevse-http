@@ -876,9 +876,13 @@ class OpenEVSE:
     def ambient_temperature(self) -> float | None:
         """Return the temperature of the ambient sensor, in degrees Celsius."""
         temp = self._status.get("temp")
-        if temp is not None:
-            return temp / 10
-        return self._status.get("temp1", 0) / 10
+        if temp is not None and not isinstance(temp, bool):
+            return float(temp) / 10
+
+        temp1 = self._status.get("temp1")
+        if temp1 is not None and not isinstance(temp1, bool):
+            return float(temp1) / 10
+        return None
 
     @property
     def rtc_temperature(self) -> float | None:
