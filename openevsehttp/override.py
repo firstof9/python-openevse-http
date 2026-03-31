@@ -119,6 +119,7 @@ class Override:
             _LOGGER.debug(
                 "Toggling manual override via RAPI. Current state: %s", int_state
             )
+            # 254 represents the "sleeping" state
             command = "$FE" if int_state == 254 else "$FS"
             rapi_response = await self._evse.send_command(command)
             if isinstance(rapi_response, dict):

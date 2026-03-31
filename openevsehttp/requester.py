@@ -97,7 +97,9 @@ class Requester:
             method,
         )
         try:
-            kwargs = {"data": rapi, "auth": auth}
+            kwargs = {"auth": auth}
+            if rapi is not None:
+                kwargs["data"] = rapi
             if data is not None:
                 kwargs["json"] = data
             async with http_method(url, **kwargs) as resp:

@@ -218,6 +218,12 @@ def test_charger_legacy(mock_aioclient):
         status=200,
         body=load_fixture("v_legacy_json/config.json"),
     )
+    mock_aioclient.get(
+        TEST_URL_WS,
+        status=200,
+        body=load_fixture("v_legacy_json/status.json"),
+        repeat=True,
+    )
     return main.OpenEVSE(TEST_TLD)
 
 
