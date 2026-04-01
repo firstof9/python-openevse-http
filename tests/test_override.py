@@ -600,6 +600,35 @@ async def test_override_failure_logic(mock_aioclient):
         await charger.clear_override()
 
 
+async def test_set_override_post_failure(test_charger, mock_aioclient, caplog):
+    """Verify that set_override raises UnknownError when the POST response indicates failure."""
+    await test_charger.update()
+    test_charger.requester._update_callback = None
+    value = {
+        "state": "active",
+        "charge_current": 0,
+        "max_current": 0,
+        "energy_limit": 0,
+        "time_limit": 0,
+        "auto_release": True,
+    }
+    mock_aioclient.get(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body=json.dumps(value),
+        repeat=True,
+    )
+    mock_aioclient.post(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body='{"ok": false, "msg": "failed"}',
+    )
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(UnknownError):
+            await test_charger.set_override("active")
+    assert "Problem setting override." in caplog.text
+
+
 async def test_clear_override_non_dict_response(test_charger, caplog):
     """Verify that clear_override() handles non-dictionary responses gracefully."""
     with patch.object(test_charger, "_version_check", return_value=True):
