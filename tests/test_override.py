@@ -17,6 +17,7 @@ pytestmark = pytest.mark.asyncio
 async def test_toggle_override_base(test_charger, mock_aioclient, caplog):
     """Verify toggle_override correctly sends the manual override request."""
     await test_charger.update()
+    test_charger.requester.set_update_callback(None)
     mock_aioclient.patch(
         TEST_URL_OVERRIDE,
         status=200,
@@ -32,6 +33,7 @@ async def test_toggle_override_base(test_charger, mock_aioclient, caplog):
 async def test_toggle_override_dev(test_charger_dev, mock_aioclient, caplog):
     """Test toggle override with dev version."""
     await test_charger_dev.update()
+    test_charger_dev.requester.set_update_callback(None)
     mock_aioclient.patch(
         TEST_URL_OVERRIDE,
         status=200,
@@ -48,6 +50,7 @@ async def test_toggle_override_dev(test_charger_dev, mock_aioclient, caplog):
 async def test_toggle_override_new(test_charger_new, mock_aioclient, caplog):
     """Test toggle override with new features."""
     await test_charger_new.update()
+    test_charger_new.requester.set_update_callback(None)
     value = {
         "state": "active",
         "charge_current": 0,
@@ -88,6 +91,7 @@ async def test_toggle_override_modified_ver(
 ):
     """Test toggle override with modified version string."""
     await test_charger_modified_ver.update()
+    test_charger_modified_ver.requester.set_update_callback(None)
     value = {
         "state": "disabled",
         "charge_current": 0,
@@ -196,9 +200,14 @@ async def test_toggle_override_empty_status(
     test_charger_legacy._status = {}
 
     # Mock Update calls
-    mock_aioclient.get(f"http://{SERVER_URL}/status", status=200, body='{"state": 1}')
     mock_aioclient.get(
-        f"http://{SERVER_URL}/config", status=200, body='{"version": "2.9.1"}'
+        f"http://{SERVER_URL}/status", status=200, body='{"state": 1}', repeat=True
+    )
+    mock_aioclient.get(
+        f"http://{SERVER_URL}/config",
+        status=200,
+        body='{"version": "2.9.1"}',
+        repeat=True,
     )
 
     # Mock toggle call

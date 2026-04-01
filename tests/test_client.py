@@ -709,6 +709,7 @@ async def test_set_current_v2(
 ):
     """Verify that set_current correctly uses the RAPI interface for older firmware versions."""
     await test_charger_v2.update()
+    test_charger_v2.requester.set_update_callback(None)
     value = {"cmd": "OK", "ret": "$OK"}
     mock_aioclient.post(
         "http://openevse.test.tld/r",
@@ -842,6 +843,7 @@ async def test_evse_restart(
 ):
     """Verify that restart_evse correctly sends the restart command to the EVSE module."""
     await test_charger_v2.update()
+    test_charger_v2.requester.set_update_callback(None)
     value = {"cmd": "OK", "ret": "$OK"}
     mock_aioclient.post(
         "http://openevse.test.tld/r",

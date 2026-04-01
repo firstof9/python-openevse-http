@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import datetime
+import inspect
 import logging
 from collections.abc import Callable, Mapping
 from typing import Any
@@ -88,7 +89,7 @@ class OpenEVSE:
 
         # Modules
         self.requester = Requester(host, user, pwd, session)
-        self.requester.set_update_callback(self.update)
+        self.requester.set_update_callback(self.full_refresh)
         self.firmware = Firmware(self)
         self.override = Override(self)
         self.limit = Limit(self)
@@ -111,12 +112,13 @@ class OpenEVSE:
         """Send a RAPI command to the charger and parses the response."""
         return await self.requester.send_command(command)
 
-    async def update(self) -> None:
+    async def update(self, force_full: bool = False) -> None:
         """Update the values."""
-        # TODO: add additional endpoints to update
+        # By default, only refresh /status if websocket is not active.
+        # force_full override this behavior.
         urls = [f"{self.url}config"]
 
-        if not self._ws_listening:
+        if not self._ws_listening or force_full:
             urls = [f"{self.url}status", f"{self.url}config"]
 
         for url in urls:
@@ -256,9 +258,13 @@ class OpenEVSE:
             if "wh" in keys:
                 data["watthour"] = data.pop("wh")
             # TODO: update specific endpoints based on _version prefix
-            if any(key in keys for key in UPDATE_TRIGGERS):
+            if (
+                any(key in keys for key in UPDATE_TRIGGERS)
+                or data.get("ret") == "$OK"
+                or "cmd" in keys
+            ):
                 try:
-                    await self.update()
+                    await self.update(force_full=True)
                 except Exception as err:  # pylint: disable=broad-exception-caught
                     _LOGGER.error(
                         "Update failed during websocket push (triggers: %s): %s",
@@ -280,6 +286,21 @@ class OpenEVSE:
         """Set the update callback."""
         self.callback = callback
 
+    async def full_refresh(self) -> None:
+        """Force a full refresh of all data and notify callback."""
+        _LOGGER.debug("Forced full refresh.")
+        await self.update(force_full=True)
+        if self.callback is not None:
+            try:
+                if self.is_coroutine_function(self.callback):
+                    await self.callback()  # pylint: disable=not-callable
+                else:
+                    self.callback()  # pylint: disable=not-callable
+            except Exception as err:  # pylint: disable=broad-exception-caught
+                _LOGGER.exception(
+                    "Exception in user callback during full-refresh: %s", err
+                )
+
     async def ws_disconnect(self) -> None:
         """Disconnect the websocket listener (idempotent)."""
         if not self._ws_listening and not self.tasks and self.websocket is None:
@@ -300,7 +321,7 @@ class OpenEVSE:
 
     def is_coroutine_function(self, callback):
         """Check if a callback is a coroutine function."""
-        return asyncio.iscoroutinefunction(callback)
+        return inspect.iscoroutinefunction(callback)
 
     @property
     def ws_state(self) -> Any:
