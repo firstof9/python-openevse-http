@@ -120,7 +120,7 @@ async def test_auth_empty_password(mock_callback):
     ):
         await client.running()
 
-        args, kwargs = mock_connect.call_args
+        _, kwargs = mock_connect.call_args
         auth = kwargs.get("auth")
         assert auth is not None
         assert auth.login == "admin"
