@@ -2342,3 +2342,55 @@ async def test_client_lifecycle_branches():
     for t in charger.tasks:
         t.cancel()
     await asyncio.gather(*charger.tasks, return_exceptions=True)
+
+
+async def test_client_update_non_dict_response(test_charger, caplog):
+    """Verify that update() handles non-dictionary responses gracefully."""
+    # Mock self.process_request to return a string directly, bypassing Requester's dict-wrapping
+    with patch.object(
+        test_charger, "process_request", AsyncMock(return_value="Not a dictionary")
+    ):
+        with caplog.at_level(logging.WARNING):
+            await test_charger.update(force_full=True)
+    assert (
+        "Unexpected non-dict response from http://openevse.test.tld/status: Not a dictionary"
+        in caplog.text
+    )
+
+
+async def test_client_full_refresh_callbacks(test_charger, mock_aioclient, caplog):
+    """Verify that full_refresh() executes user callbacks and handles exceptions."""
+    # Mock data to allow update() to succeed
+    mock_aioclient.get(
+        "http://openevse.test.tld/status",
+        status=200,
+        body='{"state": 1, "ok": True}',
+        repeat=True,
+    )
+    mock_aioclient.get(
+        "http://openevse.test.tld/config",
+        status=200,
+        body='{"version": "4.0.1", "ok": True}',
+        repeat=True,
+    )
+
+    # 1. Test async callback
+    async_cb = AsyncMock()
+    test_charger.set_update_callback(async_cb)
+    await test_charger.full_refresh()
+    async_cb.assert_awaited_once()
+
+    # 2. Test sync callback
+    sync_cb = MagicMock()
+    test_charger.set_update_callback(sync_cb)
+    await test_charger.full_refresh()
+    sync_cb.assert_called_once()
+
+    # 3. Test callback exception
+    error_cb = MagicMock(side_effect=Exception("Callback failed"))
+    test_charger.set_update_callback(error_cb)
+    with caplog.at_level(logging.ERROR):
+        await test_charger.full_refresh()
+    assert (
+        "Exception in user callback during full-refresh: Callback failed" in caplog.text
+    )

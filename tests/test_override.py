@@ -3,6 +3,7 @@
 import json
 import logging
 from unittest import mock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from aiohttp.client_exceptions import ContentTypeError
@@ -583,3 +584,19 @@ async def test_override_failure_logic(mock_aioclient):
     )
     with pytest.raises(UnknownError):
         await charger.clear_override()
+
+
+async def test_clear_override_non_dict_response(test_charger, caplog):
+    """Verify that clear_override() handles non-dictionary responses gracefully."""
+    with patch.object(test_charger, "_version_check", return_value=True):
+        # Mock self.process_request to return a string directly
+        with patch.object(
+            test_charger, "process_request", AsyncMock(return_value="Not a dictionary")
+        ):
+            with caplog.at_level(logging.ERROR):
+                with pytest.raises(UnknownError):
+                    await test_charger.clear_override()
+    assert (
+        "Unexpected non-dict response clearing override: Not a dictionary"
+        in caplog.text
+    )
