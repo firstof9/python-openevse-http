@@ -59,7 +59,7 @@ class Requester:
             raise MissingMethod
         method = method.lower()
 
-        if self._user and self._pwd:
+        if self._user:
             auth = aiohttp.BasicAuth(self._user, self._pwd)
 
         if data is not None and rapi is not None:

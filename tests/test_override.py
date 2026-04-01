@@ -566,7 +566,18 @@ async def test_override_failure_logic(mock_aioclient):
         f"http://{SERVER_URL}/config", status=200, body='{"version": "4.1.0"}'
     )
     mock_aioclient.get(
-        f"http://{SERVER_URL}/override", status=200, body='{"state": "disabled"}'
+        f"http://{SERVER_URL}/override",
+        status=200,
+        body=json.dumps(
+            {
+                "state": "disabled",
+                "charge_current": 0,
+                "max_current": 0,
+                "energy_limit": 0,
+                "time_limit": 0,
+                "auto_release": True,
+            }
+        ),
     )
 
     charger = OpenEVSE(SERVER_URL)

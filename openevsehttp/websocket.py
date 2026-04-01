@@ -84,7 +84,7 @@ class OpenEVSEWebsocket:
         await self._set_state(STATE_STARTING)
         auth = None
 
-        if self._user and self._password:
+        if self._user:
             auth = aiohttp.BasicAuth(self._user, self._password)
 
         try:

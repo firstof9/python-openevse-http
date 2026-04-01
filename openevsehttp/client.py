@@ -192,8 +192,8 @@ class OpenEVSE:
 
     async def _start_listening(self):
         """Websocket setup."""
-        if not self.websocket:
-            _LOGGER.debug("Websocket not initialized, creating...")
+        if not self.websocket or self.websocket.state == STATE_STOPPED:
+            _LOGGER.debug("Websocket not initialized or stopped, creating...")
             self.websocket = OpenEVSEWebsocket(
                 self.url, self._update_status, self._user, self._pwd, self._session
             )

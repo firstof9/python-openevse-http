@@ -1600,7 +1600,7 @@ async def test_extra_coverage_edge_cases(mock_aioclient, caplog):
         caplog.at_level(logging.DEBUG),
     ):
         await charger.ws_start()
-        assert "Websocket not initialized, creating..." in caplog.text
+        assert "Websocket not initialized or stopped, creating..." in caplog.text
 
         # Now task is active. Call ws_start AGAIN to trigger orphan check.
         # Force _ws_listening to False so it attempts setup again
@@ -1707,6 +1707,17 @@ async def test_extra_coverage_edge_cases(mock_aioclient, caplog):
     charger._ws_listening = True
     with pytest.raises(AlreadyListening):
         await charger.ws_start()
+
+    # Verify recreation of stopped websocket (fix for reuse bug)
+    charger.websocket.state = STATE_STOPPED
+    first_ws = charger.websocket
+    await charger.ws_start()
+    assert charger.websocket is not first_ws
+    # Cleanup tasks from the new websocket
+    for task in list(charger.tasks):
+        task.cancel()
+    await asyncio.gather(*charger.tasks, return_exceptions=True)
+    charger.tasks = set()
 
     # Verify idempotence on a fresh instance
     charger_fresh = OpenEVSE(SERVER_URL)
