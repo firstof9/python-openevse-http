@@ -110,11 +110,13 @@ def test_charger_new(mock_aioclient):
         TEST_URL_STATUS,
         status=200,
         body=load_fixture("v4_json/status-new.json"),
+        repeat=True,
     )
     mock_aioclient.get(
         TEST_URL_CONFIG,
         status=200,
         body=load_fixture("v4_json/config-new.json"),
+        repeat=True,
     )
     mock_aioclient.get(
         TEST_URL_WS,
@@ -212,11 +214,13 @@ def test_charger_legacy(mock_aioclient):
         TEST_URL_STATUS,
         status=200,
         body=load_fixture("v_legacy_json/status.json"),
+        repeat=True,
     )
     mock_aioclient.get(
         TEST_URL_CONFIG,
         status=200,
         body=load_fixture("v_legacy_json/config.json"),
+        repeat=True,
     )
     mock_aioclient.get(
         TEST_URL_WS,

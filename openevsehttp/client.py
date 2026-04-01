@@ -118,7 +118,12 @@ class OpenEVSE:
         # force_full override this behavior.
         urls = [f"{self.url}config"]
 
-        if not self._ws_listening or force_full:
+        if (
+            not self._ws_listening
+            or force_full
+            or not self._status
+            or "state" not in self._status
+        ):
             urls = [f"{self.url}status", f"{self.url}config"]
 
         for url in urls:
@@ -689,6 +694,8 @@ class OpenEVSE:
         if result != "Divert Mode changed":
             _LOGGER.error("Problem issuing command. Response: %s", response)
             raise UnknownError
+
+        await self.full_refresh()
 
     # Properties
     @property

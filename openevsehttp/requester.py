@@ -136,7 +136,7 @@ class Requester:
                     return message
 
                 if (
-                    method in ("post", "patch", "put")
+                    method in ("post", "patch", "put", "delete")
                     and isinstance(message, dict)
                     and message.get("ok", True) is not False
                     and self._update_callback

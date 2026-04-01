@@ -1445,6 +1445,7 @@ async def test_led_brightness(mock_aioclient):
     charger._config["version"] = "4.1.0"
     charger._config["led_brightness"] = 128
     mock_aioclient.post(TEST_URL_CONFIG, status=200, body='{"msg": "done"}')
+    charger.requester._update_callback = None
     await charger.set_led_brightness(255)
     assert charger.led_brightness == 128
 
@@ -1458,10 +1459,11 @@ async def test_set_divert_mode(mock_aioclient):
         await charger.set_divert_mode("invalid")
 
     # Success
-    mock_aioclient.post(
-        f"http://{SERVER_URL}/divertmode", status=200, body="Divert Mode changed"
-    )
-    await charger.set_divert_mode("eco")
+    with patch.object(charger, "full_refresh", AsyncMock()):
+        mock_aioclient.post(
+            f"http://{SERVER_URL}/divertmode", status=200, body="Divert Mode changed"
+        )
+        await charger.set_divert_mode("eco")
 
     # Failure
     mock_aioclient.post(f"http://{SERVER_URL}/divertmode", status=200, body="Error")

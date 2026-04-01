@@ -122,6 +122,7 @@ async def test_toggle_override_modified_ver(
 async def test_toggle_override_v2(test_charger_legacy, mock_aioclient, caplog):
     """Test legacy toggle override."""
     await test_charger_legacy.update()
+    test_charger_legacy.requester._update_callback = None
     value = {"cmd": "OK", "ret": "$OK"}
     mock_aioclient.post(
         TEST_URL_RAPI,
@@ -318,6 +319,7 @@ async def test_set_override_success(
 ):
     """Verify that set_override correctly sends various override parameters to the device."""
     await test_charger.update()
+    test_charger.requester._update_callback = None
     value = {
         "state": "active",
         "charge_current": 0,
@@ -437,6 +439,7 @@ async def test_get_override(test_charger, test_charger_legacy, mock_aioclient, c
 async def test_set_override_partial(test_charger, mock_aioclient, caplog):
     """Verify that set_override correctly merges partial updates with current override state."""
     await test_charger.update()
+    test_charger.requester._update_callback = None
     value = {
         "state": "active",
         "charge_current": 32,
