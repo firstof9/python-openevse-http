@@ -31,7 +31,7 @@ async def test_firmware_check(
     mock_aioclient,
     caplog,
 ):
-    """Test v4 Status reply."""
+    """Verify firmware check correctly identifies latest version from GitHub."""
     await test_charger.update()
     mock_aioclient.get(
         TEST_URL_GITHUB_v4,
@@ -121,7 +121,7 @@ async def test_firmware_check(
 
 
 async def test_version_check(test_charger_new, mock_aioclient, caplog):
-    """Test version check function."""
+    """Verify that _version_check correctly parses and compares semantic versions."""
     await test_charger_new.update()
 
     result = test_charger_new._version_check("4.0.0")
@@ -144,7 +144,7 @@ async def test_version_check(test_charger_new, mock_aioclient, caplog):
 
 
 async def test_firmware_check_no_config():
-    """Test firmware_check when config is not loaded."""
+    """Ensure firmware_check fails appropriately if config was not loaded."""
     charger = OpenEVSE(SERVER_URL)
 
     result = await charger.firmware_check()
@@ -153,7 +153,7 @@ async def test_firmware_check_no_config():
 
 
 async def test_firmware_check_no_firmware_version(mock_aioclient):
-    """Test firmware_check when firmware_version is missing."""
+    """Ensure firmware_check fails appropriately if firmware_version is missing in config."""
     mock_aioclient.get(
         TEST_URL_STATUS,
         status=200,
@@ -174,7 +174,7 @@ async def test_firmware_check_no_firmware_version(mock_aioclient):
 
 
 async def test_firmware_check_github_api_error(mock_aioclient):
-    """Test firmware_check when GitHub API fails."""
+    """Ensure firmware_check handles GitHub API failures gracefully."""
     mock_aioclient.get(
         TEST_URL_STATUS,
         status=200,
@@ -201,7 +201,7 @@ async def test_firmware_check_github_api_error(mock_aioclient):
 
 
 async def test_version_check_exceptions():
-    """Test _version_check exception paths."""
+    """Verify _version_check handles invalid version strings gracefully."""
     charger = OpenEVSE(SERVER_URL)
 
     # Trigger re.search Exception
@@ -219,7 +219,7 @@ async def test_version_check_exceptions():
 
 
 async def test_version_check_master():
-    """Test _version_check with 'master' in version."""
+    """Verify that 'master' version string is correctly handled (ordered correctly)."""
     charger = OpenEVSE(SERVER_URL)
     charger._config = {"version": "v4.0.1.master"}
     # This should set value to "dev"
@@ -227,7 +227,7 @@ async def test_version_check_master():
 
 
 async def test_version_check_limit():
-    """Test _version_check with max_version."""
+    """Verify max_version restriction in _version_check if provided."""
     charger = OpenEVSE(SERVER_URL)
     charger._config = {"version": "2.9.1"}
     assert charger._version_check("2.0.0", "3.0.0") is True
@@ -238,7 +238,7 @@ async def test_version_check_limit():
 
 
 async def test_firmware_check_external_session(mock_aioclient):
-    """Test firmware_check with an external session."""
+    """Verify firmware_check correctly utilizes external session when provided."""
     mock_aioclient.get(
         "http://openevse.test.tld/status",
         status=200,

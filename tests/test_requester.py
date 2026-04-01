@@ -25,7 +25,7 @@ pytestmark = pytest.mark.asyncio
 
 
 async def test_get_status_auth(test_charger_auth):
-    """Test v4 Status reply."""
+    """Verify status retrieval when authentication is enabled."""
     await test_charger_auth.update()
     status = test_charger_auth.status
     assert status == "sleeping"
@@ -33,7 +33,7 @@ async def test_get_status_auth(test_charger_auth):
 
 
 async def test_get_status_auth_err(test_charger_auth_err):
-    """Test v4 Status reply."""
+    """Ensure update() raises AuthenticationError on 401 status."""
     pre_state = test_charger_auth_err.state
     with pytest.raises(main.AuthenticationError):
         await test_charger_auth_err.update()
@@ -41,7 +41,7 @@ async def test_get_status_auth_err(test_charger_auth_err):
 
 
 async def test_send_command(test_charger, mock_aioclient):
-    """Test v4 Status reply."""
+    """Verify successful RAPI command execution and response parsing."""
     value = {"cmd": "OK", "ret": "$OK"}
     mock_aioclient.post(
         TEST_URL_RAPI,
@@ -53,7 +53,7 @@ async def test_send_command(test_charger, mock_aioclient):
 
 
 async def test_send_command_failed(test_charger, mock_aioclient):
-    """Test v4 Status reply."""
+    """Ensure send_command correctly handles RAPI failure responses."""
     value = {"cmd": "OK", "ret": "$NK^21"}
     mock_aioclient.post(
         TEST_URL_RAPI,
@@ -65,7 +65,7 @@ async def test_send_command_failed(test_charger, mock_aioclient):
 
 
 async def test_send_command_missing(test_charger, mock_aioclient):
-    """Test v4 Status reply."""
+    """Handle RAPI responses that are missing the expected return key."""
     value = {"cmd": "OK", "what": "$NK^21"}
     mock_aioclient.post(
         TEST_URL_RAPI,
@@ -77,7 +77,7 @@ async def test_send_command_missing(test_charger, mock_aioclient):
 
 
 async def test_send_command_auth(test_charger_auth, mock_aioclient):
-    """Test v4 Status reply."""
+    """Verify RAPI command execution when authentication is configured."""
     value = {"cmd": "OK", "ret": "$OK"}
     mock_aioclient.post(
         TEST_URL_RAPI,
@@ -89,7 +89,7 @@ async def test_send_command_auth(test_charger_auth, mock_aioclient):
 
 
 async def test_send_command_parse_err(test_charger_auth, mock_aioclient):
-    """Test v4 Status reply."""
+    """Ensure 400 status on RAPI commands raises ParseJSONError with details."""
     mock_aioclient.post(
         TEST_URL_RAPI, status=400, body='{"msg": "Could not parse JSON"}'
     )
@@ -131,7 +131,7 @@ async def test_non_json_response():
 
 
 async def test_send_command_auth_err(test_charger_auth, mock_aioclient):
-    """Test v4 Status reply."""
+    """Verify 401 status on RAPI commands raises AuthenticationError."""
     mock_aioclient.post(
         TEST_URL_RAPI,
         status=401,
@@ -141,7 +141,7 @@ async def test_send_command_auth_err(test_charger_auth, mock_aioclient):
 
 
 async def test_send_command_async_timeout(test_charger_auth, mock_aioclient, caplog):
-    """Test v4 Status reply."""
+    """Ensure asyncio.TimeoutError is logged and re-raised."""
     mock_aioclient.post(
         TEST_URL_RAPI,
         exception=asyncio.TimeoutError,
@@ -153,7 +153,7 @@ async def test_send_command_async_timeout(test_charger_auth, mock_aioclient, cap
 
 
 async def test_send_command_server_timeout(test_charger_auth, mock_aioclient, caplog):
-    """Test v4 Status reply."""
+    """Verify ServerTimeoutError is logged and re-raised with the target URL."""
     mock_aioclient.post(
         TEST_URL_RAPI,
         exception=ServerTimeoutError,

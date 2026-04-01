@@ -14,15 +14,8 @@ from tests.const import SERVER_URL, TEST_URL_OVERRIDE, TEST_URL_RAPI
 pytestmark = pytest.mark.asyncio
 
 
-async def test_toggle_override(
-    test_charger,
-    test_charger_dev,
-    test_charger_new,
-    test_charger_modified_ver,
-    mock_aioclient,
-    caplog,
-):
-    """Test v4 Status reply."""
+async def test_toggle_override_base(test_charger, mock_aioclient, caplog):
+    """Verify toggle_override correctly sends the manual override request."""
     await test_charger.update()
     mock_aioclient.patch(
         TEST_URL_OVERRIDE,
@@ -30,25 +23,31 @@ async def test_toggle_override(
         body="OK",
         repeat=True,
     )
-    mock_aioclient.post(
-        TEST_URL_OVERRIDE,
-        status=200,
-        body='{"msg": "OK"}',
-        repeat=True,
-    )
     with caplog.at_level(logging.DEBUG):
         await test_charger.toggle_override()
     assert "Toggling manual override http" in caplog.text
     await test_charger.ws_disconnect()
 
+
+async def test_toggle_override_dev(test_charger_dev, mock_aioclient, caplog):
+    """Test toggle override with dev version."""
     await test_charger_dev.update()
-    caplog.clear()
+    mock_aioclient.patch(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body="OK",
+        repeat=True,
+    )
     with caplog.at_level(logging.DEBUG):
         await test_charger_dev.toggle_override()
     assert "Stripping 'dev' from version." in caplog.text
     assert "Toggling manual override http" in caplog.text
     await test_charger_dev.ws_disconnect()
 
+
+async def test_toggle_override_new(test_charger_new, mock_aioclient, caplog):
+    """Test toggle override with new features."""
+    await test_charger_new.update()
     value = {
         "state": "active",
         "charge_current": 0,
@@ -62,35 +61,33 @@ async def test_toggle_override(
         status=200,
         body=json.dumps(value),
     )
+    mock_aioclient.patch(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body="OK",
+        repeat=True,
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_new.toggle_override()
+    assert "Toggling manual override http" in caplog.text
 
-    await test_charger_new.update()
-    caplog.clear()
+    value["state"] = "disabled"
+    mock_aioclient.get(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body=json.dumps(value),
+    )
     with caplog.at_level(logging.DEBUG):
         await test_charger_new.toggle_override()
     assert "Toggling manual override http" in caplog.text
     await test_charger_new.ws_disconnect()
 
-    value = {
-        "state": "disabled",
-        "charge_current": 0,
-        "max_current": 0,
-        "energy_limit": 0,
-        "time_limit": 0,
-        "auto_release": True,
-    }
-    mock_aioclient.get(
-        TEST_URL_OVERRIDE,
-        status=200,
-        body=json.dumps(value),
-    )
 
-    caplog.clear()
-    with caplog.at_level(logging.DEBUG):
-        await test_charger_new.toggle_override()
-    assert "Toggling manual override http" in caplog.text
-
+async def test_toggle_override_modified_ver(
+    test_charger_modified_ver, mock_aioclient, caplog
+):
+    """Test toggle override with modified version string."""
     await test_charger_modified_ver.update()
-
     value = {
         "state": "disabled",
         "charge_current": 0,
@@ -104,8 +101,12 @@ async def test_toggle_override(
         status=200,
         body=json.dumps(value),
     )
-
-    caplog.clear()
+    mock_aioclient.patch(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body="OK",
+        repeat=True,
+    )
     with caplog.at_level(logging.DEBUG):
         await test_charger_modified_ver.toggle_override()
         assert "Detected firmware: v5.0.1_modified" in caplog.text
@@ -190,7 +191,7 @@ async def test_toggle_override_v2_transport_fail(
 async def test_toggle_override_empty_status(
     test_charger_legacy, mock_aioclient, caplog
 ):
-    """Test toggle with empty status (line 94-95)."""
+    """Verify that toggle_override updates status if it is empty before continuing."""
     # Force empty status
     test_charger_legacy._status = {}
 
@@ -212,7 +213,7 @@ async def test_toggle_override_empty_status(
 
 
 async def test_toggle_override_missing_state_after_update(mock_aioclient, caplog):
-    """Test toggle when state is still missing after update."""
+    """Ensure toggle_override raises UnknownError if state remains missing after update."""
     charger = OpenEVSE(SERVER_URL)
     charger._config["version"] = "2.9.0"
     charger._status = {}
@@ -228,7 +229,7 @@ async def test_toggle_override_missing_state_after_update(mock_aioclient, caplog
 
 
 async def test_toggle_override_state_zero(mock_aioclient, caplog):
-    """Test toggle when state is 0 (Unknown)."""
+    """Ensure toggle_override raises UnknownError if state is 0 (unknown)."""
     charger = OpenEVSE(SERVER_URL)
     charger._config["version"] = "2.9.0"
     charger._status = {"state": 0}
@@ -245,7 +246,7 @@ async def test_toggle_override_state_zero(mock_aioclient, caplog):
 
 
 async def test_toggle_override_partial_status(mock_aioclient):
-    """Test toggle when status exists but state is missing."""
+    """Verify that toggle_override handles status with missing state key by refreshing."""
     charger = OpenEVSE(SERVER_URL)
     charger._config["version"] = "2.9.0"
     charger._status = {"other": 1}  # Existing but incomplete status
@@ -305,7 +306,7 @@ async def test_toggle_override_partial_status(mock_aioclient):
 async def test_set_override_success(
     test_charger, mock_aioclient, caplog, args, kwargs, expected_log
 ):
-    """Test set override function with various parameters."""
+    """Verify that set_override correctly sends various override parameters to the device."""
     await test_charger.update()
     value = {
         "state": "active",
@@ -339,7 +340,7 @@ async def test_set_override_errors(
     mock_aioclient,
     caplog,
 ):
-    """Test set override function errors."""
+    """Ensure set_override raises appropriate exceptions for invalid states or unsupported firmware."""
     await test_charger.update()
     value = {
         "state": "active",
@@ -378,7 +379,7 @@ async def test_set_override_errors(
 async def test_clear_override(
     test_charger, test_charger_legacy, mock_aioclient, caplog
 ):
-    """Test clear override function."""
+    """Verify that clear_override correctly sends the DELETE request to remove manual overrides."""
     await test_charger.update()
     mock_aioclient.delete(
         TEST_URL_OVERRIDE,
@@ -397,7 +398,7 @@ async def test_clear_override(
 
 
 async def test_get_override(test_charger, test_charger_legacy, mock_aioclient, caplog):
-    """Test get override function."""
+    """Verify that get_override correctly retrieves the current manual override configuration."""
     await test_charger.update()
     value = {
         "state": "active",
@@ -424,7 +425,7 @@ async def test_get_override(test_charger, test_charger_legacy, mock_aioclient, c
 
 
 async def test_set_override_partial(test_charger, mock_aioclient, caplog):
-    """Test partial override updates."""
+    """Verify that set_override correctly merges partial updates with current override state."""
     await test_charger.update()
     value = {
         "state": "active",
@@ -460,7 +461,7 @@ async def test_set_override_partial(test_charger, mock_aioclient, caplog):
 
 
 async def test_clear_override_non_dict(test_charger, mock_aioclient, caplog):
-    """Test clear override with non-dict response."""
+    """Verify that clear_override handles non-JSON responses from the clear endpoint."""
     await test_charger.update()
     mock_aioclient.delete(
         TEST_URL_OVERRIDE,
@@ -503,7 +504,7 @@ async def test_set_override_get_missing_state(test_charger, mock_aioclient, capl
 async def test_toggle_override_v2_string_state(
     test_charger_legacy, mock_aioclient, caplog
 ):
-    """Test v4 Status reply with string-based state (coercion)."""
+    """Verify that manual_override correctly coerces string-based 'active' state to boolean True."""
     await test_charger_legacy.update()
     # Mock state as a string
     test_charger_legacy._status["state"] = "254"
@@ -520,7 +521,7 @@ async def test_toggle_override_v2_string_state(
 
 
 async def test_toggle_override_v2_invalid_state(test_charger_legacy, caplog):
-    """Test v4 Status reply with invalid state (coercion error)."""
+    """Verify that manual_override returns False and logs a warning for unexpected state values."""
     await test_charger_legacy.update()
     # Mock state as invalid string
     test_charger_legacy._status["state"] = "not-an-int"
@@ -532,7 +533,7 @@ async def test_toggle_override_v2_invalid_state(test_charger_legacy, caplog):
 
 
 async def test_override_failure_logic(mock_aioclient):
-    """Test 'ok: False' paths in override.py via OpenEVSE client proxy methods."""
+    """Verify 'ok: False' error handling across all override operations."""
     # Initial status/config/override calls for update()
     mock_aioclient.get(
         f"http://{SERVER_URL}/status", status=200, body='{"status": "sleeping"}'

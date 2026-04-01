@@ -115,7 +115,17 @@ async def test_websocket_uses_external_session(mock_aioclient):
     # Create a real session for testing
     async with aiohttp.ClientSession() as session:
         # Create OpenEVSE instance with external session
-        with patch("openevsehttp.__main__.OpenEVSE.repeat", return_value=AsyncMock()):
+        with (
+            patch("openevsehttp.__main__.OpenEVSE.repeat", return_value=AsyncMock()),
+            patch(
+                "openevsehttp.websocket.OpenEVSEWebsocket.listen",
+                new_callable=AsyncMock,
+            ),
+            patch(
+                "openevsehttp.websocket.OpenEVSEWebsocket.keepalive",
+                new_callable=AsyncMock,
+            ),
+        ):
             charger = OpenEVSE(TEST_TLD, session=session)
 
             # Initialize websocket lazily

@@ -138,8 +138,12 @@ class Requester:
                 if (
                     method in ("post", "patch", "put")
                     and isinstance(message, dict)
-                    and any(key in message for key in UPDATE_TRIGGERS)
+                    and message.get("ok", True) is not False
                     and self._update_callback
+                    and (
+                        any(key in message for key in UPDATE_TRIGGERS)
+                        or message.get("msg") in ("done", "no change", "OK")
+                    )
                 ):
                     if self._invoking_callback:
                         self._pending_refresh = True
