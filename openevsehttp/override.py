@@ -47,7 +47,19 @@ class Override:
         url = f"{self._evse.url}override"
 
         data: dict[str, Any] = await self.get()
-        if not isinstance(data, dict) or data.get("ok") is False or "state" not in data:
+        required_keys = [
+            "state",
+            "charge_current",
+            "max_current",
+            "energy_limit",
+            "time_limit",
+            "auto_release",
+        ]
+        if (
+            not isinstance(data, dict)
+            or data.get("ok") is False
+            or not all(key in data for key in required_keys)
+        ):
             _LOGGER.error("Failed to retrieve current override state: %s", data)
             raise UnknownError
 

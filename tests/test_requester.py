@@ -681,7 +681,7 @@ async def test_process_request_post_no_callback(mock_aioclient):
     req = Requester(SERVER_URL)
     # req._update_callback is None by default
     await req.process_request(TEST_URL_CONFIG, method="post", data={})
-    # Should not crash on line 125/127
+    # Verify no crash when _update_callback is None
 
 
 async def test_json_list_response():

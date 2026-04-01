@@ -618,6 +618,7 @@ async def test_set_current(test_charger, mock_aioclient, caplog):
         "http://openevse.test.tld/override",
         status=200,
         body=json.dumps(value),
+        repeat=True,
     )
     mock_aioclient.post(
         "http://openevse.test.tld/override",
@@ -800,7 +801,7 @@ async def test_set_divertmode_broken(test_charger_broken):
 
 
 async def test_set_divertmode_unknown_semver(test_charger_unknown_semver, caplog):
-    # 2. Line 40-41: Non-semver version
+    # Handle non-semver firmware versions gracefully
     test_charger_unknown_semver._config = {"version": "not-semver"}
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(UnsupportedFeature):
@@ -1701,17 +1702,17 @@ async def test_extra_coverage_edge_cases(mock_aioclient, caplog):
     await asyncio.gather(*charger.tasks, return_exceptions=True)
     charger.tasks = set()
 
-    # Now mock it as connected to finally hit AlreadyListening at line 191 (was 181)
+    # Mock as connected to trigger AlreadyListening branch
     charger.websocket.state = "connected"
     charger._ws_listening = True
     with pytest.raises(AlreadyListening):
         await charger.ws_start()
 
-    # 6. Lines 258 in ws_disconnect: Idempotence return on a FRESH instance
+    # Verify idempotence on a fresh instance
     charger_fresh = OpenEVSE(SERVER_URL)
-    await charger_fresh.ws_disconnect()  # Hits line 258 immediately
+    await charger_fresh.ws_disconnect()  # Disconnect immediately
 
-    # 7. Lines 556-557: set_led_brightness error
+    # Verify led_brightness error handling
     charger._config["version"] = "4.2.0"
     mock_aioclient.post(TEST_URL_CONFIG, status=200, body='{"msg": "failed"}')
     with caplog.at_level(logging.ERROR):
@@ -1720,13 +1721,13 @@ async def test_extra_coverage_edge_cases(mock_aioclient, caplog):
     assert "Problem issuing command. Response: {'msg': 'failed'}" in caplog.text
     caplog.clear()
 
-    # 8. Lines 697-699: state property with invalid state_idx
+    # Verify state property invalid index handling
     charger._status["state"] = "invalid"
     with caplog.at_level(logging.DEBUG):
         assert charger.state == "unknown"
         assert "Invalid state value: invalid" in caplog.text
 
-    # 9. Lines 716-718: status property branches
+    # Verify status property branch handling
     charger._status = {"status": "present"}
     assert charger.status == "present"
     charger._status = {"state": 3}  # Charging
@@ -1734,7 +1735,7 @@ async def test_extra_coverage_edge_cases(mock_aioclient, caplog):
 
 
 async def test_set_divert_mode_error_coverage(mock_aioclient, caplog):
-    """Line 547 coverage (set_divert_mode error path)."""
+    """Verify set_divert_mode error handling."""
     charger = OpenEVSE(SERVER_URL)
     charger._config["version"] = "4.2.2"
 
@@ -1813,18 +1814,18 @@ async def test_client_none_safeguards(mock_aioclient):
     """Test safety paths when websocket or config is None."""
     charger = OpenEVSE(SERVER_URL)
 
-    # 1. ws_state when websocket is None (line 298)
+    # Verify ws_state when no websocket set
     charger.websocket = None
     assert charger.ws_state == "stopped"
 
-    # 2. divert_mode when _config is None (line 464)
+    # Verify divert_mode when no config available
     charger._config = None
     with pytest.raises(UnsupportedFeature):
         await charger.divert_mode()
 
 
 async def test_update_failure_cache_preservation(mock_aioclient):
-    """Test that update() preserves cache on failure (Lines 133-134)."""
+    """Verify that update() preserves cache data on network failure."""
     charger = OpenEVSE(SERVER_URL)
     # Initial success to establish a state
     mock_aioclient.get(
@@ -1878,7 +1879,7 @@ async def test_set_current_transport_fail(caplog):
 
 
 async def test_websocket_update_exception_handling(caplog):
-    """Test update failure during websocket push (Lines 260-261)."""
+    """Verify update failure during websocket status push."""
     charger = OpenEVSE(SERVER_URL)
     charger._config["version"] = "4.0.0"
     trigger_key = next(iter(UPDATE_TRIGGERS))
@@ -1902,12 +1903,12 @@ async def test_websocket_non_mapping_payload(caplog):
 
 
 async def test_set_current_rapi_dict_error(mock_aioclient):
-    """Test set_current handling of RAPI dict error (Lines 524-525)."""
+    """Verify set_current handling of RAPI dict error."""
     charger = OpenEVSE(SERVER_URL)
     # Force RAPI branch
     charger._config["version"] = "2.9.0"
 
-    # requester.py Line 159 covered here too (returning dict if ok=False)
+    # requester.py handles returning dict if ok=False
     mock_aioclient.post(
         TEST_URL_RAPI, status=200, body='{"ok": false, "msg": "transport error"}'
     )
@@ -1916,7 +1917,7 @@ async def test_set_current_rapi_dict_error(mock_aioclient):
 
 
 async def test_restart_evse_rapi_dict_error(mock_aioclient):
-    """Test restart_evse handling of RAPI dict error (Lines 580-581)."""
+    """Verify restart_evse handling of RAPI dict error."""
     charger = OpenEVSE(SERVER_URL)
     # Force RAPI branch
     charger._config["version"] = "4.1.0"
@@ -2131,7 +2132,7 @@ async def test_client_set_current_error_handling(caplog):
     charger.requester = MagicMock()
     charger.send_command = AsyncMock(return_value="$EX")
 
-    # Path: Missing limits for lines 522-525
+    # Handle missing hard current limits configuration
     charger._version_check = lambda v: True
     charger._config = {"min_current_hard": None, "max_current_hard": 40}
     with caplog.at_level(logging.ERROR):
@@ -2139,12 +2140,12 @@ async def test_client_set_current_error_handling(caplog):
             await charger.set_current(10)
     assert "Missing current limits in config" in caplog.text
 
-    # Path: Invalid value for lines 528-534
+    # Handle invalid value out of hard limits range
     charger._config = {"min_current_hard": 6, "max_current_hard": 40}
     with pytest.raises(ValueError):
         await charger.set_current(5)
 
-    # Path: RAPI failure for lines 552-555
+    # Handle RAPI failure during current set
     charger._version_check = lambda v: False
     assert await charger.set_current(10) is False
 
@@ -2167,21 +2168,21 @@ async def test_client_property_edge_cases():
     """Test property accessors with malformed or missing status data."""
     charger = OpenEVSE("openevse.test.tld")
 
-    # State with invalid index for lines 829-831
+    # Handle state fallback for invalid index
     charger._status = {"state": "invalid"}
     assert charger.state == "unknown"
 
-    # Wifi signal with invalid data for lines 849, 852-853
+    # Handle Wifi signal with invalid data
     charger._status = {"srssi": "invalid"}
     assert charger.wifi_signal is None
     charger._status = {}
     assert charger.wifi_signal is None
 
-    # Ambient temp with bools and fallback for line 885
+    # Handle ambient temp with boolean data fallback
     charger._status = {"temp": True, "temp1": False}
     assert charger.ambient_temperature is None
 
-    # Service level edge cases for lines 727, 730-731
+    # Handle service level edge cases
     charger._config = {"service": "invalid"}
     assert charger.service_level is None
     charger._config = {}
@@ -2189,7 +2190,7 @@ async def test_client_property_edge_cases():
 
 
 async def test_client_test_and_get_error():
-    """Test test_and_get raising UnknownError for lines 156-157."""
+    """Verify that test_and_get raises UnknownError on failure."""
     charger = OpenEVSE("openevse.test.tld")
     charger.requester = MagicMock()
     charger.requester.process_request = AsyncMock(return_value={"ok": False})
@@ -2198,7 +2199,7 @@ async def test_client_test_and_get_error():
 
 
 async def test_client_update_failure_path(caplog):
-    """Test update method error path for line 146."""
+    """Verify update method exception handling."""
     charger = OpenEVSE("openevse.test.tld")
     charger.requester = MagicMock()
     charger.requester.process_request = AsyncMock(side_effect=Exception("Failed"))
@@ -2207,7 +2208,7 @@ async def test_client_update_failure_path(caplog):
 
 
 async def test_client_ws_disconnect_task_cleanup():
-    """Test task cleanup during websocket disconnect for lines 290-294."""
+    """Verify task cleanup during websocket disconnection."""
     charger = OpenEVSE("openevse.test.tld")
     charger.websocket = MagicMock()
     charger.websocket.close = AsyncMock()
@@ -2237,7 +2238,7 @@ async def test_client_rapi_fallback_errors():
 
 
 async def test_client_restart_wifi_errors():
-    """Test restart_wifi for lines 586-587, 592-593."""
+    """Verify restart_wifi error handling."""
     charger = OpenEVSE("openevse.test.tld")
     charger.requester = MagicMock()
     charger.requester.process_request = AsyncMock(return_value={"ok": False})
@@ -2252,7 +2253,7 @@ async def test_client_restart_wifi_errors():
 
 
 async def test_client_restart_evse_errors():
-    """Test restart_evse for lines 603-604."""
+    """Verify restart_evse error handling."""
     charger = OpenEVSE("openevse.test.tld")
     charger._config["version"] = "5.0.0"
     charger.requester = MagicMock()
@@ -2262,7 +2263,7 @@ async def test_client_restart_evse_errors():
 
 
 async def test_client_led_brightness_errors():
-    """Test set_led_brightness for lines 638-639, 643-644."""
+    """Verify set_led_brightness error handling."""
     charger = OpenEVSE("openevse.test.tld")
     charger._config["version"] = "4.1.0"
     charger.requester = MagicMock()
@@ -2278,7 +2279,7 @@ async def test_client_led_brightness_errors():
 
 
 async def test_client_divert_mode_errors():
-    """Test set_divert_mode for lines 660-661."""
+    """Verify set_divert_mode error handling."""
     charger = OpenEVSE("openevse.test.tld")
     charger.requester = MagicMock()
     charger.requester.process_request = AsyncMock(return_value={"ok": False})
@@ -2287,7 +2288,7 @@ async def test_client_divert_mode_errors():
 
 
 async def test_client_ws_start_active_tasks():
-    """Test ws_start with active tasks for line 203."""
+    """Verify ws_start behavior when tasks are already active."""
     charger = OpenEVSE("openevse.test.tld")
     charger._loop = asyncio.get_running_loop()
     charger.websocket = MagicMock()
@@ -2307,7 +2308,7 @@ async def test_client_ws_start_active_tasks():
 
 
 async def test_client_shaper_active_coverage():
-    """Test shaper_active property for coverage of lines 1044-1049."""
+    """Verify shaper_active property with various data types and fallbacks."""
     charger = OpenEVSE("openevse.test.tld")
 
     # bool path (1044)
@@ -2330,14 +2331,14 @@ async def test_client_shaper_active_coverage():
 
 
 async def test_client_lifecycle_branches():
-    """Test internal lifecycle branches for coverage of lines 211-217."""
+    """Verify internal lifecycle branch handling."""
     charger = OpenEVSE("openevse.test.tld")
     charger._loop = asyncio.get_running_loop()
     charger.websocket = MagicMock()
     charger.websocket.listen = AsyncMock()
     charger.websocket.keepalive = AsyncMock()
 
-    # Trigger line 205-210 by having no tasks
+    # Initialize tasks when none exist
     charger.tasks = None
     await charger.ws_start()
     assert len(charger.tasks) == 2

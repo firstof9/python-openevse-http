@@ -10,7 +10,13 @@ from aiohttp.client_exceptions import ContentTypeError
 
 from openevsehttp.__main__ import OpenEVSE
 from openevsehttp.exceptions import UnknownError, UnsupportedFeature
-from tests.const import SERVER_URL, TEST_URL_OVERRIDE, TEST_URL_RAPI
+from tests.const import (
+    SERVER_URL,
+    TEST_URL_CONFIG,
+    TEST_URL_OVERRIDE,
+    TEST_URL_RAPI,
+    TEST_URL_STATUS,
+)
 
 pytestmark = pytest.mark.asyncio
 
@@ -398,9 +404,14 @@ async def test_clear_override(
         status=200,
         body='{"msg": "OK"}',
     )
+    # Mock refresh calls
+    mock_aioclient.get(TEST_URL_STATUS, status=200, body='{"state": 1}')
+    mock_aioclient.get(TEST_URL_CONFIG, status=200, body='{"version": "4.1.0"}')
+
     with caplog.at_level(logging.DEBUG):
         await test_charger.clear_override()
         assert "Clear response: OK" in caplog.text
+        assert "Forced full refresh." in caplog.text
 
     await test_charger_legacy.update()
     with caplog.at_level(logging.DEBUG):

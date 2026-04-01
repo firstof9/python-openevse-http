@@ -292,14 +292,13 @@ async def test_keepalive_send_exceptions(ws_client_auth):
     ws_client_auth._client.send_json.side_effect = ValueError("Value err")
     await ws_client_auth.keepalive()
 
-    # RuntimeError
-    # Code sets state to STATE_DISCONNECTED on RuntimeError (line 172)
+    # Handle state transition on RuntimeError
     ws_client_auth._client.send_json.side_effect = RuntimeError("Runtime err")
     await ws_client_auth.keepalive()
     assert ws_client_auth.state == STATE_DISCONNECTED
 
     # Generic Exception
-    # Code sets state to STATE_DISCONNECTED on generic Exception (line 175)
+    # Handle state transition on generic Exception
     ws_client_auth._client.send_json.side_effect = Exception("Generic err")
     await ws_client_auth.keepalive()
     assert ws_client_auth.state == STATE_DISCONNECTED
@@ -330,8 +329,8 @@ async def test_state_setter_threadsafe_fallback(ws_client):
 
 @pytest.mark.asyncio
 async def test_websocket_coverage_gaps(ws_client):
-    """Test remaining lines in websocket.py."""
-    # 1. Line 102: break when STATE_STOPPED
+    """Test specific coverage gaps in websocket.py."""
+    # Case: break loop when status becomes STOPPED
     msg = MagicMock()
     msg.type = aiohttp.WSMsgType.TEXT
     msg.json.return_value = {"key": "value"}
@@ -355,7 +354,7 @@ async def test_websocket_coverage_gaps(ws_client):
         await ws_client.running()
         assert ws_client.state == STATE_STOPPED
 
-    # 2. Line 109: "pong" in msg.keys()
+    # Case: handle "pong" messages
     msg_pong = MagicMock()
     msg_pong.type = aiohttp.WSMsgType.TEXT
     msg_pong.json.return_value = {"pong": 1}
