@@ -210,20 +210,20 @@ class OpenEVSE:
 
         if not self._ws_listening and not active_tasks:
             _LOGGER.debug("Setting up websocket ping...")
-            self.tasks = {
+            self.tasks = [
                 self._loop.create_task(self.websocket.listen()),
                 self._loop.create_task(self.repeat(300, self.websocket.keepalive)),
-            }
+            ]
         elif active_tasks:
             _LOGGER.debug("Cleaning up orphaned websocket tasks before restart...")
             for task in active_tasks:
                 if not task.done():
                     task.cancel()
             await asyncio.gather(*active_tasks, return_exceptions=True)
-            self.tasks = {
+            self.tasks = [
                 self._loop.create_task(self.websocket.listen()),
                 self._loop.create_task(self.repeat(300, self.websocket.keepalive)),
-            }
+            ]
 
     async def _update_status(self, msgtype, data, error):
         """Update data from websocket listener."""

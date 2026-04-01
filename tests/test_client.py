@@ -2218,7 +2218,7 @@ async def test_client_ws_disconnect_task_cleanup():
             pass
 
     task = asyncio.create_task(dummy())
-    charger.tasks = {task}
+    charger.tasks = [task]
     await charger.ws_disconnect()
     assert task.cancelled() or task.done()
 
