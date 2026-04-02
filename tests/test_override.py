@@ -705,8 +705,12 @@ async def test_toggle_override_partial_refresh_success(
         )
         # Ensure we have a state in status so the toggle continues
         test_charger_legacy._status = {"state": 254}
-        await test_charger_legacy.toggle_override()
-        assert mock_update.call_count == 2
-        mock_update.assert_called_with(force_full=True)
+        # Mark as legacy version manually to avoid version_check warning during update failure
+        test_charger_legacy._config = {"version": "2.9.1"}
+
+        with caplog.at_level(logging.DEBUG):
+            await test_charger_legacy.toggle_override()
+            assert mock_update.call_count == 2
+            mock_update.assert_called_with(force_full=True)
 
     assert "Toggling manual override via RAPI. Current state: 254" in caplog.text

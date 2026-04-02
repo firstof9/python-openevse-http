@@ -1469,11 +1469,12 @@ async def test_set_divert_mode(mock_aioclient):
         await charger.set_divert_mode("invalid")
 
     # Success
-    with patch.object(charger, "full_refresh", AsyncMock()):
-        mock_aioclient.post(
-            f"http://{SERVER_URL}/divertmode", status=200, body="Divert Mode changed"
-        )
-        await charger.set_divert_mode("eco")
+    mock_aioclient.get(f"http://{SERVER_URL}/status", status=200, body='{"ok": true}')
+    mock_aioclient.get(f"http://{SERVER_URL}/config", status=200, body='{"ok": true}')
+    mock_aioclient.post(
+        f"http://{SERVER_URL}/divertmode", status=200, body="Divert Mode changed"
+    )
+    await charger.set_divert_mode("eco")
 
     # Failure
     mock_aioclient.post(f"http://{SERVER_URL}/divertmode", status=200, body="Error")
