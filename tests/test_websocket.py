@@ -362,27 +362,19 @@ async def test_keepalive_send_exceptions(ws_client_auth):
 
 @pytest.mark.asyncio
 async def test_state_setter_threadsafe_fallback(ws_client):
-    """Test state setter falls back to call_soon_threadsafe on RuntimeError."""
+    """Test state setter falls back to run_coroutine_threadsafe on RuntimeError."""
     mock_loop = MagicMock()
     ws_client._error_reason = "Previous Error"
 
-    # Ensure stored loop is None to trigger the second get_running_loop call
-    ws_client._loop = None
+    # Captured loop is available but not running in current thread
+    ws_client._loop = mock_loop
+    mock_loop.create_task.side_effect = RuntimeError("Loop not running in thread")
 
-    with (
-        patch("asyncio.get_running_loop", side_effect=RuntimeError("No running loop")),
-        patch("asyncio.get_event_loop", return_value=mock_loop),
-    ):
+    with patch("asyncio.run_coroutine_threadsafe") as mock_run_threadsafe:
         ws_client.state = STATE_CONNECTED
         assert ws_client.state == STATE_CONNECTED
 
-        mock_loop.call_soon_threadsafe.assert_called_once()
-
-        args, _ = mock_loop.call_soon_threadsafe.call_args
-        assert args[0] is mock_loop.create_task
-        # Await the coroutine to resolve unawaited coroutine warning
-        await args[1]
-
+        mock_run_threadsafe.assert_called_once()
         assert ws_client._error_reason is None
 
 
@@ -394,9 +386,9 @@ async def test_websocket_coverage_gaps(ws_client):
     msg.type = aiohttp.WSMsgType.TEXT
     msg.json.return_value = {"key": "value"}
 
-    mock_ws = MagicMock()
-    mock_ws.__aenter__ = AsyncMock(return_value=mock_ws)
-    mock_ws.__aexit__ = AsyncMock(return_value=None)
+    mock_ws = AsyncMock()
+    mock_ws.__aenter__.return_value = mock_ws
+    mock_ws.__aexit__.return_value = None
 
     async def async_iter_stop():
         # Yield one message, then change state to STOPPED
@@ -476,3 +468,34 @@ def test_websocket_init_no_loop(mock_callback):
     if "error" in results:
         raise results["error"]
     assert results["loop"] is None
+
+
+def test_websocket_state_no_loop(mock_callback):
+    """Verify that setting state raises RuntimeError if no loop is available."""
+    # Provide a mock session to avoid aiohttp loop requirement
+    client = OpenEVSEWebsocket(SERVER_URL, mock_callback, session=MagicMock())
+    client._loop = None
+
+    with patch("asyncio.get_running_loop", side_effect=RuntimeError("No running loop")):
+        with pytest.raises(RuntimeError, match="No event loop available"):
+            client.state = STATE_CONNECTED
+
+
+@pytest.mark.asyncio
+async def test_websocket_close(mock_callback):
+    """Verify that close() properly closes the session."""
+    session = MagicMock(spec=aiohttp.ClientSession)
+    session.close = AsyncMock()
+    # Case 1: Internal session
+    client = OpenEVSEWebsocket(SERVER_URL, mock_callback)
+    client.session = session
+    client._session_external = False
+    await client.close()
+    assert client.state == STATE_STOPPED
+    session.close.assert_called_once()
+
+    # Case 2: External session (should not close)
+    session.close.reset_mock()
+    client._session_external = True
+    await client.close()
+    session.close.assert_not_called()

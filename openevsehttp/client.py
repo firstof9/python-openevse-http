@@ -115,7 +115,7 @@ class OpenEVSE:
         """Send a RAPI command to the charger and parses the response."""
         return await self.requester.send_command(command)
 
-    async def update(self, force_full: bool = False) -> None:
+    async def update(self, force_full: bool = False) -> bool:
         """Update the values."""
         # By default, only refresh /status if websocket is not active.
         # force_full override this behavior.
@@ -129,6 +129,7 @@ class OpenEVSE:
         ):
             urls = [f"{self.url}status", f"{self.url}config"]
 
+        results = []
         for url in urls:
             _LOGGER.debug("Updating data from %s", url)
             response = await self.process_request(url, method="get")
@@ -136,19 +137,23 @@ class OpenEVSE:
                 _LOGGER.warning(
                     "Unexpected non-dict response from %s: %s", url, response
                 )
+                results.append(False)
                 continue
 
             if response.get("ok") is False or list(response.keys()) == ["msg"]:
                 _LOGGER.debug("Update failed for %s, keeping previous cache.", url)
+                results.append(False)
                 continue
 
             if "/status" in url:
                 self._status = response
                 _LOGGER.debug("Status update: %s", self._status)
-
             else:
                 self._config = response
                 _LOGGER.debug("Config update: %s", self._config)
+            results.append(True)
+
+        return all(results) if results else False
 
     def _extract_msg(self, response: Any) -> str | None:
         """Safely extract the 'msg' field from a response."""

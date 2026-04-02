@@ -111,7 +111,9 @@ class Override:
             _LOGGER.debug("Toggle response: %s", response)
         else:
             # Older firmware use RAPI commands
-            await self._evse.update(force_full=True)
+            if not await self._evse.update(force_full=True):
+                _LOGGER.error("Cannot toggle override: status refresh failed")
+                raise UnknownError
 
             try:
                 int_state = int(self._evse._status["state"])

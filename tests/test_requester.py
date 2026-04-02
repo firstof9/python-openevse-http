@@ -430,7 +430,10 @@ async def test_process_request_post_with_config_version(mock_aioclient):
     mock_aioclient.get(TEST_URL_CONFIG, status=200, body="{}")
 
     charger = OpenEVSE(SERVER_URL)
-    await charger.process_request(TEST_URL_CONFIG, method="post")
+    with patch.object(charger, "update", AsyncMock()) as mock_update:
+        await charger.process_request(TEST_URL_CONFIG, method="post")
+        # Ensure update() was called after the POST request returned config_version
+        mock_update.assert_called_once()
 
 
 async def test_external_session_with_error_handling(mock_aioclient):
@@ -749,7 +752,7 @@ async def test_rapi_ok_trigger(mock_aioclient):
     )
 
     requester = Requester(SERVER_URL)
-    mock_cb = MagicMock()
+    mock_cb = AsyncMock()
     requester._update_callback = mock_cb
 
     # RAPI responses are processed after the request
@@ -758,4 +761,4 @@ async def test_rapi_ok_trigger(mock_aioclient):
     )
 
     # The callback should be triggered even if "cmd" is missing
-    mock_cb.assert_called_once()
+    mock_cb.assert_awaited_once()

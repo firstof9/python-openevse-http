@@ -1480,6 +1480,8 @@ async def test_set_divert_mode(mock_aioclient):
     with pytest.raises(UnknownError):
         await charger.set_divert_mode("fast")
 
+    await charger.ws_disconnect()
+
 
 async def test_get_charge_current_fallbacks():
     """Test get_charge_current fallbacks."""
@@ -1642,7 +1644,7 @@ async def test_extra_coverage_edge_cases(mock_aioclient, caplog):
 
     # 5. restart_evse RAPI failure path
     charger._config["version"] = "4.0.0"
-    with patch.object(charger, "send_command", return_value=("", "$NK")):
+    with patch.object(charger, "send_command", AsyncMock(return_value=("", "$NK"))):
         with caplog.at_level(logging.ERROR):
             with pytest.raises(UnknownError):
                 await charger.restart_evse()
@@ -1890,7 +1892,9 @@ async def test_set_current_transport_fail(caplog):
     """Test set_current with transport failure (False, msg)."""
     charger = OpenEVSE(SERVER_URL)
     charger._config["version"] = "2.9.0"
-    with patch.object(charger, "send_command", return_value=(False, "timeout")):
+    with patch.object(
+        charger, "send_command", AsyncMock(return_value=(False, "timeout"))
+    ):
         with caplog.at_level(logging.ERROR):
             assert await charger.set_current(16) is False
         assert (

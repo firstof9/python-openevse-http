@@ -686,3 +686,19 @@ async def test_toggle_legacy_status_refresh(mock_aioclient, caplog):
         assert charger._status["state"] == 254
         assert "Toggling manual override via RAPI. Current state: 254" in caplog.text
         assert "Forced full refresh." in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_toggle_override_refresh_fail(
+    test_charger_legacy, mock_aioclient, caplog
+):
+    """Verify that toggle_override raises UnknownError if refresh fails."""
+    # Mock update to return False
+    with patch.object(
+        test_charger_legacy, "update", AsyncMock(return_value=False)
+    ) as mock_update:
+        with caplog.at_level(logging.ERROR):
+            with pytest.raises(UnknownError):
+                await test_charger_legacy.toggle_override()
+        mock_update.assert_called_once_with(force_full=True)
+    assert "Cannot toggle override: status refresh failed" in caplog.text
