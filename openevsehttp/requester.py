@@ -26,13 +26,13 @@ class Requester:
     def __init__(
         self,
         host: str,
-        user: str = "",
-        pwd: str = "",
+        user: str | None = "",
+        pwd: str | None = "",
         session: aiohttp.ClientSession | None = None,
     ) -> None:
         """Initialize the requester."""
-        self._user = user
-        self._pwd = pwd
+        self._user = user or ""
+        self._pwd = pwd or ""
         self.url = f"http://{host}/"
         self._session = session
         self._update_callback: Callable[[], Awaitable[None]] | None = None

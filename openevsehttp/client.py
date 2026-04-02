@@ -85,6 +85,8 @@ class OpenEVSE:
         self._loop = None
         self.tasks = None
         self._callback_lock = asyncio.Lock()
+        self._callback_in_progress = False
+        self._callback_pending = False
         self._session = session
         self._session_external = session is not None
 
@@ -248,15 +250,14 @@ class OpenEVSE:
                 _LOGGER.debug("Disconnect message: %s", error)
                 self._ws_listening = False
 
-            # Stopped websockets without errors are expected during shutdown
-            # and ignored
-            elif data == STATE_STOPPED and error:
-                _LOGGER.debug(
-                    "Websocket to %s failed, aborting [Error: %s]",
-                    uri,
-                    error,
-                )
+            elif data == STATE_STOPPED:
                 self._ws_listening = False
+                if error:
+                    _LOGGER.debug(
+                        "Websocket to %s failed, aborting [Error: %s]",
+                        uri,
+                        error,
+                    )
 
         elif msgtype == "data":
             if not isinstance(data, Mapping):
@@ -293,14 +294,32 @@ class OpenEVSE:
         """Invoke user callback, serialized."""
         if self.callback is None:
             return
+
         async with self._callback_lock:
-            try:
-                if self.is_coroutine_function(self.callback):
-                    await self.callback()  # pylint: disable=not-callable
-                else:
-                    self.callback()  # pylint: disable=not-callable
-            except Exception as err:  # pylint: disable=broad-exception-caught
-                _LOGGER.exception("Exception in user callback: %s", err)
+            if self._callback_in_progress:
+                self._callback_pending = True
+                return
+            self._callback_in_progress = True
+
+        try:
+            while True:
+                async with self._callback_lock:
+                    self._callback_pending = False
+
+                try:
+                    if self.is_coroutine_function(self.callback):
+                        await self.callback()  # pylint: disable=not-callable
+                    else:
+                        self.callback()  # pylint: disable=not-callable
+                except Exception as err:  # pylint: disable=broad-exception-caught
+                    _LOGGER.exception("Exception in user callback: %s", err)
+
+                async with self._callback_lock:
+                    if not self._callback_pending:
+                        break
+        finally:
+            async with self._callback_lock:
+                self._callback_in_progress = False
 
     async def full_refresh(self) -> None:
         """Force a full refresh of all data and notify callback."""

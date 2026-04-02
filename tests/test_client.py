@@ -1162,6 +1162,12 @@ async def test_update_status_states():
     await charger._update_status(SIGNAL_CONNECTION_STATE, STATE_STOPPED, "fatal error")
     assert charger._ws_listening is False
 
+    # Test stopped WITHOUT error
+    await charger._update_status(SIGNAL_CONNECTION_STATE, STATE_CONNECTED, None)
+    assert charger._ws_listening is True
+    await charger._update_status(SIGNAL_CONNECTION_STATE, STATE_STOPPED, None)
+    assert charger._ws_listening is False
+
 
 async def test_update_status_data_triggers(mock_aioclient):
     """Test _update_status with data that triggers update and callback."""
@@ -2438,3 +2444,24 @@ async def test_callback_serialization(test_charger, mock_aioclient):
 
     assert call_count == 2
     assert max_concurrent_calls == 1
+
+
+@pytest.mark.asyncio
+async def test_callback_reentrancy(test_charger):
+    """Verify that re-entrant callback calls do not deadlock and are coalesced."""
+    call_count = 0
+
+    async def reentrant_callback():
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            # Manually trigger another invocation while this one is running
+            # This would have deadlocked before with the plain lock
+            await test_charger._invoke_callback()
+
+    test_charger.set_update_callback(reentrant_callback)
+
+    await test_charger._invoke_callback()
+
+    # Total calls should be 2: the original and the coalesced one
+    assert call_count == 2

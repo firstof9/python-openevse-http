@@ -13,6 +13,7 @@ from aioresponses import aioresponses
 import openevsehttp.__main__ as main
 from openevsehttp.__main__ import OpenEVSE
 from openevsehttp.exceptions import AuthenticationError, MissingMethod, ParseJSONError
+from openevsehttp.requester import Requester
 from tests.common import load_fixture
 from tests.const import (
     SERVER_URL,
@@ -717,3 +718,21 @@ async def test_process_request_both_payloads():
             data={"foo": "bar"},
             rapi="$GS",
         )
+
+
+@pytest.mark.asyncio
+async def test_requester_auth_none(mock_aioclient):
+    """Test requester with user/pwd as None."""
+    mock_aioclient.get(
+        f"http://{SERVER_URL}/status",
+        status=200,
+        body='{"status": "sleeping"}',
+    )
+
+    with patch("openevsehttp.requester.aiohttp.BasicAuth") as mock_auth:
+        # Passing None should be normalized to "" and not raise ValueError
+        requester = Requester(SERVER_URL, user="admin", pwd=None)
+        await requester.process_request(f"http://{SERVER_URL}/status")
+
+        # Verify auth was created with empty pwd
+        mock_auth.assert_called_once_with("admin", "")
