@@ -736,3 +736,26 @@ async def test_requester_auth_none(mock_aioclient):
 
         # Verify auth was created with empty pwd
         mock_auth.assert_called_once_with("admin", "")
+
+
+@pytest.mark.asyncio
+async def test_rapi_ok_trigger(mock_aioclient):
+    """Verify that $OK with data triggers callback."""
+    # Setup mock for a POST request that returns $OK with data
+    mock_aioclient.post(
+        f"http://{SERVER_URL}/rapi",
+        status=200,
+        body='{"ret": "$OK 40", "ok": true}',
+    )
+
+    requester = Requester(SERVER_URL)
+    mock_cb = MagicMock()
+    requester._update_callback = mock_cb
+
+    # RAPI responses are processed after the request
+    await requester.process_request(
+        f"http://{SERVER_URL}/rapi", method="post", rapi="$FP"
+    )
+
+    # The callback should be triggered even if "cmd" is missing
+    mock_cb.assert_called_once()

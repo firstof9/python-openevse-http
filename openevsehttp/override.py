@@ -111,12 +111,7 @@ class Override:
             _LOGGER.debug("Toggle response: %s", response)
         else:
             # Older firmware use RAPI commands
-            if (
-                not self._evse._status
-                or "state" not in self._evse._status
-                or self._evse._status["state"] is None
-            ):
-                await self._evse.update()
+            await self._evse.update(force_full=True)
 
             try:
                 int_state = int(self._evse._status["state"])

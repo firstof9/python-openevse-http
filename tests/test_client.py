@@ -173,6 +173,7 @@ async def test_get_charging_voltage(fixture, expected, request):
     await charger.update()
     status = charger.charging_voltage
     assert status == expected
+    await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -1316,7 +1317,6 @@ async def test_set_service_level(test_charger, mock_aioclient, caplog):
     assert "Set service level to: 1" in caplog.text
 
 
-@pytest.mark.asyncio
 async def test_ws_disconnect_extra():
     """Test ws_disconnect calls close."""
     charger = OpenEVSE(SERVER_URL)
@@ -2449,7 +2449,6 @@ async def test_callback_serialization(test_charger, mock_aioclient):
     assert max_concurrent_calls == 1
 
 
-@pytest.mark.asyncio
 async def test_callback_reentrancy(test_charger):
     """Verify that re-entrant callback calls do not deadlock and are coalesced."""
     call_count = 0
@@ -2470,7 +2469,6 @@ async def test_callback_reentrancy(test_charger):
     assert call_count == 2
 
 
-@pytest.mark.asyncio
 async def test_websocket_readonly_mapping(test_charger):
     """Verify that read-only mapping data doesn't cause crash."""
     data = MappingProxyType({"wh": 100, "temp": 25})

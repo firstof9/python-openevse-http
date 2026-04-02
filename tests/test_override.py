@@ -654,3 +654,37 @@ async def test_clear_override_non_dict_response(test_charger, caplog):
         "Unexpected non-dict response clearing override: Not a dictionary"
         in caplog.text
     )
+
+
+@pytest.mark.asyncio
+async def test_toggle_legacy_status_refresh(mock_aioclient, caplog):
+    """Verify that toggle() for older firmware unconditionally refreshes status."""
+    charger = OpenEVSE(SERVER_URL)
+    # Mocking legacy version to ensure the RAPI path is taken
+    charger._config["version"] = "2.9.1"
+    charger._status = {"state": 1}
+
+    # Mock full refresh calls
+    mock_aioclient.get(
+        f"http://{SERVER_URL}/status", status=200, body='{"state": 254}', repeat=True
+    )
+    mock_aioclient.get(
+        f"http://{SERVER_URL}/config",
+        status=200,
+        body='{"version": "2.9.1"}',
+        repeat=True,
+    )
+
+    # Mock toggle call (RAPI path)
+    mock_aioclient.post(
+        TEST_URL_RAPI,
+        status=200,
+        body='{"cmd": "$FE", "ret": "$OK"}',
+    )
+
+    with caplog.at_level(logging.DEBUG):
+        await charger.toggle_override()
+        # Should have updated from 1 to 254 before sending $FE
+        assert charger._status["state"] == 254
+        assert "Toggling manual override via RAPI. Current state: 254" in caplog.text
+        assert "Forced full refresh." in caplog.text
