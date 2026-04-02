@@ -85,7 +85,7 @@ class OpenEVSEWebsocket:
         auth = None
 
         if self._user:
-            auth = aiohttp.BasicAuth(self._user, self._password)
+            auth = aiohttp.BasicAuth(self._user, self._password or "")
 
         try:
             async with self.session.ws_connect(

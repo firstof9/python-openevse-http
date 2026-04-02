@@ -129,6 +129,34 @@ async def test_auth_empty_password(mock_callback):
 
 
 @pytest.mark.asyncio
+async def test_auth_none_password(mock_callback):
+    """Verify that a None password is coerced to empty string in websocket."""
+    client = OpenEVSEWebsocket(SERVER_URL, mock_callback, user="admin", password=None)
+
+    mock_ws = MagicMock()
+    mock_ws.__aenter__ = AsyncMock(return_value=mock_ws)
+    mock_ws.__aexit__ = AsyncMock(return_value=None)
+
+    async def async_iter():
+        yield MagicMock(type=aiohttp.WSMsgType.CLOSED)
+
+    mock_ws.__aiter__.side_effect = async_iter
+
+    with (
+        patch("aiohttp.ClientSession.ws_connect", return_value=mock_ws) as mock_connect,
+        patch("asyncio.sleep", new_callable=AsyncMock),
+    ):
+        await client.running()
+
+        _, kwargs = mock_connect.call_args
+        auth = kwargs.get("auth")
+        assert auth is not None
+        assert auth.login == "admin"
+        assert auth.password == ""
+    await client.session.close()
+
+
+@pytest.mark.asyncio
 async def test_connection_error_retry(ws_client, mock_callback):
     """Test connection retry logic."""
     error = aiohttp.ClientConnectionError("Connection lost")

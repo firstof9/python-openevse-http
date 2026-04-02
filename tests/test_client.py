@@ -2405,6 +2405,36 @@ async def test_client_full_refresh_callbacks(test_charger, mock_aioclient, caplo
     test_charger.set_update_callback(error_cb)
     with caplog.at_level(logging.ERROR):
         await test_charger.full_refresh()
-    assert (
-        "Exception in user callback during full-refresh: Callback failed" in caplog.text
+    assert "Exception in user callback: Callback failed" in caplog.text
+
+
+async def test_callback_serialization(test_charger, mock_aioclient):
+    """Verify that concurrent callback triggers are serialized via the lock."""
+    call_count = 0
+    active_calls = 0
+    max_concurrent_calls = 0
+
+    async def slow_callback():
+        nonlocal call_count, active_calls, max_concurrent_calls
+        active_calls += 1
+        max_concurrent_calls = max(max_concurrent_calls, active_calls)
+        call_count += 1
+        await asyncio.sleep(0.1)
+        # Yield control to allow another task to attempt entry
+        await asyncio.sleep(0)
+        active_calls -= 1
+
+    test_charger.set_update_callback(slow_callback)
+
+    # Trigger via two paths in parallel: full_refresh and _invoke_callback
+    mock_aioclient.get(
+        "http://openevse.test.tld/status", status=200, body='{"status": "sleeping"}'
     )
+    mock_aioclient.get(
+        "http://openevse.test.tld/config", status=200, body='{"firmware": "4.1.0"}'
+    )
+
+    await asyncio.gather(test_charger.full_refresh(), test_charger._invoke_callback())
+
+    assert call_count == 2
+    assert max_concurrent_calls == 1

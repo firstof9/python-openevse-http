@@ -84,6 +84,7 @@ class OpenEVSE:
         self.callback: Callable | None = None
         self._loop = None
         self.tasks = None
+        self._callback_lock = asyncio.Lock()
         self._session = session
         self._session_external = session is not None
 
@@ -282,33 +283,30 @@ class OpenEVSE:
                     )
             self._status.update(data)
 
-            if self.callback is not None:
-                try:
-                    if self.is_coroutine_function(self.callback):
-                        await self.callback()  # pylint: disable=not-callable
-                    else:
-                        self.callback()  # pylint: disable=not-callable
-                except Exception as err:  # pylint: disable=broad-exception-caught
-                    _LOGGER.exception("Exception in user callback: %s", err)
+            await self._invoke_callback()
 
     def set_update_callback(self, callback: Callable | None) -> None:
         """Set the update callback."""
         self.callback = callback
 
-    async def full_refresh(self) -> None:
-        """Force a full refresh of all data and notify callback."""
-        _LOGGER.debug("Forced full refresh.")
-        await self.update(force_full=True)
-        if self.callback is not None:
+    async def _invoke_callback(self) -> None:
+        """Invoke user callback, serialized."""
+        if self.callback is None:
+            return
+        async with self._callback_lock:
             try:
                 if self.is_coroutine_function(self.callback):
                     await self.callback()  # pylint: disable=not-callable
                 else:
                     self.callback()  # pylint: disable=not-callable
             except Exception as err:  # pylint: disable=broad-exception-caught
-                _LOGGER.exception(
-                    "Exception in user callback during full-refresh: %s", err
-                )
+                _LOGGER.exception("Exception in user callback: %s", err)
+
+    async def full_refresh(self) -> None:
+        """Force a full refresh of all data and notify callback."""
+        _LOGGER.debug("Forced full refresh.")
+        await self.update(force_full=True)
+        await self._invoke_callback()
 
     async def ws_disconnect(self) -> None:
         """Disconnect the websocket listener (idempotent)."""
