@@ -529,30 +529,28 @@ async def test_toggle_override_v2_string_state(
     test_charger_legacy, mock_aioclient, caplog
 ):
     """Verify that manual_override correctly coerces string-based 'active' state to boolean True."""
-    await test_charger_legacy.update()
-    # Mock state as a string
+    # Mock status directly for test
     test_charger_legacy._status["state"] = "254"
-
-    value = {"cmd": "OK", "ret": "$OK"}
-    mock_aioclient.post(
-        TEST_URL_RAPI,
-        status=200,
-        body=json.dumps(value),
-    )
-    with caplog.at_level(logging.DEBUG):
-        await test_charger_legacy.toggle_override()
-    assert "Toggling manual override via RAPI. Current state: 254" in caplog.text
+    with patch.object(test_charger_legacy, "update", AsyncMock()):
+        value = {"cmd": "OK", "ret": "$OK"}
+        mock_aioclient.post(
+            TEST_URL_RAPI,
+            status=200,
+            body=json.dumps(value),
+        )
+        with caplog.at_level(logging.DEBUG):
+            await test_charger_legacy.toggle_override()
+        assert "Toggling manual override via RAPI. Current state: 254" in caplog.text
 
 
 async def test_toggle_override_v2_invalid_state(test_charger_legacy, caplog):
     """Verify that manual_override returns False and logs a warning for unexpected state values."""
-    await test_charger_legacy.update()
-    # Mock state as invalid string
+    # Mock status directly for test
     test_charger_legacy._status["state"] = "not-an-int"
-
-    with caplog.at_level(logging.ERROR):
-        with pytest.raises(UnknownError):
-            await test_charger_legacy.toggle_override()
+    with patch.object(test_charger_legacy, "update", AsyncMock()):
+        with caplog.at_level(logging.ERROR):
+            with pytest.raises(UnknownError):
+                await test_charger_legacy.toggle_override()
     assert "Cannot toggle override: current state is unknown" in caplog.text
 
 
