@@ -1,6 +1,7 @@
 """Tests for OpenEVSE Websocket."""
 
 import datetime
+import threading
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiohttp
@@ -453,3 +454,25 @@ async def test_listen_break_immediately(ws_client):
     with patch.object(ws_client, "running", side_effect=mock_run):
         await ws_client.listen()
     assert ws_client.state == STATE_STOPPED
+
+
+def test_websocket_init_no_loop(mock_callback):
+    """Verify that OpenEVSEWebsocket handles init when no loop is running."""
+    # Use a thread to naturally trigger the "no running loop" state
+    results = {}
+
+    def target():
+        try:
+            # Provide a mock session to avoid aiohttp loop requirement
+            client = OpenEVSEWebsocket(SERVER_URL, mock_callback, session=MagicMock())
+            results["loop"] = client._loop
+        except Exception as err:
+            results["error"] = err
+
+    thread = threading.Thread(target=target)
+    thread.start()
+    thread.join()
+
+    if "error" in results:
+        raise results["error"]
+    assert results["loop"] is None
