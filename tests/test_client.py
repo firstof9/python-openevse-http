@@ -2050,7 +2050,7 @@ async def test_get_charge_current_ok_false(mock_aioclient):
         assert await charger.get_charge_current() == 16
 
 
-async def test_set_current_failure_envelope(mock_aioclient):
+async def test_set_current_failure_envelope(mock_aioclient, caplog):
     """Test set_current when API returns failure envelope without 'ok' key."""
     # Mock required endpoints for update() and initial state
     mock_aioclient.get(
@@ -2064,7 +2064,9 @@ async def test_set_current_failure_envelope(mock_aioclient):
         body='{"version": "4.1.2", "min_current_hard": 6, "max_current_hard": 32}',
     )
     mock_aioclient.get(
-        f"http://{SERVER_URL}/override", status=200, body='{"state": "disabled"}'
+        f"http://{SERVER_URL}/override",
+        status=200,
+        body='{"state": "disabled", "charge_current": 10, "max_current": 32, "energy_limit": 0, "time_limit": 0, "auto_release": true}',
     )
 
     charger = OpenEVSE(SERVER_URL)
@@ -2075,9 +2077,11 @@ async def test_set_current_failure_envelope(mock_aioclient):
         f"http://{SERVER_URL}/override", status=200, body='{"msg": "failed"}'
     )
 
-    # This should now raise UnknownError
-    with pytest.raises(UnknownError):
-        await charger.set_current(10)
+    # This should now raise UnknownError with the correct error message logged
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(UnknownError):
+            await charger.set_current(10)
+    assert "Problem setting override. Response: {'msg': 'failed'}" in caplog.text
 
 
 async def test_mutator_ignoring_ok_false(mock_aioclient):

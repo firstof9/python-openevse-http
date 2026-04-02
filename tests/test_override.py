@@ -689,16 +689,24 @@ async def test_toggle_legacy_status_refresh(mock_aioclient, caplog):
 
 
 @pytest.mark.asyncio
-async def test_toggle_override_refresh_fail(
+async def test_toggle_override_partial_refresh_success(
     test_charger_legacy, mock_aioclient, caplog
 ):
-    """Verify that toggle_override raises UnknownError if refresh fails."""
-    # Mock update to return False
+    """Verify that toggle_override succeeds if status is available even if update() returns False."""
+    # Mock update to return False (simulating e.g. /config failure)
     with patch.object(
         test_charger_legacy, "update", AsyncMock(return_value=False)
     ) as mock_update:
-        with caplog.at_level(logging.ERROR):
-            with pytest.raises(UnknownError):
-                await test_charger_legacy.toggle_override()
-        mock_update.assert_called_once_with(force_full=True)
-    assert "Cannot toggle override: status refresh failed" in caplog.text
+        # Mock toggle call (RAPI path)
+        mock_aioclient.post(
+            TEST_URL_RAPI,
+            status=200,
+            body='{"cmd": "$FE", "ret": "$OK"}',
+        )
+        # Ensure we have a state in status so the toggle continues
+        test_charger_legacy._status = {"state": 254}
+        await test_charger_legacy.toggle_override()
+        assert mock_update.call_count == 2
+        mock_update.assert_called_with(force_full=True)
+
+    assert "Toggling manual override via RAPI. Current state: 254" in caplog.text

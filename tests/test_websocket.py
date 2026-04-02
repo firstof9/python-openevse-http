@@ -375,6 +375,9 @@ async def test_state_setter_threadsafe_fallback(ws_client):
         assert ws_client.state == STATE_CONNECTED
 
         mock_run_threadsafe.assert_called_once()
+        # Close the coroutine to avoid RuntimeWarning
+        coro = mock_run_threadsafe.call_args[0][0]
+        coro.close()
         assert ws_client._error_reason is None
 
 
@@ -487,8 +490,8 @@ async def test_websocket_close(mock_callback):
     session = MagicMock(spec=aiohttp.ClientSession)
     session.close = AsyncMock()
     # Case 1: Internal session
-    client = OpenEVSEWebsocket(SERVER_URL, mock_callback)
-    client.session = session
+    # Pass mock session to constructor to avoid creating a real one
+    client = OpenEVSEWebsocket(SERVER_URL, mock_callback, session=session)
     client._session_external = False
     await client.close()
     assert client.state == STATE_STOPPED
