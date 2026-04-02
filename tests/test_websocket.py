@@ -1,6 +1,5 @@
 """Tests for OpenEVSE Websocket."""
 
-import asyncio
 import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -366,8 +365,11 @@ async def test_state_setter_threadsafe_fallback(ws_client):
     mock_loop = MagicMock()
     ws_client._error_reason = "Previous Error"
 
+    # Ensure stored loop is None to trigger the second get_running_loop call
+    ws_client._loop = None
+
     with (
-        patch("asyncio.create_task", side_effect=RuntimeError("No running loop")),
+        patch("asyncio.get_running_loop", side_effect=RuntimeError("No running loop")),
         patch("asyncio.get_event_loop", return_value=mock_loop),
     ):
         ws_client.state = STATE_CONNECTED
@@ -376,7 +378,7 @@ async def test_state_setter_threadsafe_fallback(ws_client):
         mock_loop.call_soon_threadsafe.assert_called_once()
 
         args, _ = mock_loop.call_soon_threadsafe.call_args
-        assert args[0] is asyncio.create_task
+        assert args[0] is mock_loop.create_task
         # Await the coroutine to resolve unawaited coroutine warning
         await args[1]
 

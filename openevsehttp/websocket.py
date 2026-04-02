@@ -46,6 +46,11 @@ class OpenEVSEWebsocket:
         self._client = None
         self._ping = None
         self._pong = None
+        self._loop: asyncio.AbstractEventLoop | None = None
+        try:
+            self._loop = asyncio.get_running_loop()
+        except RuntimeError:
+            pass
 
     @property
     def state(self):
@@ -60,11 +65,12 @@ class OpenEVSEWebsocket:
         # Schedule the callback asynchronously without awaiting here.
         coro = self.callback(SIGNAL_CONNECTION_STATE, value, self._error_reason)
         try:
-            asyncio.create_task(coro)
+            loop = self._loop or asyncio.get_running_loop()
+            loop.create_task(coro)
         except RuntimeError:
             # If there's no running loop, schedule safely on the event loop.
-            loop = asyncio.get_event_loop()
-            loop.call_soon_threadsafe(asyncio.create_task, coro)
+            loop = self._loop or asyncio.get_event_loop()
+            loop.call_soon_threadsafe(loop.create_task, coro)
         self._error_reason = None
 
     async def _set_state(self, value):
