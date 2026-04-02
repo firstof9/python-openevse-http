@@ -1813,6 +1813,18 @@ async def test_callback_exception(test_charger, caplog):
         assert "Exception in user callback: Callback error" in caplog.text
 
 
+async def test_invoke_callback_cancellation(test_charger):
+    """Test that _invoke_callback clears progress flag on task cancellation."""
+
+    async def cancel_callback():
+        raise asyncio.CancelledError
+
+    test_charger.set_update_callback(cancel_callback)
+    with pytest.raises(asyncio.CancelledError):
+        await test_charger._invoke_callback()
+    assert test_charger._callback_in_progress is False
+
+
 async def test_divert_mode_server_error(mock_aioclient, caplog):
     """Test divert_mode with server 'ok': False response."""
     charger = OpenEVSE(SERVER_URL)

@@ -34,7 +34,7 @@ async def test_external_session_provided():
     mock_session.get = MagicMock(return_value=mock_get)
 
     # Create OpenEVSE instance with external session
-    with patch("openevsehttp.__main__.OpenEVSE.repeat", return_value=AsyncMock()):
+    with patch("openevsehttp.__main__.OpenEVSE.repeat", new_callable=AsyncMock):
         charger = OpenEVSE(TEST_TLD, session=mock_session)
 
         # Verify the session is stored
@@ -57,7 +57,7 @@ async def test_no_external_session(mock_aioclient):
     )
 
     # Create OpenEVSE instance without external session
-    with patch("openevsehttp.__main__.OpenEVSE.repeat", return_value=AsyncMock()):
+    with patch("openevsehttp.__main__.OpenEVSE.repeat", new_callable=AsyncMock):
         charger = OpenEVSE(TEST_TLD)
 
         # Verify no session is stored
@@ -84,7 +84,7 @@ async def test_external_session_with_update(mock_aioclient):
     # Create a real session for testing
     async with aiohttp.ClientSession() as session:
         # Create OpenEVSE instance with external session
-        with patch("openevsehttp.__main__.OpenEVSE.repeat", return_value=AsyncMock()):
+        with patch("openevsehttp.__main__.OpenEVSE.repeat", new_callable=AsyncMock):
             charger = OpenEVSE(TEST_TLD, session=session)
 
             # Verify the session is stored
@@ -116,7 +116,7 @@ async def test_websocket_uses_external_session(mock_aioclient):
     async with aiohttp.ClientSession() as session:
         # Create OpenEVSE instance with external session
         with (
-            patch("openevsehttp.__main__.OpenEVSE.repeat", return_value=AsyncMock()),
+            patch("openevsehttp.__main__.OpenEVSE.repeat", new_callable=AsyncMock),
             patch(
                 "openevsehttp.websocket.OpenEVSEWebsocket.listen",
                 new_callable=AsyncMock,
@@ -166,7 +166,7 @@ async def test_firmware_check_with_external_session(mock_aioclient):
     )
 
     # Create OpenEVSE instance without external session (use mocked responses)
-    with patch("openevsehttp.__main__.OpenEVSE.repeat", return_value=AsyncMock()):
+    with patch("openevsehttp.__main__.OpenEVSE.repeat", new_callable=AsyncMock):
         charger = OpenEVSE(TEST_TLD)
 
         # Load config first
@@ -198,7 +198,7 @@ async def test_session_not_closed_when_external(mock_aioclient):
 
     try:
         # Create OpenEVSE instance with external session
-        with patch("openevsehttp.__main__.OpenEVSE.repeat", return_value=AsyncMock()):
+        with patch("openevsehttp.__main__.OpenEVSE.repeat", new_callable=AsyncMock):
             charger = OpenEVSE(TEST_TLD, session=session)
 
             # Update to initialize websocket

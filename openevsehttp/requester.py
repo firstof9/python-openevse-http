@@ -142,8 +142,9 @@ class Requester:
                     and self._update_callback
                     and (
                         any(key in message for key in UPDATE_TRIGGERS)
+                        or "cmd" in message
                         or message.get("msg") in ("done", "no change", "OK")
-                        or message.get("ret", "").startswith("$OK")
+                        or str(message.get("ret", "")).startswith("$OK")
                     )
                 ):
                     if self._invoking_callback:

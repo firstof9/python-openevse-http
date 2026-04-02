@@ -310,9 +310,6 @@ class OpenEVSE:
 
         try:
             while True:
-                async with self._callback_lock:
-                    self._callback_pending = False
-
                 try:
                     if self.is_coroutine_function(self.callback):
                         await self.callback()  # pylint: disable=not-callable
@@ -323,10 +320,13 @@ class OpenEVSE:
 
                 async with self._callback_lock:
                     if not self._callback_pending:
+                        self._callback_in_progress = False
                         break
+                    self._callback_pending = False
         finally:
-            async with self._callback_lock:
-                self._callback_in_progress = False
+            if self._callback_in_progress:
+                async with self._callback_lock:
+                    self._callback_in_progress = False
 
     async def full_refresh(self) -> None:
         """Force a full refresh of all data and notify callback."""
