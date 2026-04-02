@@ -201,7 +201,7 @@ class OpenEVSE:
                 self.url, self._update_status, self._user, self._pwd, self._session
             )
 
-        if not self._loop:
+        if not self._loop or self._loop.is_closed():
             try:
                 _LOGGER.debug("Attempting to find running loop...")
                 self._loop = asyncio.get_running_loop()
@@ -264,8 +264,10 @@ class OpenEVSE:
                 _LOGGER.warning("Non-mapping websocket payload: %s", data)
                 return
 
+            # Ensure data is a mutable dict to avoid errors with read-only mappings
+            data = dict(data)
             _LOGGER.debug("Websocket data: %s", data)
-            keys = data.keys()
+            keys = list(data.keys())
             if "wh" in keys:
                 data["watthour"] = data.pop("wh")
             # TODO: update specific endpoints based on _version prefix
@@ -342,8 +344,10 @@ class OpenEVSE:
 
         if self.websocket is not None:
             await self.websocket.close()
-            # Clear handle to ensure fresh initialization in ws_start
             self.websocket = None
+
+        # Reset the loop handle to ensure it is refreshed on next start
+        self._loop = None
 
     def is_coroutine_function(self, callback):
         """Check if a callback is a coroutine function."""

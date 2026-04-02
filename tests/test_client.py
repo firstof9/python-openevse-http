@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 from datetime import datetime, timedelta, timezone
+from types import MappingProxyType
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import pytest
@@ -40,7 +41,9 @@ async def test_update_status(test_charger):
     """Verify that _update_status correctly updates the internal status dictionary."""
     data = json.loads(load_fixture("v4_json/status.json"))
     await test_charger._update_status("data", data, None)
-    assert test_charger._status == data
+    # Check key features instead of direct equality since keys are renamed (wh -> watthour)
+    assert test_charger._status["watthour"] == data["wh"]
+    assert test_charger._status["state"] == data["state"]
 
 
 @pytest.mark.parametrize(
@@ -1193,9 +1196,9 @@ async def test_update_status_data_triggers(mock_aioclient):
         data = {"wh": 100, "config_version": 2}
         await charger._update_status("data", data, None)
 
-        assert data["watthour"] == 100
-        assert "wh" not in data
+        # Check charger._status instead of original data since it's no longer mutated
         assert charger._status["watthour"] == 100
+
         mock_callback.assert_called_once()
 
 
@@ -2384,13 +2387,13 @@ async def test_client_full_refresh_callbacks(test_charger, mock_aioclient, caplo
     mock_aioclient.get(
         "http://openevse.test.tld/status",
         status=200,
-        body='{"state": 1, "ok": True}',
+        body='{"state": 1, "ok": true}',
         repeat=True,
     )
     mock_aioclient.get(
         "http://openevse.test.tld/config",
         status=200,
-        body='{"version": "4.0.1", "ok": True}',
+        body='{"version": "4.0.1", "ok": true}',
         repeat=True,
     )
 
@@ -2465,3 +2468,13 @@ async def test_callback_reentrancy(test_charger):
 
     # Total calls should be 2: the original and the coalesced one
     assert call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_websocket_readonly_mapping(test_charger):
+    """Verify that read-only mapping data doesn't cause crash."""
+    data = MappingProxyType({"wh": 100, "temp": 25})
+    # Should not raise TypeError when trying to pop 'wh' or update status
+    await test_charger._update_status("data", data, None)
+    assert test_charger._status["watthour"] == 100
+    assert test_charger._status["temp"] == 25
