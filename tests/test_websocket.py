@@ -502,3 +502,24 @@ async def test_websocket_close(mock_callback):
     client._session_external = True
     await client.close()
     session.close.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_state_setter_scheduling_failure(ws_client):
+    """Test state setter handles scheduling failures gracefully (hits 86-89)."""
+    mock_loop = MagicMock()
+    ws_client._loop = mock_loop
+
+    # 1. Test Exception directly from create_task (hits line 86)
+    mock_loop.create_task.side_effect = Exception("Fatal create_task error")
+    with pytest.raises(Exception, match="Fatal create_task error"):
+        ws_client.state = STATE_CONNECTED
+
+    # 2. Test RuntimeError then Exception from run_coroutine_threadsafe (hits line 86)
+    mock_loop.create_task.side_effect = RuntimeError("Loop not in thread")
+    with patch(
+        "asyncio.run_coroutine_threadsafe",
+        side_effect=Exception("Fatal threadsafe error"),
+    ):
+        with pytest.raises(Exception, match="Fatal threadsafe error"):
+            ws_client.state = STATE_CONNECTED
