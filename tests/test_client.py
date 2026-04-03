@@ -465,15 +465,22 @@ async def test_version_check(test_charger_new, mock_aioclient, caplog):
     result = test_charger_new._version_check("4.0.0", "4.1.7")
     assert not result
 
+    # Test multi-digit version components (e.g. 4.10.0)
+    test_charger_new._config["version"] = "v4.10.0"
+    result = test_charger_new._version_check("4.9.0")
+    assert result
+    result = test_charger_new._version_check("4.11.0")
+    assert not result
+
 
 async def test_version_check_exceptions():
     """Test _version_check exception paths."""
     charger = OpenEVSE(SERVER_URL)
 
-    # Trigger re.search Exception
+    # Invalid version string should log warning and return False
     charger._config = {"version": "invalid"}
-    with patch("re.search", side_effect=Exception):
-        assert charger._version_check("2.0.0") is False
+    # _version_check catches AwesomeVersionCompareException and returns False
+    assert charger._version_check("2.0.0") is False
 
     # Trigger AwesomeVersionCompareException in limit comparison
 
@@ -546,13 +553,19 @@ async def test_start_listening_no_loop():
     """Test _start_listening when no running loop is found."""
     charger = OpenEVSE(SERVER_URL)
     charger.websocket = MagicMock()
+    # Mock calls to return coroutines for create_task
+    charger.websocket.listen.return_value = asyncio.Future()
+    charger.websocket.listen.return_value.set_result(None)
+    charger.repeat = MagicMock()
 
     with patch("asyncio.get_running_loop", side_effect=RuntimeError):
-        with patch("asyncio.get_event_loop") as mock_get_loop:
+        with patch("asyncio.new_event_loop") as mock_new_loop:
             mock_loop = MagicMock()
-            mock_get_loop.return_value = mock_loop
-            charger._start_listening()
-            assert charger._loop == mock_loop
+            mock_new_loop.return_value = mock_loop
+            with patch("threading.Thread") as mock_thread:
+                charger._start_listening()
+                assert charger._loop == mock_loop
+                mock_thread.assert_called_once()
 
 
 async def test_update_status_states():
@@ -592,7 +605,10 @@ async def test_update_status_data_triggers(mock_aioclient):
     charger = OpenEVSE(SERVER_URL)
 
     # Set a coroutine callback
-    mock_callback = AsyncMock()
+    async def mock_callback_coro():
+        pass
+
+    mock_callback = AsyncMock(side_effect=mock_callback_coro)
     charger.callback = mock_callback
 
     # "wh" should be popped to "watthour"

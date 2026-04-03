@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 import logging
 import re
+import threading
 from collections.abc import Callable
 from typing import Any
 
@@ -15,6 +17,10 @@ from awesomeversion import AwesomeVersion
 from awesomeversion.exceptions import AwesomeVersionCompareException
 
 from .commands import CommandsMixin
+from .const import (
+    ERROR_TIMEOUT,
+    UPDATE_TRIGGERS,
+)
 from .exceptions import (
     AlreadyListening,
     AuthenticationError,
@@ -34,38 +40,6 @@ from .websocket import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-
-states = {
-    0: "unknown",
-    1: "not connected",
-    2: "connected",
-    3: "charging",
-    4: "vent required",
-    5: "diode check failed",
-    6: "gfci fault",
-    7: "no ground",
-    8: "stuck relay",
-    9: "gfci self-test failure",
-    10: "over temperature",
-    254: "sleeping",
-    255: "disabled",
-}
-
-divert_mode = {
-    "fast": 1,
-    "eco": 2,
-}
-
-ERROR_TIMEOUT = "Timeout while updating"
-INFO_LOOP_RUNNING = "Event loop already running, not creating new one."
-UPDATE_TRIGGERS = [
-    "config_version",
-    "claims_version",
-    "override_version",
-    "schedule_version",
-    "schedule_plan_version",
-    "limit_version",
-]
 
 
 class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
@@ -169,9 +143,9 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
                     _LOGGER.warning("%s", message)
 
                 if (
-                    method == "post"
+                    method.lower() != "get"
                     and isinstance(message, dict)
-                    and "config_version" in message
+                    and any(key in message for key in UPDATE_TRIGGERS)
                 ):
                     await self.update()
                 return message
@@ -254,24 +228,24 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
 
     def _start_listening(self):
         """Start the websocket listener."""
+        new_loop = False
         if not self._loop:
             try:
                 _LOGGER.debug("Attempting to find running loop...")
                 self._loop = asyncio.get_running_loop()
             except RuntimeError:
-                self._loop = asyncio.get_event_loop()
+                self._loop = asyncio.new_event_loop()
+                new_loop = True
                 _LOGGER.debug("Using new event loop...")
 
         if not self._ws_listening:
             _LOGGER.debug("Setting up websocket ping...")
             self._loop.create_task(self.websocket.listen())
             self._loop.create_task(self.repeat(300, self.websocket.keepalive))
-            pending = asyncio.all_tasks()
             self._ws_listening = True
-            try:
-                self._loop.run_until_complete(asyncio.gather(*pending))
-            except RuntimeError:
-                _LOGGER.info(INFO_LOOP_RUNNING)
+
+            if new_loop:
+                threading.Thread(target=self._loop.run_forever, daemon=True).start()
 
     async def _update_status(self, msgtype, data, error):
         """Update data from websocket listener."""
@@ -321,7 +295,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
 
     def is_coroutine_function(self, callback):
         """Check if a callback is a coroutine function."""
-        return asyncio.iscoroutinefunction(callback)
+        return inspect.iscoroutinefunction(callback)
 
     @property
     def ws_state(self) -> Any:
@@ -354,13 +328,14 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
             limit = AwesomeVersion(max_version)
 
         firmware_filtered = None
+        firmware_search = re.search(r"\d+\.\d+\.\d+", self._config["version"])
+        if firmware_search:
+            firmware_filtered = firmware_search.group(0)
+        else:
+            _LOGGER.warning(
+                "Non-standard versioning string: %s", self._config["version"]
+            )
 
-        try:
-            firmware_search = re.search("\\d\\.\\d\\.\\d", self._config["version"])
-            if firmware_search is not None:
-                firmware_filtered = firmware_search[0]
-        except Exception:  # pylint: disable=broad-exception-caught
-            _LOGGER.warning("Non-standard versioning string.")
         _LOGGER.debug("Detected firmware: %s", self._config["version"])
         _LOGGER.debug("Filtered firmware: %s", firmware_filtered)
 

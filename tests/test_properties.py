@@ -57,6 +57,30 @@ async def test_get_state_raw(fixture, expected, request):
     await charger.ws_disconnect()
 
 
+async def test_get_status_unknown():
+    """Test status property with unknown/invalid codes."""
+    charger = OpenEVSE(SERVER_URL)
+    # Unknown code
+    charger._status = {"state": 99}
+    assert charger.status == "unknown"
+
+    # Invalid type
+    charger._status = {"state": "invalid"}
+    assert charger.status == "unknown"  # code 0 fallback
+
+
+async def test_get_state_unknown():
+    """Test state property with unknown/invalid codes."""
+    charger = OpenEVSE(SERVER_URL)
+    # Unknown code
+    charger._status = {"state": 99}
+    assert charger.state == "unknown"
+
+    # Invalid type
+    charger._status = {"state": "invalid"}
+    assert charger.state == "unknown"  # code 0 fallback
+
+
 # ── wifi / network ──────────────────────────────────────────────────
 
 
@@ -618,6 +642,30 @@ async def test_get_ambient_temperature(fixture, expected, request):
     status = charger.ambient_temperature
     assert status == expected
     await charger.ws_disconnect()
+
+
+async def test_get_ambient_temperature_zero():
+    """Test ambient_temperature property with 0°C."""
+    charger = OpenEVSE(SERVER_URL)
+    # 0 should be 0.0
+    charger._status = {"temp": 0}
+    assert charger.ambient_temperature == 0.0
+
+    # Fallback to temp1
+    charger._status = {"temp": None, "temp1": 0}
+    assert charger.ambient_temperature == 0.0
+
+
+async def test_get_ambient_temperature_none():
+    """Test ambient_temperature property with missing sensors."""
+    charger = OpenEVSE(SERVER_URL)
+    # Both missing
+    charger._status = {"temp": None, "temp1": None}
+    assert charger.ambient_temperature is None
+
+    # Both missing in key sense
+    charger._status = {}
+    assert charger.ambient_temperature is None
 
 
 @pytest.mark.parametrize(

@@ -334,7 +334,7 @@ async def test_set_divertmode(
     with pytest.raises(UnsupportedFeature):
         with caplog.at_level(logging.DEBUG):
             await test_charger_unknown_semver.divert_mode()
-            assert "Non-semver firmware version detected." in caplog.text
+    assert "Non-semver firmware version detected." in caplog.text
 
 
 # ── set_charge_mode ──────────────────────────────────────────────────
@@ -377,10 +377,10 @@ async def test_set_charge_mode(test_charger, mock_aioclient, caplog):
         status=200,
         body=json.dumps(value),
     )
-    with caplog.at_level(logging.DEBUG):
-        with pytest.raises(UnknownError):
+    with pytest.raises(UnknownError):
+        with caplog.at_level(logging.DEBUG):
             await test_charger.set_charge_mode("fast")
-            assert "Problem issuing command: error" in caplog.text
+    assert "Problem issuing command: error" in caplog.text
 
     value = {"msg": "done"}
     mock_aioclient.post(
@@ -433,10 +433,10 @@ async def test_set_service_level(test_charger, mock_aioclient, caplog):
         status=200,
         body=json.dumps(value),
     )
-    with caplog.at_level(logging.DEBUG):
-        with pytest.raises(UnknownError):
+    with pytest.raises(UnknownError):
+        with caplog.at_level(logging.DEBUG):
             await test_charger.set_service_level(1)
-            assert "Problem issuing command: error" in caplog.text
+    assert "Problem issuing command: error" in caplog.text
 
     value = {"msg": "done"}
     mock_aioclient.post(
@@ -606,6 +606,22 @@ async def test_async_charge_current(
     value = await test_charger_v2.async_charge_current
     assert value == 25
     await test_charger_v2.ws_disconnect()
+
+
+async def test_async_charge_current_list(test_charger, mock_aioclient):
+    """Test async_charge_current function with a list of claims."""
+    await test_charger.update()
+    # Mock a list-based response
+    mock_aioclient.get(
+        TEST_URL_CLAIMS_TARGET,
+        status=200,
+        body='[{"properties":{"state":"disabled","charge_current":30,"max_current":23,"auto_release":false}}]',
+        repeat=False,
+    )
+
+    value = await test_charger.async_charge_current
+    assert value == 30
+    await test_charger.ws_disconnect()
 
 
 async def test_async_override_state(

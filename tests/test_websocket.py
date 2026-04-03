@@ -67,7 +67,10 @@ async def test_run_success(ws_client, mock_callback):
 
     mock_ws.__aiter__.side_effect = async_iter
 
-    with patch("aiohttp.ClientSession.ws_connect", return_value=mock_ws):
+    with (
+        patch("aiohttp.ClientSession.ws_connect", return_value=mock_ws),
+        patch("asyncio.sleep", return_value=None),
+    ):
         await ws_client.running()
 
         # Check that state transitions and data callbacks occurred
@@ -175,9 +178,10 @@ async def test_websocket_auth(ws_client_auth):
 
     mock_ws.__aiter__.side_effect = empty_iter
 
-    with patch(
-        "aiohttp.ClientSession.ws_connect", return_value=mock_ws
-    ) as mock_connect:
+    with (
+        patch("aiohttp.ClientSession.ws_connect", return_value=mock_ws) as mock_connect,
+        patch("asyncio.sleep", return_value=None),
+    ):
         await ws_client_auth.running()
 
         # Verify BasicAuth was created and passed
@@ -204,7 +208,10 @@ async def test_websocket_message_types(ws_client_auth):
 
     mock_ws.__aiter__.side_effect = async_iter_closed
 
-    with patch("aiohttp.ClientSession.ws_connect", return_value=mock_ws):
+    with (
+        patch("aiohttp.ClientSession.ws_connect", return_value=mock_ws),
+        patch("asyncio.sleep", return_value=None),
+    ):
         await ws_client_auth.running()
         # Should stop running naturally on closed
 
@@ -217,7 +224,10 @@ async def test_websocket_message_types(ws_client_auth):
 
     mock_ws.__aiter__.side_effect = async_iter_error
 
-    with patch("aiohttp.ClientSession.ws_connect", return_value=mock_ws):
+    with (
+        patch("aiohttp.ClientSession.ws_connect", return_value=mock_ws),
+        patch("asyncio.sleep", return_value=None),
+    ):
         await ws_client_auth.running()
         # Should stop running on error
 

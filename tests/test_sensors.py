@@ -39,11 +39,15 @@ async def test_self_production(test_charger, test_charger_v2, mock_aioclient, ca
         await test_charger.self_production(None, None)
         assert "No sensor data to send to device." in caplog.text
 
+    await test_charger_v2.update()
+    # Force version lower than 2.9.1 to trigger UnsupportedFeature
+    test_charger_v2._config["version"] = "2.8.0"
     with pytest.raises(UnsupportedFeature):
         with caplog.at_level(logging.DEBUG):
             await test_charger_v2.self_production(-3000, 1000)
-            assert "Feature not supported for older firmware." in caplog.text
-        await test_charger.ws_disconnect()
+    assert "Feature not supported for older firmware." in caplog.text
+    await test_charger_v2.ws_disconnect()
+    await test_charger.ws_disconnect()
 
 
 # ── soc ──────────────────────────────────────────────────────────────
@@ -76,11 +80,12 @@ async def test_soc(test_charger, test_charger_v2, mock_aioclient, caplog):
         assert "No SOC data to send to device." in caplog.text
         await test_charger.ws_disconnect()
 
+    await test_charger_v2.update()
     with pytest.raises(UnsupportedFeature):
         with caplog.at_level(logging.DEBUG):
             await test_charger_v2.soc(50, 90, 3100)
-            assert "Feature not supported for older firmware." in caplog.text
-        await test_charger_v2.ws_disconnect()
+    assert "Feature not supported for older firmware." in caplog.text
+    await test_charger_v2.ws_disconnect()
 
 
 # ── voltage ──────────────────────────────────────────────────────────
@@ -103,10 +108,15 @@ async def test_voltage(test_charger, test_charger_v2, mock_aioclient, caplog):
         await test_charger.grid_voltage(None)
         assert "No sensor data to send to device." in caplog.text
 
+    await test_charger_v2.update()
+    # Force version lower than 2.9.1 to trigger UnsupportedFeature
+    test_charger_v2._config["version"] = "2.8.0"
     with pytest.raises(UnsupportedFeature):
         with caplog.at_level(logging.DEBUG):
             await test_charger_v2.grid_voltage(210)
-            assert "Feature not supported for older firmware." in caplog.text
+    assert "Feature not supported for older firmware." in caplog.text
+    await test_charger_v2.ws_disconnect()
+    await test_charger.ws_disconnect()
 
 
 # ── set_shaper_live_power ────────────────────────────────────────────

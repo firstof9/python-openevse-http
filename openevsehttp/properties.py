@@ -6,7 +6,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from .const import MAX_AMPS, MIN_AMPS
+from .const import MAX_AMPS, MIN_AMPS, states
 from .exceptions import UnsupportedFeature
 
 _LOGGER = logging.getLogger(__name__)
@@ -102,14 +102,24 @@ class PropertiesMixin:
     async def async_charge_current(self) -> int | None:
         """Return the charge current."""
         try:
-            claims = None
             claims = await self.list_claims(target=True)
-        except UnsupportedFeature:
+            # Normalize list to find an element with properties or use the first one
+            if isinstance(claims, list):
+                claims = next(
+                    (c for c in claims if isinstance(c, dict) and "properties" in c),
+                    claims[0] if claims else {},
+                )
+
+            if isinstance(claims, dict):
+                properties = claims.get("properties", {})
+                if "charge_current" in properties:
+                    return min(
+                        properties["charge_current"],
+                        self._config.get("max_current_hard", 48),
+                    )
+        except (UnsupportedFeature, IndexError, KeyError):
             pass
-        if claims is not None and "charge_current" in claims["properties"].keys():
-            return min(
-                claims["properties"]["charge_current"], self._config["max_current_hard"]
-            )
+
         if "max_current_soft" in self._config:
             return self._config.get("max_current_soft")
         return self._status.get("pilot")
@@ -167,16 +177,21 @@ class PropertiesMixin:
     @property
     def status(self) -> str:
         """Return charger's state."""
-        from .client import states
+        # Check if "status" is already a string in _status (some versions)
+        if "status" in self._status:
+            return str(self._status["status"])
 
-        return self._status.get("status", states[int(self._status.get("state", 0))])
+        # Fall back to state mapping
+        return self.state
 
     @property
     def state(self) -> str:
         """Return charger's state."""
-        from .client import states
-
-        return states[int(self._status.get("state", 0))]
+        try:
+            code = int(self._status.get("state", 0))
+        except (ValueError, TypeError):
+            code = 0
+        return states.get(code, "unknown")
 
     @property
     def state_raw(self) -> int | None:
@@ -217,9 +232,14 @@ class PropertiesMixin:
     def ambient_temperature(self) -> float | None:
         """Return the temperature of the ambient sensor, in degrees Celsius."""
         temp = self._status.get("temp")
-        if temp:
+        if temp is not None:
             return temp / 10
-        return self._status.get("temp1", 0) / 10
+
+        temp1 = self._status.get("temp1")
+        if temp1 is not None:
+            return temp1 / 10
+
+        return None
 
     @property
     def rtc_temperature(self) -> float | None:

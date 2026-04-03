@@ -11,6 +11,7 @@ from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
 from awesomeversion import AwesomeVersion
 from awesomeversion.exceptions import AwesomeVersionCompareException
 
+from .const import MAX_AMPS, MIN_AMPS, divert_mode
 from .exceptions import UnknownError, UnsupportedFeature
 
 _LOGGER = logging.getLogger(__name__)
@@ -172,15 +173,13 @@ class CommandsMixin:
         #   3.x - 4.1.0: use RAPI commands $SC <amps>
         #   4.1.2: use HTTP API call
         amps = int(amps)
+        min_current = self._config.get("min_current_hard", MIN_AMPS)
+        max_current = self._config.get("max_current_hard", MAX_AMPS)
+        if amps < min_current or amps > max_current:
+            _LOGGER.error("Invalid value for current limit: %s", amps)
+            raise ValueError
 
         if self._version_check("4.1.2"):
-            if (
-                amps < self._config["min_current_hard"]
-                or amps > self._config["max_current_hard"]
-            ):
-                _LOGGER.error("Invalid value for current limit: %s", amps)
-                raise ValueError
-
             _LOGGER.debug("Setting current limit to %s", amps)
             response = await self.set_override(charge_current=amps)
             _LOGGER.debug("Set current response: %s", response)
@@ -334,15 +333,13 @@ class CommandsMixin:
 
     async def set_divert_mode(self, mode: str = "fast") -> None:
         """Set the divert mode."""
-        from .client import divert_mode as divert_mode_map
-
         url = f"{self.url}divertmode"
         if mode not in ["fast", "eco"]:
             _LOGGER.error("Invalid value for divert mode: %s", mode)
             raise ValueError
         _LOGGER.debug("Setting divert mode to %s", mode)
         # convert text to int
-        new_mode = divert_mode_map[mode]
+        new_mode = divert_mode[mode]
 
         data = f"divertmode={new_mode}"
 

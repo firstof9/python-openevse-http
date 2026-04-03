@@ -57,18 +57,20 @@ class OpenEVSEWebsocket:
         """Setter that schedules the callback."""
         self._state = value
         _LOGGER.debug("Websocket %s", value)
+
+        if not self.callback:
+            return
+
+        # Prepare the coroutine or invoke the callback
+        coro = self.callback(SIGNAL_CONNECTION_STATE, value, self._error_reason)
+
         # Schedule the callback asynchronously without awaiting here.
         try:
-            asyncio.create_task(
-                self.callback(SIGNAL_CONNECTION_STATE, value, self._error_reason)
-            )
+            asyncio.create_task(coro)
         except RuntimeError:
             # If there's no running loop, schedule safely on the event loop.
             loop = asyncio.get_event_loop()
-            loop.call_soon_threadsafe(
-                asyncio.create_task,
-                self.callback(SIGNAL_CONNECTION_STATE, value, self._error_reason),
-            )
+            loop.call_soon_threadsafe(asyncio.create_task, coro)
         self._error_reason = None
 
     async def _set_state(self, value):
