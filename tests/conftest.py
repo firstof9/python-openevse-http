@@ -3,7 +3,7 @@
 import pytest
 from aioresponses import aioresponses
 
-import openevsehttp.__main__ as main
+import openevsehttp as main
 from tests.common import load_fixture
 
 TEST_URL_STATUS = "http://openevse.test.tld/status"
