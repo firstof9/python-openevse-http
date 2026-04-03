@@ -60,9 +60,9 @@ class CommandsMixin:
 
         _LOGGER.debug("Setting charge mode to %s", mode)
         response = await self.process_request(url=url, method="post", data=data)
-        result = response["msg"]
-        if result not in ["done", "no change"]:
-            _LOGGER.error("Problem issuing command: %s", response["msg"])
+        msg = response.get("msg")
+        if msg not in ["done", "no change"]:
+            _LOGGER.error("Problem issuing command: %s", response)
             raise UnknownError
 
     async def divert_mode(self) -> dict[str, str] | dict[str, Any]:
@@ -166,7 +166,7 @@ class CommandsMixin:
 
         _LOGGER.debug("Clearing manual override %s", url)
         response = await self.process_request(url=url, method="delete")
-        _LOGGER.debug("Toggle response: %s", response["msg"])
+        _LOGGER.debug("Toggle response: %s", response.get("msg", response))
 
     async def set_current(self, amps: int = 6) -> None:
         """Set the soft current limit."""
@@ -206,9 +206,9 @@ class CommandsMixin:
         _LOGGER.debug("Set service level to: %s", level)
         response = await self.process_request(url=url, method="post", data=data)
         _LOGGER.debug("service response: %s", response)
-        result = response["msg"]
-        if result not in ["done", "no change"]:
-            _LOGGER.error("Problem issuing command: %s", response["msg"])
+        msg = response.get("msg")
+        if msg not in ["done", "no change"]:
+            _LOGGER.error("Problem issuing command: %s", response)
             raise UnknownError
 
     # Restart OpenEVSE WiFi
@@ -218,7 +218,7 @@ class CommandsMixin:
         data = {"device": "gateway"}
 
         response = await self.process_request(url=url, method="post", data=data)
-        _LOGGER.debug("WiFi Restart response: %s", response["msg"])
+        _LOGGER.debug("WiFi Restart response: %s", response.get("msg", response))
 
     # Restart EVSE module
     async def restart_evse(self) -> None:
@@ -237,7 +237,7 @@ class CommandsMixin:
 
         _LOGGER.debug("EVSE Restart response: %s", response)
 
-    # Firmwave version
+    # Firmware version
     async def firmware_check(self) -> dict | None:
         """Return the latest firmware version."""
         if "version" not in self._config:

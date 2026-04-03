@@ -113,10 +113,12 @@ class PropertiesMixin:
             if isinstance(claims, dict):
                 properties = claims.get("properties", {})
                 if "charge_current" in properties:
-                    return min(
-                        properties["charge_current"],
-                        self._config.get("max_current_hard", 48),
-                    )
+                    try:
+                        charge_current = int(properties["charge_current"])
+                        max_hard = int(self._config.get("max_current_hard", 48))
+                        return min(charge_current, max_hard)
+                    except (TypeError, ValueError):
+                        pass
         except (UnsupportedFeature, IndexError, KeyError):
             pass
 
@@ -177,9 +179,10 @@ class PropertiesMixin:
     @property
     def status(self) -> str:
         """Return charger's state."""
-        # Check if "status" is already a string in _status (some versions)
-        if "status" in self._status:
-            return str(self._status["status"])
+        # Check if "status" is already a non-null string in _status (some versions)
+        val = self._status.get("status")
+        if val is not None:
+            return str(val)
 
         # Fall back to state mapping
         return self.state
@@ -438,9 +441,13 @@ class PropertiesMixin:
         value = self._status.get(
             "time_to_full_charge", self._status.get("vehicle_eta", None)
         )
-        if value is not None:
-            return datetime.now(timezone.utc) + timedelta(seconds=value)
-        return value
+        if value is None:
+            return None
+        try:
+            seconds = float(value)
+        except (TypeError, ValueError):
+            return None
+        return datetime.now(timezone.utc) + timedelta(seconds=seconds)
 
     # There is currently no min/max amps JSON data
     # available via HTTP API methods

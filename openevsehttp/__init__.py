@@ -7,11 +7,8 @@ from .client import (
     OpenEVSE,
 )
 from .const import (
-    CLIENT,
     ERROR_TIMEOUT,
     INFO_LOOP_RUNNING,
-    MAX_AMPS,
-    MIN_AMPS,
     UPDATE_TRIGGERS,
     divert_mode,
     states,

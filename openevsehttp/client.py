@@ -290,7 +290,8 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
     async def ws_disconnect(self) -> None:
         """Disconnect the websocket listener."""
         self._ws_listening = False
-        assert self.websocket
+        if self.websocket is None:
+            return
         await self.websocket.close()
 
     def is_coroutine_function(self, callback):
@@ -298,9 +299,10 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
         return inspect.iscoroutinefunction(callback)
 
     @property
-    def ws_state(self) -> Any:
+    def ws_state(self) -> Any | None:
         """Return the status of the websocket listener."""
-        assert self.websocket
+        if self.websocket is None:
+            return None
         return self.websocket.state
 
     async def repeat(self, interval, func, *args, **kwargs):

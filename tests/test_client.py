@@ -643,6 +643,25 @@ async def test_repeat():
             mock_func.assert_called_once_with("test")
 
 
+async def test_websocket_utils(test_charger):
+    """Test websocket utility methods."""
+    # Test ws_state when websocket is None
+    assert test_charger.ws_state is None
+    # Test ws_disconnect when websocket is None
+    await test_charger.ws_disconnect()
+    assert test_charger._ws_listening is False
+
+    # Test with mock websocket
+    mock_ws = MagicMock()
+    mock_ws.close = AsyncMock()
+    mock_ws.state = "connected"
+    test_charger.websocket = mock_ws
+    assert test_charger.ws_state == "connected"
+    await test_charger.ws_disconnect()
+    mock_ws.close.assert_called_once()
+    assert test_charger._ws_listening is False
+
+
 # ── get_schedule ─────────────────────────────────────────────────────
 
 

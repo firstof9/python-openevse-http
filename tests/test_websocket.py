@@ -299,9 +299,7 @@ async def test_state_setter_threadsafe_fallback(ws_client):
     ws_client._error_reason = "Previous Error"
 
     with (
-        patch(
-            "asyncio.create_task", side_effect=RuntimeError("No running loop")
-        ) as mock_create_task,
+        patch("asyncio.create_task", side_effect=RuntimeError("No running loop")),
         patch("asyncio.get_event_loop", return_value=mock_loop),
     ):
         ws_client.state = STATE_CONNECTED
@@ -310,6 +308,22 @@ async def test_state_setter_threadsafe_fallback(ws_client):
         mock_loop.call_soon_threadsafe.assert_called_once()
 
         args, _ = mock_loop.call_soon_threadsafe.call_args
-        assert args[0] is mock_create_task
+        assert args[0] == ws_client._schedule_task
+        # Cover _schedule_task by manual invocation
+        with patch("asyncio.create_task") as mock_ct:
+            task = mock_ct.return_value
+            args[0](args[1])
+            mock_ct.assert_called_once_with(args[1])
+            assert task in ws_client._tasks
+            # Trigger cleanup
+            mock_ct.call_args[0][0].close()  # close mock coro to avoid warning
+            # Manually trigger the done callback to cover discard (line 83)
+            task.add_done_callback.call_args[0][0](task)
+            assert task not in ws_client._tasks
 
         assert ws_client._error_reason is None
+
+    # Test state setter without callback coverage (line 63)
+    ws_client.callback = None
+    ws_client.state = STATE_STOPPED
+    assert ws_client.state == STATE_STOPPED

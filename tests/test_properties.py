@@ -1,6 +1,7 @@
 """Tests for property accessors."""
 
 from datetime import datetime, timedelta, timezone
+from unittest.mock import patch
 
 import pytest
 from freezegun import freeze_time
@@ -736,6 +737,9 @@ async def test_get_time(fixture, expected_str, request):
 
 
 @pytest.mark.parametrize(
+    "fixture", ["test_charger", "test_charger_v2", "test_charger_new"]
+)
+@pytest.mark.parametrize(
     "bad_value",
     [
         "not-a-timestamp",
@@ -744,14 +748,53 @@ async def test_get_time(fixture, expected_str, request):
         {"some": "dict"},
     ],
 )
-async def test_time_parsing_errors(test_charger, bad_value):
+async def test_time_parsing_errors(request, fixture, bad_value):
     """Test that ValueError and AttributeError are caught and return None."""
-    test_charger._status["time"] = bad_value
-    result = test_charger.time
+    charger = request.getfixturevalue(fixture)
+    charger._status["time"] = bad_value
+    result = charger.time
     assert result is None
+
+    # Test vehicle_eta with non-numeric value (only if not already numeric)
+    if not isinstance(bad_value, int | float):
+        charger._status["vehicle_eta"] = bad_value
+        result = charger.vehicle_eta
+        assert result is None
+
+
+async def test_status_logic_coverage(test_charger):
+    """Test status logic coverage for fallback and positive cases."""
+    # Positive case: status string exists
+    test_charger._status["status"] = "charging"
+    assert test_charger.status == "charging"
+
+    # Fallback Case: status is None
+    test_charger._status["status"] = None
+    assert test_charger.status == test_charger.state
+
+    # Fallback Case: status is missing
+    del test_charger._status["status"]
+    assert test_charger.status == test_charger.state
+
+
+async def test_async_charge_current_exception(test_charger):
+    """Test async_charge_current exception path."""
+    with patch.object(test_charger, "list_claims", side_effect=UnsupportedFeature):
+        # Should catch UnsupportedFeature and return config/status fallback
+        test_charger._config["max_current_soft"] = 32
+        assert await test_charger.async_charge_current == 32
 
 
 # ── divert ──────────────────────────────────────────────────────────
+
+
+async def test_async_charge_current_numeric_error(test_charger):
+    """Test async_charge_current with malformed numeric data."""
+    # Test TypeError in int conversion
+    claims = {"properties": {"charge_current": "invalid"}}
+    with patch.object(test_charger, "list_claims", return_value=claims):
+        test_charger._config["max_current_soft"] = 24
+        assert await test_charger.async_charge_current == 24
 
 
 @pytest.mark.parametrize(

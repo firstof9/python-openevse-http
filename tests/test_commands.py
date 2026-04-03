@@ -245,7 +245,6 @@ async def test_set_current_v2(
     assert "Setting current via RAPI" in caplog.text
 
     await test_charger_dev.update()
-    value = {"msg": "OK"}
     value = {
         "state": "active",
         "charge_current": 0,
@@ -380,7 +379,7 @@ async def test_set_charge_mode(test_charger, mock_aioclient, caplog):
     with pytest.raises(UnknownError):
         with caplog.at_level(logging.DEBUG):
             await test_charger.set_charge_mode("fast")
-    assert "Problem issuing command: error" in caplog.text
+    assert "Problem issuing command: {'msg': 'error'}" in caplog.text
 
     value = {"msg": "done"}
     mock_aioclient.post(
@@ -436,7 +435,7 @@ async def test_set_service_level(test_charger, mock_aioclient, caplog):
     with pytest.raises(UnknownError):
         with caplog.at_level(logging.DEBUG):
             await test_charger.set_service_level(1)
-    assert "Problem issuing command: error" in caplog.text
+    assert "Problem issuing command: {'msg': 'error'}" in caplog.text
 
     value = {"msg": "done"}
     mock_aioclient.post(
