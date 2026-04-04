@@ -506,8 +506,8 @@ class PropertiesMixin:
         except UnsupportedFeature:
             _LOGGER.debug("Override state unavailable on older firmware.")
             return None
-        if "state" in override.keys():
-            return override["state"]
+        if isinstance(override, dict):
+            return override.get("state", "auto")
         return "auto"
 
     @property

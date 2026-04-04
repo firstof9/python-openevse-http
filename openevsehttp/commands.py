@@ -86,6 +86,8 @@ class CommandsMixin:
         _LOGGER.debug("Toggling divert: %s", mode)
         response = await self.process_request(url=url, method="post", data=data)
         _LOGGER.debug("divert_mode response: %s", response)
+        if isinstance(response, dict) and response.get("msg") == "OK":
+            self._config["divert_enabled"] = mode
         return response
 
     async def get_override(self) -> dict[str, str] | dict[str, Any]:
@@ -228,7 +230,7 @@ class CommandsMixin:
             url = f"{self.url}restart"
             data = {"device": "evse"}
             reply = await self.process_request(url=url, method="post", data=data)
-            response = reply["msg"]
+            response = reply.get("msg", "Unknown error")
 
         else:
             _LOGGER.debug("Restarting EVSE module via RAPI")

@@ -86,7 +86,8 @@ class OpenEVSEWebsocket:
         """Async helper to set the state and await the callback."""
         self._state = value
         _LOGGER.debug("Websocket %s", value)
-        await self.callback(SIGNAL_CONNECTION_STATE, value, self._error_reason)
+        if self.callback:
+            await self.callback(SIGNAL_CONNECTION_STATE, value, self._error_reason)
         self._error_reason = None
 
     @staticmethod

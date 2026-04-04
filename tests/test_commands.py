@@ -546,7 +546,7 @@ async def test_led_brightness(test_charger_new, test_charger_v2, caplog):
     await test_charger_v2.update()
     with pytest.raises(UnsupportedFeature):
         with caplog.at_level(logging.DEBUG):
-            status = await test_charger_v2.led_brightness
+            _ = test_charger_v2.led_brightness
     assert "Feature not supported for older firmware." in caplog.text
 
 
