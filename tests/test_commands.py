@@ -314,21 +314,29 @@ async def test_set_divertmode(
     await test_charger_v2.update()
     await test_charger_v2.divert_mode()
 
-    mock_aioclient.post(
-        TEST_URL_CONFIG,
-        status=200,
-        body=value,
-    )
+    # Test UnsupportedFeature based on version
+    # This call does NOT consume a POST mock because it raises early
     await test_charger_broken.update()
-    test_charger_broken._config["version"] = "4.1.8"
+    test_charger_broken._config["version"] = "1.0.0"
     with pytest.raises(UnsupportedFeature):
         await test_charger_broken.divert_mode()
 
+    # Test JSON success and cache update
     mock_aioclient.post(
         TEST_URL_CONFIG,
         status=200,
-        body=value,
+        body='{"msg": "OK"}',
     )
+    test_charger_new._config["divert_enabled"] = False
+    await test_charger_new.divert_mode()
+    assert test_charger_new._config["divert_enabled"] is True
+
+    # Test UnsupportedFeature based on missing config key
+    # This call DOES NOT consume a POST mock because it raises early
+    test_charger_new._config["version"] = "4.1.2"
+    del test_charger_new._config["divert_enabled"]
+    with pytest.raises(UnsupportedFeature):
+        await test_charger_new.divert_mode()
     await test_charger_unknown_semver.update()
     with pytest.raises(UnsupportedFeature):
         with caplog.at_level(logging.DEBUG):

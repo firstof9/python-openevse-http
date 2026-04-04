@@ -280,13 +280,13 @@ async def test_keepalive_send_exceptions(ws_client_auth):
     await ws_client_auth.keepalive()
 
     # RuntimeError
-    # Code sets state to STATE_DISCONNECTED on RuntimeError (line 172)
+    # Code sets state to STATE_DISCONNECTED on RuntimeError
     ws_client_auth._client.send_json.side_effect = RuntimeError("Runtime err")
     await ws_client_auth.keepalive()
     assert ws_client_auth.state == STATE_DISCONNECTED
 
     # Generic Exception
-    # Code sets state to STATE_DISCONNECTED on generic Exception (line 175)
+    # Code sets state to STATE_DISCONNECTED on generic Exception
     ws_client_auth._client.send_json.side_effect = Exception("Generic err")
     await ws_client_auth.keepalive()
     assert ws_client_auth.state == STATE_DISCONNECTED
@@ -317,13 +317,13 @@ async def test_state_setter_threadsafe_fallback(ws_client):
             assert task in ws_client._tasks
             # Trigger cleanup
             mock_ct.call_args[0][0].close()  # close mock coro to avoid warning
-            # Manually trigger the done callback to cover discard (line 83)
+            # Manually trigger the done callback to cover discard
             task.add_done_callback.call_args[0][0](task)
             assert task not in ws_client._tasks
 
         assert ws_client._error_reason is None
 
-    # Test state setter without callback coverage (line 63)
+    # Test state setter without callback coverage
     ws_client.callback = None
     ws_client.state = STATE_STOPPED
     assert ws_client.state == STATE_STOPPED

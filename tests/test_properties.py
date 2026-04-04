@@ -797,6 +797,12 @@ async def test_async_charge_current_numeric_error(test_charger):
         assert await test_charger.async_charge_current == 24
 
 
+async def test_async_override_state_non_dict(test_charger_new):
+    """Test async_override_state handles non-dictionary responses."""
+    with patch.object(test_charger_new, "get_override", return_value="string"):
+        assert await test_charger_new.async_override_state == "auto"
+
+
 @pytest.mark.parametrize(
     "fixture, expected",
     [("test_charger", True), ("test_charger_v2", False), ("test_charger_new", False)],
