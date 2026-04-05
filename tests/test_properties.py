@@ -443,6 +443,15 @@ async def test_get_charging_power(fixture, expected, request):
         await charger.ws_disconnect()
 
 
+async def test_charging_power_non_numeric():
+    """Test charging_power with non-numeric values."""
+    charger = OpenEVSE("openevse.test.tld")
+    charger._status = {"voltage": "240", "amp": 32}
+    assert charger.charging_power is None
+    charger._status = {"voltage": 240, "amp": "32"}
+    assert charger.charging_power is None
+
+
 @pytest.mark.parametrize(
     "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
 )

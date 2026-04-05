@@ -389,7 +389,10 @@ class PropertiesMixin:
         if self._status is not None and all(
             key in self._status for key in ["voltage", "amp"]
         ):
-            return round(self._status["voltage"] * self._status["amp"], 2)
+            voltage = self._status["voltage"]
+            amp = self._status["amp"]
+            if isinstance(voltage, int | float) and isinstance(amp, int | float):
+                return round(voltage * amp, 2)
         return None
 
     # Shaper values

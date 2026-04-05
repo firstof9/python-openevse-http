@@ -252,13 +252,14 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
     async def _update_status(self, msgtype, data, error):
         """Update data from websocket listener."""
         if msgtype == SIGNAL_CONNECTION_STATE:
+            uri = self.websocket.uri if self.websocket else "Unknown"
             if data == STATE_CONNECTED:
-                _LOGGER.debug("Websocket to %s successful", self.websocket.uri)
+                _LOGGER.debug("Websocket to %s successful", uri)
                 self._ws_listening = True
             elif data == STATE_DISCONNECTED:
                 _LOGGER.debug(
                     "Websocket to %s disconnected, retrying",
-                    self.websocket.uri,
+                    uri,
                 )
                 _LOGGER.debug("Disconnect message: %s", error)
                 self._ws_listening = False
@@ -268,7 +269,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
             elif data == STATE_STOPPED and error:
                 _LOGGER.debug(
                     "Websocket to %s failed, aborting [Error: %s]",
-                    self.websocket.uri,
+                    uri,
                     error,
                 )
                 self._ws_listening = False
