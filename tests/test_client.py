@@ -1386,3 +1386,18 @@ async def test_ws_disconnect_owned_loop():
                 # Check for threadsafe call to stop
                 assert mock_loop.call_soon_threadsafe.called
                 assert mock_loop.close.called
+
+
+async def test_ws_shutdown_drains_tasks(test_charger):
+    """Test that _shutdown cancels pending tasks."""
+    mock_task = MagicMock()
+    ws_mock = MagicMock()
+    ws_mock._tasks = {mock_task}
+    ws_mock.close = AsyncMock()
+    test_charger.websocket = ws_mock
+
+    await test_charger._shutdown()
+
+    assert mock_task.cancel.called
+    assert len(ws_mock._tasks) == 0
+    assert test_charger.websocket is None
