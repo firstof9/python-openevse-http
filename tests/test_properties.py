@@ -789,6 +789,7 @@ async def test_status_logic_coverage(test_charger):
     # Fallback Case: status is missing
     del test_charger._status["status"]
     assert test_charger.status == test_charger.state
+    await test_charger.ws_disconnect()
 
 
 async def test_async_charge_current_exception(test_charger):
@@ -797,6 +798,7 @@ async def test_async_charge_current_exception(test_charger):
         # Should catch UnsupportedFeature and return config/status fallback
         test_charger._config["max_current_soft"] = 32
         assert await test_charger.get_charge_current() == 32
+    await test_charger.ws_disconnect()
 
 
 # ── divert ──────────────────────────────────────────────────────────
@@ -809,12 +811,14 @@ async def test_async_charge_current_numeric_error(test_charger):
     with patch.object(test_charger, "list_claims", return_value=claims):
         test_charger._config["max_current_soft"] = 24
         assert await test_charger.get_charge_current() == 24
+    await test_charger.ws_disconnect()
 
 
 async def test_get_override_state_non_dict(test_charger_new):
     """Test get_override_state handles non-dictionary responses."""
     with patch.object(test_charger_new, "get_override", return_value="string"):
         assert await test_charger_new.get_override_state() == "auto"
+    await test_charger_new.ws_disconnect()
 
 
 @pytest.mark.parametrize(
