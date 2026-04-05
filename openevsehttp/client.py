@@ -240,7 +240,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
                 new_loop = True
                 _LOGGER.debug("Using new event loop...")
 
-        if not self._ws_listening:
+        if not self._ws_listening and self.websocket is not None:
             _LOGGER.debug("Setting up websocket ping...")
             self._loop.create_task(self.websocket.listen())
             self._loop.create_task(self.repeat(300, self.websocket.keepalive))
@@ -316,7 +316,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
 
         *args and **kwargs are passed as the arguments to func.
         """
-        while self.ws_state != "stopped":
+        while self.ws_state != STATE_STOPPED:
             await asyncio.sleep(interval)
             await func(*args, **kwargs)
 

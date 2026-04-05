@@ -351,6 +351,18 @@ class CommandsMixin:
         data = f"divertmode={new_mode}"
 
         response = await self.process_request(url=url, method="post", rapi=data)
-        if response != "Divert Mode changed":
+        success = False
+        if isinstance(response, str):
+            res_lower = response.lower()
+            if "divert" in res_lower and "changed" in res_lower:
+                success = True
+        elif isinstance(response, dict) and response.get("msg") in [
+            "OK",
+            "done",
+            "no change",
+        ]:
+            success = True
+
+        if not success:
             _LOGGER.error("Problem issuing command: %s", response)
             raise UnknownError

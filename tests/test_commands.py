@@ -318,6 +318,16 @@ async def test_set_divertmode(
         status=200,
         body=value,
     )
+    test_charger_new._config["divert_enabled"] = False
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_new.divert_mode()
+        assert "Toggling divert: True" in caplog.text
+
+    mock_aioclient.post(
+        TEST_URL_CONFIG,
+        status=200,
+        body=value,
+    )
     await test_charger_v2.update()
     await test_charger_v2.divert_mode()
 
@@ -334,6 +344,7 @@ async def test_set_divertmode(
         status=200,
         body='{"msg": "OK"}',
     )
+    test_charger_new._config["version"] = "2.9.1"
     test_charger_new._config["divert_enabled"] = False
     await test_charger_new.divert_mode()
     assert test_charger_new._config["divert_enabled"] is True
@@ -349,6 +360,27 @@ async def test_set_divertmode(
         with caplog.at_level(logging.DEBUG):
             await test_charger_unknown_semver.divert_mode()
     assert "Non-semver firmware version detected." in caplog.text
+
+
+async def test_set_divertmode_dict(test_charger_new, mock_aioclient):
+    """Test set_divertmode with dict response."""
+    mock_aioclient.post(
+        "http://openevse.test.tld/divertmode",
+        status=200,
+        body='{"msg": "OK"}',
+    )
+    await test_charger_new.set_divert_mode("eco")
+
+
+async def test_set_divertmode_fail(test_charger_new, mock_aioclient):
+    """Test set_divertmode failure."""
+    mock_aioclient.post(
+        "http://openevse.test.tld/divertmode",
+        status=200,
+        body='{"msg": "failure!"}',
+    )
+    with pytest.raises(main.UnknownError):
+        await test_charger_new.set_divert_mode("eco")
 
 
 # ── set_charge_mode ──────────────────────────────────────────────────

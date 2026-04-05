@@ -27,6 +27,7 @@ from .websocket import (
     SIGNAL_CONNECTION_STATE,
     STATE_CONNECTED,
     STATE_DISCONNECTED,
+    STATE_STARTING,
     STATE_STOPPED,
     OpenEVSEWebsocket,
 )
@@ -47,6 +48,7 @@ __all__ = [
     "SIGNAL_CONNECTION_STATE",
     "STATE_CONNECTED",
     "STATE_DISCONNECTED",
+    "STATE_STARTING",
     "STATE_STOPPED",
     "UnknownError",
     "UnsupportedFeature",
