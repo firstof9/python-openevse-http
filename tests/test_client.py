@@ -1359,3 +1359,29 @@ async def test_repeat_task():
     await asyncio.sleep(0.01)
     await task
     assert task.done()
+
+
+async def test_ws_disconnect_owned_loop():
+    """Test ws_disconnect when the client owns the event loop."""
+    charger = OpenEVSE(SERVER_URL)
+    charger.websocket = MagicMock()
+    charger.websocket.state = STATE_STOPPED
+
+    # Mock loop finding to fail
+    with patch("asyncio.get_running_loop", side_effect=RuntimeError):
+        # Mock loop methods to avoid real async operations
+        mock_loop = MagicMock(spec=asyncio.AbstractEventLoop)
+        with patch("asyncio.new_event_loop", return_value=mock_loop):
+            with patch("threading.Thread"):
+                charger._start_listening()
+                assert charger._owns_loop is True
+                assert charger._loop is mock_loop
+
+                # Mock thread
+                charger._loop_thread = MagicMock()
+
+                await charger.ws_disconnect()
+                assert charger._loop is None
+                # Check for threadsafe call to stop
+                assert mock_loop.call_soon_threadsafe.called
+                assert mock_loop.close.called

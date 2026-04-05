@@ -160,11 +160,13 @@ async def test_toggle_override_v2_err(test_charger_v2, mock_aioclient, caplog):
     )
 
 
-async def test_toggle_override_refresh_fail(test_charger, mock_aioclient, caplog):
+async def test_toggle_override_refresh_fail(mock_aioclient, caplog):
     """Test toggle_override when state is missing and refresh fails."""
+    # Use a fresh charger to avoid fixture mock interference
+    charger = main.OpenEVSE("openevse.test.tld")
     # Mock status for a v3 firmware (older than 4.0.1)
     mock_aioclient.get(
-        TEST_URL_STATUS,
+        "http://openevse.test.tld/status",
         status=200,
         body='{"version": "3.3.1"}',  # Still missing state
     )
@@ -174,11 +176,11 @@ async def test_toggle_override_refresh_fail(test_charger, mock_aioclient, caplog
         body='{"version": "3.3.1"}',
     )
     # Ensure it doesn't have state and is v3
-    test_charger._status = {}
-    test_charger._config = {"version": "3.3.1"}
+    charger._status = {}
+    charger._config = {"version": "3.3.1"}
 
     with caplog.at_level(logging.ERROR):
-        await test_charger.toggle_override()
+        await charger.toggle_override()
     assert "Cannot toggle override: unknown charger state." in caplog.text
 
 
