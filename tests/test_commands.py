@@ -743,3 +743,19 @@ async def test_async_override_state(
         await test_charger_v2.update()
         await test_charger_v2.get_override_state()
         assert "Override state unavailable on older firmware." in caplog.text
+
+
+async def test_set_override_auto_release(test_charger_new, mock_aioclient):
+    """Test set_override with auto_release provided."""
+    await test_charger_new.update()
+    mock_aioclient.get(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body='{"state":"active","auto_release":true}',
+    )
+    mock_aioclient.post(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body='{"msg":"OK"}',
+    )
+    await test_charger_new.set_override(auto_release=False)
