@@ -307,7 +307,7 @@ class PropertiesMixin:
 
     @property
     def total_month(self) -> float | None:
-        """Get the total week energy usage."""
+        """Get the total month energy usage."""
         return self._status.get("total_month", None)
 
     @property
@@ -330,7 +330,7 @@ class PropertiesMixin:
 
     @property
     def vehicle(self) -> bool:
-        """Return if a vehicle is connected dto the EVSE."""
+        """Return if a vehicle is connected to the EVSE."""
         return self._status.get("vehicle", False)
 
     @property
@@ -396,7 +396,7 @@ class PropertiesMixin:
     # Shaper values
     @property
     def shaper_active(self) -> bool | None:
-        """Return if shper is active."""
+        """Return if shaper is active."""
         return self._status.get("shaper", None)
 
     @property

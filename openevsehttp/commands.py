@@ -86,7 +86,11 @@ class CommandsMixin:
         _LOGGER.debug("Toggling divert: %s", mode)
         response = await self.process_request(url=url, method="post", data=data)
         _LOGGER.debug("divert_mode response: %s", response)
-        if isinstance(response, dict) and response.get("msg") == "OK":
+        if isinstance(response, dict) and response.get("msg") in [
+            "OK",
+            "done",
+            "no change",
+        ]:
             self._config["divert_enabled"] = mode
         return response
 

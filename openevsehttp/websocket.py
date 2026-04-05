@@ -60,6 +60,7 @@ class OpenEVSEWebsocket:
         _LOGGER.debug("Websocket %s", value)
 
         if not self.callback:
+            self._error_reason = None
             return
 
         # Prepare the coroutine or invoke the callback
@@ -120,7 +121,8 @@ class OpenEVSEWebsocket:
                     if message.type == aiohttp.WSMsgType.TEXT:
                         msg = message.json()
                         msgtype = "data"
-                        await self.callback(msgtype, msg, None)
+                        if self.callback:
+                            await self.callback(msgtype, msg, None)
                         if "pong" in msg.keys():
                             self._pong = datetime.datetime.now()
 

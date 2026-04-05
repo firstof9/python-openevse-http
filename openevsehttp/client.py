@@ -189,12 +189,6 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
                 self._config = response
                 _LOGGER.debug("Config update: %s", self._config)
 
-        if not self.websocket:
-            # Start Websocket listening
-            self.websocket = OpenEVSEWebsocket(
-                self.url, self._update_status, self._user, self._pwd, self._session
-            )
-
     async def test_and_get(self) -> dict:
         """Test connection.
 
@@ -219,6 +213,11 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
 
     def ws_start(self) -> None:
         """Start the websocket listener."""
+        if not self.websocket:
+            self.websocket = OpenEVSEWebsocket(
+                self.url, self._update_status, self._user, self._pwd, self._session
+            )
+
         if self.websocket:
             if self._ws_listening and self.websocket.state == "connected":
                 raise AlreadyListening
@@ -293,6 +292,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
         if self.websocket is None:
             return
         await self.websocket.close()
+        self.websocket = None
 
     def is_coroutine_function(self, callback):
         """Check if a callback is a coroutine function."""

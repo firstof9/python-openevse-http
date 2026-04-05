@@ -261,62 +261,62 @@ async def test_get_service_level(fixture, expected, request):
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
+    "fixture, expected", [("test_charger", False), ("test_charger_v2", False)]
 )
 async def test_get_tempt(fixture, expected, request):
     """Test v4 Status reply."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.temp_check_enabled
-    assert status == expected
+    assert status is expected
     await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 1)]
+    "fixture, expected", [("test_charger", False), ("test_charger_v2", True)]
 )
 async def test_get_diodet(fixture, expected, request):
     """Test v4 Status reply."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.diode_check_enabled
-    assert status == expected
+    assert status is expected
     await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
+    "fixture, expected", [("test_charger", False), ("test_charger_v2", False)]
 )
 async def test_get_ventt(fixture, expected, request):
     """Test v4 Status reply."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.vent_required_enabled
-    assert status == expected
+    assert status is expected
     await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
+    "fixture, expected", [("test_charger", False), ("test_charger_v2", False)]
 )
 async def test_get_groundt(fixture, expected, request):
     """Test v4 Status reply."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.ground_check_enabled
-    assert status == expected
+    assert status is expected
     await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
+    "fixture, expected", [("test_charger", False), ("test_charger_v2", False)]
 )
 async def test_get_relayt(fixture, expected, request):
     """Test v4 Status reply."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.stuck_relay_check_enabled
-    assert status == expected
+    assert status is expected
     await charger.ws_disconnect()
 
 

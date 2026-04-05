@@ -58,9 +58,12 @@ async def test_get_status_auth(test_charger_auth):
 async def test_ws_state(test_charger):
     """Test v4 Status reply."""
     await test_charger.update()
+    assert test_charger.ws_state is None
+    test_charger.ws_start()
     value = test_charger.ws_state
     assert value == STATE_DISCONNECTED
     await test_charger.ws_disconnect()
+    assert test_charger.ws_state is None
 
 
 async def test_update_status(test_charger):
