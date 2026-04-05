@@ -1331,3 +1331,25 @@ async def test_websocket_stop_break():
             # Check that we received "data" once
             calls = [call for call in callback.call_args_list if call[0][0] == "data"]
             assert len(calls) == 1
+
+
+async def test_repeat_task():
+    """Test the repeat background task."""
+    charger = OpenEVSE(SERVER_URL)
+    charger.websocket = MagicMock()
+    charger.websocket.state = "connected"
+
+    mock_func = MagicMock(return_value=asyncio.Future())
+    mock_func.return_value.set_result(None)
+
+    # Launch repeat task
+    task = asyncio.create_task(charger.repeat(0.01, mock_func))
+
+    # Wait for at least one execution
+    await asyncio.sleep(0.05)
+    assert mock_func.called
+
+    # Stop and wait for termination
+    charger.websocket.state = STATE_STOPPED
+    await task
+    assert task.done()
