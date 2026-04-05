@@ -271,6 +271,13 @@ async def test_set_current_v2(
 # ── set_divertmode (toggle divert) ───────────────────────────────────
 
 
+async def test_divert_mode_no_config(test_charger):
+    """Test divert_mode with no config."""
+    test_charger._config = {}
+    with pytest.raises(RuntimeError, match="Missing configuration"):
+        await test_charger.divert_mode()
+
+
 async def test_set_divertmode(
     test_charger_new,
     test_charger_v2,
@@ -595,7 +602,7 @@ async def test_async_charge_current(
         repeat=False,
     )
 
-    value = await test_charger.async_charge_current
+    value = await test_charger.get_charge_current()
     assert value == 28
 
     mock_aioclient.get(
@@ -605,12 +612,12 @@ async def test_async_charge_current(
         repeat=False,
     )
 
-    value = await test_charger.async_charge_current
+    value = await test_charger.get_charge_current()
     assert value == 48
     await test_charger.ws_disconnect()
 
     await test_charger_v2.update()
-    value = await test_charger_v2.async_charge_current
+    value = await test_charger_v2.get_charge_current()
     assert value == 25
     await test_charger_v2.ws_disconnect()
 
@@ -626,7 +633,7 @@ async def test_async_charge_current_list(test_charger, mock_aioclient):
         repeat=False,
     )
 
-    value = await test_charger.async_charge_current
+    value = await test_charger.get_charge_current()
     assert value == 30
     await test_charger.ws_disconnect()
 
@@ -650,7 +657,7 @@ async def test_async_override_state(
         body=json.dumps(value),
     )
     with caplog.at_level(logging.DEBUG):
-        status = await test_charger.async_override_state
+        status = await test_charger.get_override_state()
         assert status == "active"
 
     value = {
@@ -662,7 +669,7 @@ async def test_async_override_state(
         body=json.dumps(value),
     )
     with caplog.at_level(logging.DEBUG):
-        status = await test_charger.async_override_state
+        status = await test_charger.get_override_state()
         assert status == "disabled"
 
     value = {}
@@ -672,10 +679,10 @@ async def test_async_override_state(
         body=json.dumps(value),
     )
     with caplog.at_level(logging.DEBUG):
-        status = await test_charger.async_override_state
+        status = await test_charger.get_override_state()
         assert status == "auto"
 
     with caplog.at_level(logging.DEBUG):
         await test_charger_v2.update()
-        await test_charger_v2.async_override_state
+        await test_charger_v2.get_override_state()
         assert "Override state unavailable on older firmware." in caplog.text

@@ -67,11 +67,12 @@ class CommandsMixin:
 
     async def divert_mode(self) -> dict[str, str] | dict[str, Any]:
         """Set the divert mode to either Normal or Eco modes."""
+        if not self._config:
+            raise RuntimeError("Missing configuration: self._config is required")
+
         if not self._version_check("2.9.1"):
             _LOGGER.debug("Feature not supported for older firmware.")
             raise UnsupportedFeature
-
-        assert self._config
 
         if "divert_enabled" in self._config:
             _LOGGER.debug("Divert Enabled: %s", self._config["divert_enabled"])
@@ -159,7 +160,7 @@ class CommandsMixin:
         else:
             # Older firmware use RAPI commands
             _LOGGER.debug("Toggling manual override via RAPI")
-            command = "$FE" if self._status["state"] == 254 else "$FS"
+            command = "$FE" if self._status.get("state", 0) == 254 else "$FS"
             response, msg = await self.send_command(command)
             _LOGGER.debug("Toggle response: %s", msg)
 

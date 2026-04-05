@@ -778,29 +778,29 @@ async def test_status_logic_coverage(test_charger):
 
 
 async def test_async_charge_current_exception(test_charger):
-    """Test async_charge_current exception path."""
+    """Test get_charge_current exception path."""
     with patch.object(test_charger, "list_claims", side_effect=UnsupportedFeature):
         # Should catch UnsupportedFeature and return config/status fallback
         test_charger._config["max_current_soft"] = 32
-        assert await test_charger.async_charge_current == 32
+        assert await test_charger.get_charge_current() == 32
 
 
 # ── divert ──────────────────────────────────────────────────────────
 
 
 async def test_async_charge_current_numeric_error(test_charger):
-    """Test async_charge_current with malformed numeric data."""
+    """Test get_charge_current with malformed numeric data."""
     # Test TypeError in int conversion
     claims = {"properties": {"charge_current": "invalid"}}
     with patch.object(test_charger, "list_claims", return_value=claims):
         test_charger._config["max_current_soft"] = 24
-        assert await test_charger.async_charge_current == 24
+        assert await test_charger.get_charge_current() == 24
 
 
-async def test_async_override_state_non_dict(test_charger_new):
-    """Test async_override_state handles non-dictionary responses."""
+async def test_get_override_state_non_dict(test_charger_new):
+    """Test get_override_state handles non-dictionary responses."""
     with patch.object(test_charger_new, "get_override", return_value="string"):
-        assert await test_charger_new.async_override_state == "auto"
+        assert await test_charger_new.get_override_state() == "auto"
 
 
 @pytest.mark.parametrize(

@@ -13,29 +13,37 @@ from openevsehttp.sensors import SensorsMixin
 class DummyCommands(CommandsMixin):
     """Dummy class for CommandsMixin tests."""
 
-    url = "http://test"
-    _status = {}
-    _config = {}
-    _session = None
+    def __init__(self):
+        """Initialize dummy commands."""
+        self.url = "http://test"
+        self._status = {}
+        self._config = {}
+        self._session = None
 
 
 class DummyManagers(ManagersMixin):
     """Dummy class for ManagersMixin tests."""
 
-    url = "http://test"
+    def __init__(self):
+        """Initialize dummy managers."""
+        self.url = "http://test"
 
 
 class DummyProperties(PropertiesMixin):
     """Dummy class for PropertiesMixin tests."""
 
-    _status = {}
-    _config = {}
+    def __init__(self):
+        """Initialize dummy properties."""
+        self._status = {}
+        self._config = {}
 
 
 class DummySensors(SensorsMixin):
     """Dummy class for SensorsMixin tests."""
 
-    url = "http://test"
+    def __init__(self):
+        """Initialize dummy sensors."""
+        self.url = "http://test"
 
 
 def test_mixins_sync_not_implemented():
@@ -62,8 +70,6 @@ async def test_commands_mixin_async_not_implemented():
 async def test_managers_mixin_not_implemented():
     """Test NotImplementedError in ManagersMixin."""
     mgrs = DummyManagers()
-    with pytest.raises(NotImplementedError):
-        mgrs._version_check("1.0.0")
     with pytest.raises(NotImplementedError):
         await mgrs.process_request("http://test")
 

@@ -35,6 +35,7 @@ __all__ = [
     "AlreadyListening",
     "AuthenticationError",
     "ContentTypeError",
+    "divert_mode",
     "ERROR_TIMEOUT",
     "INFO_LOOP_RUNNING",
     "InvalidType",
@@ -48,9 +49,8 @@ __all__ = [
     "STATE_CONNECTED",
     "STATE_DISCONNECTED",
     "STATE_STOPPED",
+    "states",
     "UnknownError",
     "UnsupportedFeature",
     "UPDATE_TRIGGERS",
-    "divert_mode",
-    "states",
 ]

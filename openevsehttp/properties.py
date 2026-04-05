@@ -98,9 +98,8 @@ class PropertiesMixin:
             return self._config.get("max_current_soft")
         return self._status.get("pilot")
 
-    @property
-    async def async_charge_current(self) -> int | None:
-        """Return the charge current."""
+    async def get_charge_current(self) -> int | None:
+        """Get the charge current."""
         try:
             claims = await self.list_claims(target=True)
             # Normalize list to find an element with properties or use the first one
@@ -498,9 +497,8 @@ class PropertiesMixin:
             counts["stuckcount"] = self._status["stuckcount"]
         return counts
 
-    @property
-    async def async_override_state(self) -> str | None:
-        """Return the unit override state."""
+    async def get_override_state(self) -> str | None:
+        """Get the unit override state."""
         try:
             override = await self.get_override()
         except UnsupportedFeature:

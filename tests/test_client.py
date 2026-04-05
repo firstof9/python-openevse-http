@@ -42,6 +42,7 @@ TEST_URL_GITHUB_v2 = (
     "https://api.github.com/repos/OpenEVSE/ESP8266_WiFi_v2.x/releases/latest"
 )
 SERVER_URL = "openevse.test.tld"
+DUMMY_PWD = "fakepassword"
 
 
 # ── Auth / update / status ────────────────────────────────────────────
@@ -137,25 +138,21 @@ async def test_send_command_parse_err(test_charger_auth, mock_aioclient):
         TEST_URL_RAPI, status=400, body='{"msg": "Could not parse JSON"}'
     )
     with pytest.raises(main.ParseJSONError):
-        status = await test_charger_auth.send_command("test")
-        assert status is None
+        await test_charger_auth.send_command("test")
 
     mock_aioclient.post(
         TEST_URL_RAPI, status=400, body='{"error": "Could not parse JSON"}'
     )
     with pytest.raises(main.ParseJSONError):
-        status = await test_charger_auth.send_command("test")
-        assert status is None
+        await test_charger_auth.send_command("test")
 
     mock_aioclient.post(TEST_URL_RAPI, status=400, body='{"other": "Something else"}')
     with pytest.raises(main.ParseJSONError):
-        status = await test_charger_auth.send_command("test")
-        assert status is None
+        await test_charger_auth.send_command("test")
 
     mock_aioclient.post(TEST_URL_RAPI, status=400, body='"Just a string response"')
     with pytest.raises(main.ParseJSONError):
-        status = await test_charger_auth.send_command("test")
-        assert status is None
+        await test_charger_auth.send_command("test")
 
 
 async def test_send_command_auth_err(test_charger_auth, mock_aioclient):
@@ -198,12 +195,12 @@ async def test_send_command_server_timeout(test_charger_auth, mock_aioclient, ca
 
 async def test_test_and_get(test_charger, test_charger_v2, mock_aioclient, caplog):
     """Test v4 Status reply."""
-    data = await test_charger.test_and_get()
     mock_aioclient.get(
         TEST_URL_CONFIG,
         status=200,
         body=load_fixture("v4_json/config.json"),
     )
+    data = await test_charger.test_and_get()
     assert data["serial"] == "1234567890AB"
     assert data["model"] == "unknown"
 
@@ -685,7 +682,7 @@ async def test_get_schedule(mock_aioclient):
 
 async def test_main_auth_instantiation():
     """Test OpenEVSE auth instantiation."""
-    charger = OpenEVSE(SERVER_URL, user="user", pwd="password")
+    charger = OpenEVSE(SERVER_URL, user="user", pwd=DUMMY_PWD)
 
     # Setup mock session to be an async context manager
     mock_session = MagicMock()
@@ -712,7 +709,7 @@ async def test_main_auth_instantiation():
 
         # Verify BasicAuth was instantiated
         # Note: process_request is called multiple times in update(), so we check if called at least once
-        mock_basic_auth.assert_called_with("user", "password")
+        mock_basic_auth.assert_called_with("user", DUMMY_PWD)
 
 
 async def test_main_sync_callback():
