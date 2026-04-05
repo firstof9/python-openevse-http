@@ -47,6 +47,7 @@ class OpenEVSEWebsocket:
         self._ping = None
         self._pong = None
         self._tasks: set[asyncio.Task] = set()
+        self._listener_loop: asyncio.AbstractEventLoop | None = None
 
     @property
     def state(self):
@@ -73,7 +74,7 @@ class OpenEVSEWebsocket:
             task.add_done_callback(self._tasks.discard)
         except RuntimeError:
             # If there's no running loop, schedule safely on the event loop.
-            loop = asyncio.get_event_loop()
+            loop = self._listener_loop or asyncio.get_event_loop()
             loop.call_soon_threadsafe(self._schedule_task, coro)
         self._error_reason = None
 
@@ -169,8 +170,12 @@ class OpenEVSEWebsocket:
     async def listen(self):
         """Start the listening websocket."""
         self.failed_attempts = 0
-        while self.state != STATE_STOPPED:
-            await self.running()
+        self._listener_loop = asyncio.get_running_loop()
+        try:
+            while self.state != STATE_STOPPED:
+                await self.running()
+        finally:
+            self._listener_loop = None
 
     async def close(self):
         """Close the listening websocket."""

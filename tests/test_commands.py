@@ -55,6 +55,7 @@ async def test_toggle_override(
         await test_charger.toggle_override()
     assert "Toggling manual override http" in caplog.text
     await test_charger.ws_disconnect()
+    caplog.clear()
 
     await test_charger_dev.update()
     with caplog.at_level(logging.DEBUG):

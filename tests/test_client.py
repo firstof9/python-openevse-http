@@ -1298,6 +1298,7 @@ async def test_websocket_listen():
         mock_running.side_effect = side_effect
 
         await ws.listen()
+        await ws.close()
         mock_running.assert_called_once()
 
 

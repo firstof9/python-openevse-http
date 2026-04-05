@@ -295,28 +295,45 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
                 else:
                     self.callback()  # pylint: disable=not-callable
 
-    async def ws_disconnect(self) -> None:
-        """Disconnect the websocket listener."""
-        self._ws_listening = False
+    async def _shutdown(self):
+        """Shutdown the websocket and tasks on the listener loop."""
+        if self._ws_keepalive_task:
+            self._ws_keepalive_task.cancel()
+        if self._ws_listen_task:
+            self._ws_listen_task.cancel()
+
         if self.websocket:
+            # Cancel all pending callback tasks
+            for task in list(self.websocket._tasks):
+                task.cancel()
+            self.websocket._tasks.clear()
+
+            # Close the websocket (this cancels running() internal tasks)
             await self.websocket.close()
             self.websocket = None
 
-        if self._ws_listen_task:
-            self._ws_listen_task.cancel()
-            self._ws_listen_task = None
-        if self._ws_keepalive_task:
-            self._ws_keepalive_task.cancel()
-            self._ws_keepalive_task = None
+        self._ws_listen_task = None
+        self._ws_keepalive_task = None
+        if self._loop:
+            self._loop.stop()
+
+    async def ws_disconnect(self) -> None:
+        """Disconnect the websocket listener."""
+        self._ws_listening = False
 
         if self._owns_loop and self._loop:
-            self._loop.call_soon_threadsafe(self._loop.stop)
+            # Schedule shutdown coroutine on the loop thread
+            loop = self._loop
+            loop.call_soon_threadsafe(lambda: loop.create_task(self._shutdown()))
             if self._loop_thread:
-                self._loop_thread.join(timeout=1.0)
+                self._loop_thread.join(timeout=2.0)
                 self._loop_thread = None
             self._loop.close()
             self._loop = None
             self._owns_loop = False
+        else:
+            # Standard async disconnect for caller loop
+            await self._shutdown()
 
     def is_coroutine_function(self, callback):
         """Check if a callback is a coroutine function."""
