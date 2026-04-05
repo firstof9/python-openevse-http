@@ -1364,7 +1364,7 @@ async def test_repeat_task():
 async def test_ws_disconnect_owned_loop():
     """Test ws_disconnect when the client owns the event loop."""
     charger = OpenEVSE(SERVER_URL)
-    charger.websocket = MagicMock()
+    charger.websocket = AsyncMock()
     charger.websocket.state = STATE_STOPPED
 
     # Mock loop finding to fail
