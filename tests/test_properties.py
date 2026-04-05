@@ -420,9 +420,12 @@ async def test_get_current_capacity(fixture, expected, request):
 async def test_get_charging_voltage(fixture, expected, request):
     """Test v4 Status reply."""
     charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.charging_voltage
-    assert status == expected
+    try:
+        await charger.update()
+        status = charger.charging_voltage
+        assert status == expected
+    finally:
+        await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -432,10 +435,12 @@ async def test_get_charging_voltage(fixture, expected, request):
 async def test_get_charging_power(fixture, expected, request):
     """Test v4 Status reply."""
     charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.charging_power
-    assert status == expected
-    await charger.ws_disconnect()
+    try:
+        await charger.update()
+        status = charger.charging_power
+        assert status == expected
+    finally:
+        await charger.ws_disconnect()
 
 
 @pytest.mark.parametrize(
@@ -689,7 +694,7 @@ async def test_get_ir_temperature(fixture, expected, request):
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.ir_temperature
-    assert status is None
+    assert status == expected
     await charger.ws_disconnect()
 
 

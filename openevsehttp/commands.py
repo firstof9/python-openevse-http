@@ -318,12 +318,13 @@ class CommandsMixin:
                 _LOGGER.error("Failed to parse JSON response: %s", message)
                 return None
 
-            response = {}
-            if isinstance(message, dict):
-                response["latest_version"] = message.get("tag_name")
-                response["release_notes"] = message.get("body")
-                response["release_url"] = message.get("html_url")
-            return response
+            if not isinstance(message, dict):
+                return None
+            return {
+                "latest_version": message.get("tag_name"),
+                "release_notes": message.get("body"),
+                "release_url": message.get("html_url"),
+            }
 
     async def set_led_brightness(self, level: int) -> None:
         """Set LED brightness level."""

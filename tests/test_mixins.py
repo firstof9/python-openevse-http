@@ -79,8 +79,6 @@ async def test_properties_mixin_not_implemented():
     """Test NotImplementedError in PropertiesMixin."""
     props = DummyProperties()
     with pytest.raises(NotImplementedError):
-        props._version_check("1.0.0")
-    with pytest.raises(NotImplementedError):
         await props.list_claims()
     with pytest.raises(NotImplementedError):
         await props.get_override()
@@ -90,7 +88,5 @@ async def test_properties_mixin_not_implemented():
 async def test_sensors_mixin_not_implemented():
     """Test NotImplementedError in SensorsMixin."""
     sensors = DummySensors()
-    with pytest.raises(NotImplementedError):
-        sensors._version_check("1.0.0")
     with pytest.raises(NotImplementedError):
         await sensors.process_request("http://test")

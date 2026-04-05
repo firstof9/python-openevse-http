@@ -81,7 +81,6 @@ async def test_get_status_auth_err(test_charger_auth_err):
     """Test v4 Status reply."""
     with pytest.raises(main.AuthenticationError):
         await test_charger_auth_err.update()
-        assert test_charger_auth_err is None
 
 
 # ── send_command ──────────────────────────────────────────────────────
@@ -165,8 +164,7 @@ async def test_send_command_auth_err(test_charger_auth, mock_aioclient):
         status=401,
     )
     with pytest.raises(main.AuthenticationError):
-        status = await test_charger_auth.send_command("test")
-        assert status is None
+        await test_charger_auth.send_command("test")
 
 
 async def test_send_command_async_timeout(test_charger_auth, mock_aioclient, caplog):
@@ -452,7 +450,7 @@ async def test_firmware_check_errors(mock_aioclient):
 
     # Non-dict JSON from github
     mock_aioclient.get(url, status=200, body='"just a string"')
-    assert await charger.firmware_check() == {}
+    assert await charger.firmware_check() is None
 
 
 # ── version_check ────────────────────────────────────────────────────

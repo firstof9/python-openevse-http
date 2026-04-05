@@ -37,7 +37,7 @@ async def test_toggle_override(
     mock_aioclient,
     caplog,
 ):
-    """Test v4 Status reply."""
+    """Test toggle_override across firmware versions."""
     await test_charger.update()
     mock_aioclient.patch(
         TEST_URL_OVERRIDE,
@@ -125,7 +125,7 @@ async def test_toggle_override(
 
 
 async def test_toggle_override_v2(test_charger_v2, mock_aioclient, caplog):
-    """Test v4 Status reply."""
+    """Test toggle_override on V2 firmware."""
     await test_charger_v2.update()
     value = {"cmd": "OK", "ret": "$OK^20"}
     mock_aioclient.post(
@@ -139,10 +139,10 @@ async def test_toggle_override_v2(test_charger_v2, mock_aioclient, caplog):
 
 
 async def test_toggle_override_v2_err(test_charger_v2, mock_aioclient, caplog):
-    """Test v4 Status reply."""
+    """Test toggle_override error handling on V2 firmware."""
     await test_charger_v2.update()
     content_error = mock.Mock()
-    content_error.real_url = f"{TEST_URL_RAPI}"
+    content_error.real_url = TEST_URL_RAPI
     mock_aioclient.post(
         TEST_URL_RAPI,
         exception=ContentTypeError(
@@ -164,7 +164,7 @@ async def test_toggle_override_v2_err(test_charger_v2, mock_aioclient, caplog):
 
 
 async def test_set_current(test_charger, mock_aioclient, caplog):
-    """Test v4 Status reply."""
+    """Test set_current command."""
     await test_charger.update()
     value = {
         "state": "active",
@@ -192,7 +192,7 @@ async def test_set_current(test_charger, mock_aioclient, caplog):
 async def test_set_current_error(
     test_charger, test_charger_broken, mock_aioclient, caplog
 ):
-    """Test v4 Status reply."""
+    """Test set_current command errors."""
     await test_charger.update()
     value = {
         "state": "active",
@@ -232,7 +232,7 @@ async def test_set_current_error(
 async def test_set_current_v2(
     test_charger_v2, test_charger_dev, mock_aioclient, caplog
 ):
-    """Test v4 Status reply."""
+    """Test set_current command on V2 firmware."""
     await test_charger_v2.update()
     value = {"cmd": "OK", "ret": "$OK^20"}
     mock_aioclient.post(
@@ -387,7 +387,7 @@ async def test_set_divertmode_fail(test_charger_new, mock_aioclient):
 
 
 async def test_set_charge_mode(test_charger, mock_aioclient, caplog):
-    """Test v4 Status reply."""
+    """Test set_charge_mode command."""
     await test_charger.update()
     value = {"msg": "done"}
     mock_aioclient.post(
