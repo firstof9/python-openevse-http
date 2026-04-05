@@ -454,7 +454,7 @@ class PropertiesMixin:
         value = self._status.get(
             "time_to_full_charge", self._status.get("vehicle_eta", None)
         )
-        if value is None:
+        if value is None or isinstance(value, bool):
             return None
         try:
             seconds = float(value)

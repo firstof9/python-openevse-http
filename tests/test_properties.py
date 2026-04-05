@@ -770,7 +770,7 @@ async def test_time_parsing_errors(request, fixture, bad_value):
     assert result is None
 
     # Test vehicle_eta with non-numeric value (only if not already numeric)
-    if not isinstance(bad_value, int | float):
+    if type(bad_value) not in (int, float):
         charger._status["vehicle_eta"] = bad_value
         result = charger.vehicle_eta
         assert result is None

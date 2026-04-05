@@ -113,7 +113,7 @@ class CommandsMixin:
         max_current: int | None = None,
         energy_limit: int | None = None,
         time_limit: int | None = None,
-        auto_release: bool = True,
+        auto_release: bool | None = None,
     ) -> Any:
         """Set the manual override status."""
         if not self._version_check("4.0.1"):
@@ -127,7 +127,8 @@ class CommandsMixin:
             _LOGGER.error("Invalid override state: %s", state)
             raise ValueError
 
-        data["auto_release"] = auto_release
+        if auto_release is not None:
+            data["auto_release"] = auto_release
 
         if state is not None:
             data["state"] = state

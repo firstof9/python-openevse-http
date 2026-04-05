@@ -314,7 +314,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
 
         self._ws_listen_task = None
         self._ws_keepalive_task = None
-        if self._loop:
+        if self._owns_loop and self._loop:
             self._loop.stop()
 
     async def ws_disconnect(self) -> None:
@@ -323,11 +323,17 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
 
         if self._owns_loop and self._loop:
             # Schedule shutdown coroutine on the loop thread
-            loop = self._loop
-            loop.call_soon_threadsafe(lambda: loop.create_task(self._shutdown()))
+            future = asyncio.run_coroutine_threadsafe(self._shutdown(), self._loop)
+            try:
+                # Wait for the shutdown to complete on the other loop
+                future.result(timeout=2.0)
+            except (asyncio.TimeoutError, Exception) as err:
+                _LOGGER.debug("Error during shutdown coroutine: %s", err)
+
             if self._loop_thread:
                 self._loop_thread.join(timeout=2.0)
                 self._loop_thread = None
+
             self._loop.close()
             self._loop = None
             self._owns_loop = False

@@ -1395,6 +1395,8 @@ async def test_ws_shutdown_drains_tasks(test_charger):
     ws_mock._tasks = {mock_task}
     ws_mock.close = AsyncMock()
     test_charger.websocket = ws_mock
+    test_charger._owns_loop = True
+    test_charger._loop = MagicMock()
 
     await test_charger._shutdown()
 
