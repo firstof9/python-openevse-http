@@ -1,7 +1,7 @@
 """Test external session management."""
 
 import json
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiohttp
 import pytest
@@ -117,7 +117,9 @@ async def test_websocket_uses_external_session(mock_aioclient):
         # Update to initialize websocket
         await charger.update()
         assert charger.websocket is None
-        charger.ws_start()
+
+        with patch("openevsehttp.websocket.OpenEVSEWebsocket.listen"):
+            charger.ws_start()
 
         # Verify websocket was created with the session
         assert charger.websocket is not None

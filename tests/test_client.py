@@ -546,8 +546,8 @@ async def test_ws_start_reset_listening():
     charger._ws_listening = True
 
     with patch.object(charger, "_start_listening"):
-        charger.ws_start()
-        assert charger._ws_listening is False
+        with pytest.raises(AlreadyListening):
+            charger.ws_start()
 
 
 async def test_start_listening_no_loop():

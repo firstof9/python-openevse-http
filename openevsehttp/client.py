@@ -62,8 +62,11 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
         self._ws_listening = False
         self.websocket: OpenEVSEWebsocket | None = None
         self.callback: Callable | None = None
-        self._loop = None
-        self.tasks = None
+        self._loop: asyncio.AbstractEventLoop | None = None
+        self._ws_listen_task: asyncio.Task | None = None
+        self._ws_keepalive_task: asyncio.Task | None = None
+        self._owns_loop = False
+        self._loop_thread: threading.Thread | None = None
         self._session = session
         self._session_external = session is not None
 
@@ -216,38 +219,40 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
 
     def ws_start(self) -> None:
         """Start the websocket listener."""
+        if self.websocket and self.websocket.state != STATE_STOPPED:
+            raise AlreadyListening
+
         if not self.websocket:
             self.websocket = OpenEVSEWebsocket(
                 self.url, self._update_status, self._user, self._pwd, self._session
             )
 
-        if self.websocket:
-            if self._ws_listening and self.websocket.state == "connected":
-                raise AlreadyListening
-            if self._ws_listening and self.websocket.state != "connected":
-                self._ws_listening = False
         self._start_listening()
 
     def _start_listening(self):
         """Start the websocket listener."""
-        new_loop = False
         if not self._loop:
             try:
                 _LOGGER.debug("Attempting to find running loop...")
                 self._loop = asyncio.get_running_loop()
             except RuntimeError:
                 self._loop = asyncio.new_event_loop()
-                new_loop = True
+                self._owns_loop = True
                 _LOGGER.debug("Using new event loop...")
 
         if not self._ws_listening and self.websocket is not None:
-            _LOGGER.debug("Setting up websocket ping...")
-            self._loop.create_task(self.websocket.listen())
-            self._loop.create_task(self.repeat(300, self.websocket.keepalive))
+            _LOGGER.debug("Setting up websocket tasks...")
+            self._ws_listen_task = self._loop.create_task(self.websocket.listen())
+            self._ws_keepalive_task = self._loop.create_task(
+                self.repeat(300, self.websocket.keepalive)
+            )
             self._ws_listening = True
 
-            if new_loop:
-                threading.Thread(target=self._loop.run_forever, daemon=True).start()
+            if self._owns_loop:
+                self._loop_thread = threading.Thread(
+                    target=self._loop.run_forever, daemon=True
+                )
+                self._loop_thread.start()
 
     async def _update_status(self, msgtype, data, error):
         """Update data from websocket listener."""
@@ -293,10 +298,25 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
     async def ws_disconnect(self) -> None:
         """Disconnect the websocket listener."""
         self._ws_listening = False
-        if self.websocket is None:
-            return
-        await self.websocket.close()
-        self.websocket = None
+        if self.websocket:
+            await self.websocket.close()
+            self.websocket = None
+
+        if self._ws_listen_task:
+            self._ws_listen_task.cancel()
+            self._ws_listen_task = None
+        if self._ws_keepalive_task:
+            self._ws_keepalive_task.cancel()
+            self._ws_keepalive_task = None
+
+        if self._owns_loop and self._loop:
+            self._loop.call_soon_threadsafe(self._loop.stop)
+            if self._loop_thread:
+                self._loop_thread.join(timeout=1.0)
+                self._loop_thread = None
+            self._loop.close()
+            self._loop = None
+            self._owns_loop = False
 
     def is_coroutine_function(self, callback):
         """Check if a callback is a coroutine function."""

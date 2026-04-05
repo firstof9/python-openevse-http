@@ -1165,6 +1165,24 @@ async def test_property_getters_with_missing_data(mock_aioclient):
     # Boolean properties return False when data is missing
     assert charger.temp_check_enabled is False
     assert charger.diode_check_enabled is False
+
+
+async def test_sensor_numeric_errors():
+    """Test all temperature/usage accessors handle non-numeric data."""
+    charger = OpenEVSE(SERVER_URL)
+    # temp and temp1 are used for ambient_temperature
+    charger._status = {"temp": "fail", "temp1": "fail"}
+    assert charger.ambient_temperature is None
+
+    # temp2, temp3, temp4
+    charger._status = {"temp2": "fail", "temp3": "fail", "temp4": "fail"}
+    assert charger.rtc_temperature is None
+    assert charger.ir_temperature is None
+    assert charger.esp_temperature is None
+
+    # wattsec for usage_session
+    charger._status = {"wattsec": "fail"}
+    assert charger.usage_session is None
     assert charger.vent_required_enabled is False
     assert charger.ground_check_enabled is False
     assert charger.stuck_relay_check_enabled is False

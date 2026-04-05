@@ -160,7 +160,14 @@ class CommandsMixin:
         else:
             # Older firmware use RAPI commands
             _LOGGER.debug("Toggling manual override via RAPI")
-            command = "$FE" if self._status.get("state", 0) == 254 else "$FS"
+            if "state" not in self._status:
+                await self.update()
+
+            if "state" not in self._status:
+                _LOGGER.error("Cannot toggle override: unknown charger state.")
+                return
+
+            command = "$FE" if self._status.get("state") == 254 else "$FS"
             response, msg = await self.send_command(command)
             _LOGGER.debug("Toggle response: %s", msg)
 

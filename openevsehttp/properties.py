@@ -110,8 +110,8 @@ class PropertiesMixin:
                 )
 
             if isinstance(claims, dict):
-                properties = claims.get("properties", {})
-                if "charge_current" in properties:
+                properties = claims.get("properties")
+                if isinstance(properties, dict) and "charge_current" in properties:
                     try:
                         charge_current = int(properties["charge_current"])
                         max_hard = int(self._config.get("max_current_hard", 48))
@@ -233,23 +233,25 @@ class PropertiesMixin:
     @property
     def ambient_temperature(self) -> float | None:
         """Return the temperature of the ambient sensor, in degrees Celsius."""
-        temp = self._status.get("temp")
-        if temp is not None:
-            return temp / 10
-
-        temp1 = self._status.get("temp1")
-        if temp1 is not None:
-            return temp1 / 10
-
+        for key in ["temp", "temp1"]:
+            temp = self._status.get(key)
+            if temp is not None:
+                try:
+                    return float(temp) / 10
+                except (ValueError, TypeError):
+                    continue
         return None
 
     @property
     def rtc_temperature(self) -> float | None:
         """Return the temperature of the real time clock sensor."""
         temp = self._status.get("temp2")
-        if temp is None or isinstance(temp, bool):
+        try:
+            if temp is None or isinstance(temp, bool):
+                return None
+            return float(temp) / 10
+        except (ValueError, TypeError):
             return None
-        return float(temp) / 10
 
     @property
     def ir_temperature(self) -> float | None:
@@ -258,17 +260,23 @@ class PropertiesMixin:
         In degrees Celsius.
         """
         temp = self._status.get("temp3")
-        if temp is None or isinstance(temp, bool):
+        try:
+            if temp is None or isinstance(temp, bool):
+                return None
+            return float(temp) / 10
+        except (ValueError, TypeError):
             return None
-        return float(temp) / 10
 
     @property
     def esp_temperature(self) -> float | None:
         """Return the temperature of the ESP sensor, in degrees Celsius."""
         temp = self._status.get("temp4")
-        if temp is None or isinstance(temp, bool):
+        try:
+            if temp is None or isinstance(temp, bool):
+                return None
+            return float(temp) / 10
+        except (ValueError, TypeError):
             return None
-        return float(temp) / 10
 
     @property
     def time(self) -> datetime | None:
@@ -291,7 +299,10 @@ class PropertiesMixin:
             return self._status.get("session_energy")
         wattsec = self._status.get("wattsec")
         if wattsec is not None:
-            return float(round(wattsec / 3600, 2))
+            try:
+                return float(round(float(wattsec) / 3600, 2))
+            except (ValueError, TypeError):
+                return None
         return None
 
     @property
