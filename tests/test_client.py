@@ -1342,14 +1342,20 @@ async def test_repeat_task():
     mock_func = MagicMock(return_value=asyncio.Future())
     mock_func.return_value.set_result(None)
 
-    # Launch repeat task
-    task = asyncio.create_task(charger.repeat(0.01, mock_func))
+    # Launch repeat task with very short interval
+    task = asyncio.create_task(charger.repeat(0.001, mock_func))
 
-    # Wait for at least one execution
-    await asyncio.sleep(0.05)
+    # Wait for execution and ensure loop body is hit
+    for _ in range(10):
+        if mock_func.called:
+            break
+        await asyncio.sleep(0.01)
+
     assert mock_func.called
 
     # Stop and wait for termination
     charger.websocket.state = STATE_STOPPED
+    # Give it one more micro-sleep to exit the loop
+    await asyncio.sleep(0.01)
     await task
     assert task.done()

@@ -168,6 +168,11 @@ async def test_toggle_override_refresh_fail(test_charger, mock_aioclient, caplog
         status=200,
         body='{"version": "3.3.1"}',  # Still missing state
     )
+    mock_aioclient.get(
+        "http://openevse.test.tld/config",
+        status=200,
+        body='{"version": "3.3.1"}',
+    )
     # Ensure it doesn't have state and is v3
     test_charger._status = {}
     test_charger._config = {"version": "3.3.1"}
