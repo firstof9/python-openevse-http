@@ -76,7 +76,8 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
     ) -> dict[str, str] | dict[str, Any]:
         """Return result of processed HTTP request."""
         auth = None
-        if method is None:
+        allowed_methods = ["get", "post", "put", "delete", "patch", "head", "options"]
+        if method not in allowed_methods:
             raise MissingMethod
 
         if self._user and self._pwd:
@@ -103,6 +104,8 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
         auth: Any,
     ) -> dict[str, str] | dict[str, Any]:
         """Process a request with a given session."""
+        if not hasattr(session, method):
+            raise MissingMethod
         http_method = getattr(session, method)
         _LOGGER.debug(
             "Connecting to %s with data: %s rapi: %s using method %s",
@@ -302,7 +305,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
     def ws_state(self) -> Any | None:
         """Return the status of the websocket listener."""
         if self.websocket is None:
-            return None
+            return STATE_STOPPED
         return self.websocket.state
 
     async def repeat(self, interval, func, *args, **kwargs):

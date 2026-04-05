@@ -13,6 +13,9 @@ from awesomeversion.exceptions import AwesomeVersionCompareException
 
 import openevsehttp.__main__ as main
 from openevsehttp.__main__ import OpenEVSE
+from openevsehttp.const import (
+    UPDATE_TRIGGERS,
+)
 from openevsehttp.exceptions import (
     AlreadyListening,
     AuthenticationError,
@@ -59,12 +62,12 @@ async def test_get_status_auth(test_charger_auth):
 async def test_ws_state(test_charger):
     """Test v4 Status reply."""
     await test_charger.update()
-    assert test_charger.ws_state is None
+    assert test_charger.ws_state == STATE_STOPPED
     test_charger.ws_start()
     value = test_charger.ws_state
     assert value == STATE_DISCONNECTED
     await test_charger.ws_disconnect()
-    assert test_charger.ws_state is None
+    assert test_charger.ws_state == STATE_STOPPED
 
 
 async def test_update_status(test_charger):
@@ -646,7 +649,7 @@ async def test_repeat():
 async def test_websocket_utils(test_charger):
     """Test websocket utility methods."""
     # Test ws_state when websocket is None
-    assert test_charger.ws_state is None
+    assert test_charger.ws_state == STATE_STOPPED
     # Test ws_disconnect when websocket is None
     await test_charger.ws_disconnect()
     assert test_charger._ws_listening is False
@@ -927,12 +930,31 @@ async def test_process_request_content_type_error():
             await charger.process_request(TEST_URL_STATUS, method="get")
 
 
-async def test_process_request_post_with_config_version(mock_aioclient):
-    """Test process_request calls update when posting config_version."""
-    mock_aioclient.post(
-        TEST_URL_CONFIG,
+async def test_process_request_invalid_method(test_charger):
+    """Test process_request with invalid method."""
+    with pytest.raises(MissingMethod):
+        await test_charger.process_request(TEST_URL_STATUS, method="invalid")
+
+
+async def test_process_request_with_session_invalid_method(test_charger):
+    """Test _process_request_with_session with invalid method."""
+    async with aiohttp.ClientSession() as session:
+        with pytest.raises(MissingMethod):
+            await test_charger._process_request_with_session(
+                session, "http://test", "invalid", None, None, None
+            )
+
+
+@pytest.mark.parametrize("method", ["post", "patch", "delete"])
+@pytest.mark.parametrize("trigger_key", UPDATE_TRIGGERS)
+async def test_process_request_triggers_update(method, trigger_key, mock_aioclient):
+    """Test process_request calls update when response contains a trigger key."""
+    url = f"{TEST_URL_CONFIG}/test"
+    # Register the mock for the specific method
+    getattr(mock_aioclient, method)(
+        url,
         status=200,
-        body='{"config_version": "1.0"}',
+        body=json.dumps({trigger_key: "1.0"}),
     )
     mock_aioclient.get(
         TEST_URL_STATUS,
@@ -946,13 +968,15 @@ async def test_process_request_post_with_config_version(mock_aioclient):
     )
 
     charger = OpenEVSE(SERVER_URL)
+    # Ensure _status is fresh
+    charger._status = {}
 
-    # This should trigger update() because of config_version in response
-    result = await charger.process_request(TEST_URL_CONFIG, method="post", data={})
+    # This should trigger update() because of trigger_key in response
+    result = await charger.process_request(url, method=method, data={})
 
-    assert "config_version" in result
+    assert trigger_key in result
     # Verify update was called by checking if status was set
-    assert charger._status is not None
+    assert charger._status != {}
 
 
 async def test_send_command_no_ret_with_msg(mock_aioclient):
@@ -1151,12 +1175,15 @@ async def test_external_session_500_error():
             assert result == {"error": "Internal server error"}
 
 
-async def test_external_session_post_with_config_version(mock_aioclient):
-    """Test external session with POST that triggers update."""
-    mock_aioclient.post(
-        TEST_URL_CONFIG,
+@pytest.mark.parametrize("method", ["post", "patch", "delete"])
+@pytest.mark.parametrize("trigger_key", UPDATE_TRIGGERS)
+async def test_external_session_triggers_update(method, trigger_key, mock_aioclient):
+    """Test external session with methods that trigger update."""
+    url = f"{TEST_URL_CONFIG}/test_external"
+    getattr(mock_aioclient, method)(
+        url,
         status=200,
-        body='{"config_version": "1.0"}',
+        body=json.dumps({trigger_key: "1.0"}),
     )
     mock_aioclient.get(
         TEST_URL_STATUS,
@@ -1171,10 +1198,12 @@ async def test_external_session_post_with_config_version(mock_aioclient):
 
     async with aiohttp.ClientSession() as session:
         charger = OpenEVSE(SERVER_URL, session=session)
-        result = await charger.process_request(TEST_URL_CONFIG, method="post", data={})
+        # Ensure _status is fresh
+        charger._status = {}
+        result = await charger.process_request(url, method=method, data={})
 
-        assert "config_version" in result
-        assert charger._status is not None
+        assert trigger_key in result
+        assert charger._status != {}
 
 
 async def test_external_session_timeout_error():
