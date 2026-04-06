@@ -243,7 +243,8 @@ class CommandsMixin:
         data = {"device": "gateway"}
 
         response = await self.process_request(url=url, method="post", data=data)
-        _LOGGER.debug("WiFi Restart response: %s", response.get("msg", response))
+        response = self._normalize_response(response)
+        _LOGGER.debug("WiFi Restart response: %s", response.get("msg", "Unknown error"))
 
     # Restart EVSE module
     async def restart_evse(self) -> None:

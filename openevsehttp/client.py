@@ -329,7 +329,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
                 # Wait for the shutdown to complete on the other loop
                 future.result(timeout=2.0)
                 shutdown_succeeded = True
-            except (asyncio.TimeoutError, Exception) as err:
+            except (asyncio.TimeoutError, asyncio.CancelledError) as err:
                 _LOGGER.debug("Error during shutdown coroutine: %s", err)
 
             if self._loop_thread:
