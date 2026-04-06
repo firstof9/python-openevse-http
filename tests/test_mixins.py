@@ -1,4 +1,4 @@
-"""Tests for the Mixin classes to ensure 100% coverage."""
+"""Tests for abstract methods in Mixin classes."""
 
 import pytest
 
@@ -7,86 +7,52 @@ from openevsehttp.managers import ManagersMixin
 from openevsehttp.properties import PropertiesMixin
 from openevsehttp.sensors import SensorsMixin
 
-# ruff: noqa: SLF001
+pytestmark = pytest.mark.asyncio
 
 
-class DummyCommands(CommandsMixin):
-    """Dummy class for CommandsMixin tests."""
-
-    def __init__(self):
-        """Initialize dummy commands."""
-        self.url = "http://test"
-        self._status = {}
-        self._config = {}
-        self._session = None
-
-
-class DummyManagers(ManagersMixin):
-    """Dummy class for ManagersMixin tests."""
-
-    def __init__(self):
-        """Initialize dummy managers."""
-        self.url = "http://test"
-
-
-class DummyProperties(PropertiesMixin):
-    """Dummy class for PropertiesMixin tests."""
-
-    def __init__(self):
-        """Initialize dummy properties."""
-        self._status = {}
-        self._config = {}
-
-
-class DummySensors(SensorsMixin):
-    """Dummy class for SensorsMixin tests."""
-
-    def __init__(self):
-        """Initialize dummy sensors."""
-        self.url = "http://test"
-
-
-def test_mixins_sync_not_implemented():
-    """Test sync NotImplementedError in all mixins."""
-    for cls in [DummyCommands, DummyManagers, DummyProperties, DummySensors]:
-        obj = cls()
-        with pytest.raises(NotImplementedError):
-            obj._version_check("1.0.0")
-
-
-@pytest.mark.asyncio
-async def test_commands_mixin_async_not_implemented():
-    """Test async NotImplementedError in CommandsMixin."""
-    cmds = DummyCommands()
+async def test_commands_mixin_not_implemented():
+    """Test NotImplementedError in CommandsMixin."""
+    mixin = CommandsMixin()
     with pytest.raises(NotImplementedError):
-        await cmds.process_request("http://test")
+        mixin._version_check("1.0.0")
     with pytest.raises(NotImplementedError):
-        await cmds.send_command("test")
+        await mixin.process_request("url")
     with pytest.raises(NotImplementedError):
-        await cmds.update()
+        await mixin.send_command("cmd")
+    with pytest.raises(NotImplementedError):
+        await mixin.update()
+    with pytest.raises(NotImplementedError):
+        mixin._normalize_response({})
 
 
-@pytest.mark.asyncio
 async def test_managers_mixin_not_implemented():
     """Test NotImplementedError in ManagersMixin."""
-    mgrs = DummyManagers()
+    mixin = ManagersMixin()
     with pytest.raises(NotImplementedError):
-        await mgrs.process_request("http://test")
-
-
-@pytest.mark.asyncio
-async def test_properties_mixin_not_implemented():
-    """Test NotImplementedError in PropertiesMixin."""
-    props = DummyProperties()
+        mixin._version_check("1.0.0")
     with pytest.raises(NotImplementedError):
-        await props.list_claims()
+        await mixin.process_request("url")
     with pytest.raises(NotImplementedError):
-        await props.get_override()
+        mixin._normalize_response({})
 
 
-@pytest.mark.asyncio
 async def test_sensors_mixin_not_implemented():
     """Test NotImplementedError in SensorsMixin."""
-    sensors = DummySensors()
+    mixin = SensorsMixin()
     with pytest.raises(NotImplementedError):
-        await sensors.process_request("http://test")
+        mixin._version_check("1.0.0")
+    with pytest.raises(NotImplementedError):
+        await mixin.process_request("url")
+    with pytest.raises(NotImplementedError):
+        mixin._normalize_response({})
+
+
+async def test_properties_mixin_not_implemented():
+    """Test NotImplementedError in PropertiesMixin."""
+    mixin = PropertiesMixin()
+    with pytest.raises(NotImplementedError):
+        mixin._version_check("1.0.0")
+    with pytest.raises(NotImplementedError):
+        await mixin.list_claims()
+    with pytest.raises(NotImplementedError):
+        await mixin.get_override()

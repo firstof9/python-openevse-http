@@ -590,9 +590,15 @@ async def test_start_listening_no_loop():
             mock_loop = MagicMock()
             mock_new_loop.return_value = mock_loop
             with patch("threading.Thread") as mock_thread:
-                charger._start_listening()
-                assert charger._loop == mock_loop
-                mock_thread.assert_called_once()
+                # Mock repeat and listen to return None to avoid unawaited coroutines
+                # as the mock loop won't actually run them.
+                with (
+                    patch.object(charger, "repeat", return_value=None),
+                    patch.object(charger.websocket, "listen", return_value=None),
+                ):
+                    charger._start_listening()
+                    assert charger._loop == mock_loop
+                    mock_thread.assert_called_once()
 
 
 async def test_update_status_states():
@@ -1393,7 +1399,7 @@ async def test_repeat_task():
 async def test_ws_disconnect_owned_loop():
     """Test ws_disconnect when the client owns the event loop."""
     charger = OpenEVSE(SERVER_URL)
-    charger.websocket = AsyncMock()
+    charger.websocket = MagicMock()
     charger.websocket.state = STATE_STOPPED
 
     # Mock loop finding to fail
@@ -1402,9 +1408,13 @@ async def test_ws_disconnect_owned_loop():
         mock_loop = MagicMock(spec=asyncio.AbstractEventLoop)
         with patch("asyncio.new_event_loop", return_value=mock_loop):
             with patch("threading.Thread"):
-                charger._start_listening()
-                assert charger._owns_loop is True
-                assert charger._loop is mock_loop
+                with (
+                    patch.object(charger, "repeat", return_value=None),
+                    patch.object(charger.websocket, "listen", return_value=None),
+                ):
+                    charger._start_listening()
+                    assert charger._owns_loop is True
+                    assert charger._loop is mock_loop
 
                 # Mock thread
                 mock_thread = MagicMock()
@@ -1414,12 +1424,18 @@ async def test_ws_disconnect_owned_loop():
                 # Mock run_coroutine_threadsafe to return a success future
                 mock_future = MagicMock()
                 mock_future.result.return_value = True
-                with patch(
-                    "asyncio.run_coroutine_threadsafe", return_value=mock_future
-                ) as mock_run:
+                with (
+                    patch(
+                        "asyncio.run_coroutine_threadsafe", return_value=mock_future
+                    ) as mock_run,
+                    patch.object(
+                        charger, "_shutdown", return_value=MagicMock()
+                    ) as mock_shutdown,
+                ):
                     await charger.ws_disconnect()
                     # Check for threadsafe call
                     assert mock_run.called
+                    assert mock_shutdown.called
 
                 assert charger._loop is None
                 assert mock_loop.close.called
@@ -1428,7 +1444,7 @@ async def test_ws_disconnect_owned_loop():
 async def test_ws_disconnect_exception():
     """Test ws_disconnect handled exceptions during shutdown."""
     charger = OpenEVSE(SERVER_URL)
-    charger.websocket = AsyncMock()
+    charger.websocket = MagicMock()
     charger.websocket.state = STATE_STOPPED
 
     # Mock loop methods to avoid real async operations
@@ -1444,11 +1460,13 @@ async def test_ws_disconnect_exception():
     # Mock run_coroutine_threadsafe to return a failing future
     mock_future = MagicMock()
     mock_future.result.side_effect = asyncio.TimeoutError
-    with patch(
-        "asyncio.run_coroutine_threadsafe", return_value=mock_future
-    ) as mock_run:
+    with (
+        patch("asyncio.run_coroutine_threadsafe", return_value=mock_future) as mock_run,
+        patch.object(charger, "_shutdown", return_value=MagicMock()) as mock_shutdown,
+    ):
         await charger.ws_disconnect()
         assert mock_run.called
+        assert mock_shutdown.called
 
     # Shutdown failed, so loop should NOT be closed/cleared
     assert charger._loop is mock_loop
@@ -1456,7 +1474,7 @@ async def test_ws_disconnect_exception():
 
 async def test_ws_shutdown_drains_tasks(test_charger):
     """Test that _shutdown cancels pending tasks."""
-    mock_task = MagicMock()
+    mock_task = asyncio.Future()
     ws_mock = MagicMock()
     ws_mock._tasks = {mock_task}
     ws_mock.close = AsyncMock()
@@ -1466,6 +1484,24 @@ async def test_ws_shutdown_drains_tasks(test_charger):
 
     await test_charger._shutdown()
 
-    assert mock_task.cancel.called
+    assert mock_task.cancelled()
     assert len(ws_mock._tasks) == 0
     assert test_charger.websocket is None
+
+
+async def test_test_and_get_invalid_response(mock_aioclient, caplog):
+    """Test test_and_get method with invalid response."""
+    mock_aioclient.get(TEST_URL_CONFIG, status=200, body="not a dict")
+    charger = OpenEVSE(SERVER_URL)
+    with caplog.at_level(logging.DEBUG):
+        with pytest.raises(MissingSerial):
+            await charger.test_and_get()
+    assert "Invalid response from config: not a dict" in caplog.text
+
+
+async def test_update_status_non_mapping_data(caplog):
+    """Test _update_status with non-mapping data."""
+    charger = OpenEVSE(SERVER_URL)
+    with caplog.at_level(logging.WARNING):
+        await charger._update_status("data", "not a dict", None)
+    assert "Received non-Mapping websocket data: not a dict" in caplog.text

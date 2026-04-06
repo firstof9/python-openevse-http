@@ -2,6 +2,7 @@
 
 import asyncio
 import datetime
+import inspect
 import logging
 
 import aiohttp  # type: ignore
@@ -67,6 +68,10 @@ class OpenEVSEWebsocket:
         # Prepare the coroutine or invoke the callback
         coro = self.callback(SIGNAL_CONNECTION_STATE, value, self._error_reason)
 
+        if not inspect.isawaitable(coro):
+            self._error_reason = None
+            return
+
         # Schedule the callback asynchronously without awaiting here.
         try:
             task = asyncio.create_task(coro)
@@ -74,15 +79,27 @@ class OpenEVSEWebsocket:
             task.add_done_callback(self._tasks.discard)
         except RuntimeError:
             # If there's no running loop, schedule safely on the event loop.
-            loop = self._listener_loop or asyncio.get_event_loop()
-            loop.call_soon_threadsafe(self._schedule_task, coro)
+            try:
+                loop = self._listener_loop or asyncio.get_event_loop()
+                loop.call_soon_threadsafe(self._schedule_task, coro)
+            except RuntimeError:
+                _LOGGER.error("Failed to schedule callback from sync context: %s", coro)
+                if hasattr(coro, "close"):
+                    coro.close()
         self._error_reason = None
 
     def _schedule_task(self, coro):
         """Schedule a task from a thread-safe context."""
-        task = asyncio.create_task(coro)
-        self._tasks.add(task)
-        task.add_done_callback(self._tasks.discard)
+        try:
+            task = asyncio.create_task(coro)
+            self._tasks.add(task)
+            task.add_done_callback(self._tasks.discard)
+        except RuntimeError:
+            _LOGGER.error("Failed to schedule callback task: %s", coro)
+            # If we still can't schedule it, we must at least close the coroutine
+            # to avoid RuntimeWarning: coroutine '...' was never awaited
+            if hasattr(coro, "close"):
+                coro.close()
 
     async def _set_state(self, value):
         """Async helper to set the state and await the callback."""

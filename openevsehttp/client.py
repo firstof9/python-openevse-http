@@ -302,36 +302,47 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
 
         elif msgtype == "data":
             _LOGGER.debug("Websocket data: %s", data)
+            if not isinstance(data, Mapping):
+                _LOGGER.warning("Received non-Mapping websocket data: %s", data)
+                return
+
             keys = data.keys()
             if "wh" in keys:
                 data["watthour"] = data.pop("wh")
             # TODO: update specific endpoints based on _version prefix
             if any(key in keys for key in UPDATE_TRIGGERS):
                 await self.update()
-            if isinstance(data, Mapping):
-                self._status.update(data)
-            else:
-                _LOGGER.warning("Received non-Mapping websocket data: %s", data)
+            self._status.update(data)
 
             if self.callback is not None:
-                if self.is_coroutine_function(self.callback):
-                    await self.callback()  # pylint: disable=not-callable
-                else:
-                    self.callback()  # pylint: disable=not-callable
+                result = self.callback()  # pylint: disable=not-callable
+                if inspect.isawaitable(result):
+                    await result
 
     async def _shutdown(self):
         """Shutdown the websocket and tasks on the listener loop."""
+        tasks = []
         if self._ws_keepalive_task:
             self._ws_keepalive_task.cancel()
+            tasks.append(self._ws_keepalive_task)
         if self._ws_listen_task:
             self._ws_listen_task.cancel()
+            tasks.append(self._ws_listen_task)
 
         if self.websocket:
             # Cancel all pending callback tasks
             for task in list(self.websocket._tasks):
                 task.cancel()
+                tasks.append(task)
             self.websocket._tasks.clear()
 
+        if tasks:
+            await asyncio.gather(
+                *(t for t in tasks if isinstance(t, asyncio.Future)),
+                return_exceptions=True,
+            )
+
+        if self.websocket:
             # Close the websocket (this cancels running() internal tasks)
             await self.websocket.close()
             self.websocket = None
@@ -390,7 +401,9 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
         """
         while self.ws_state != STATE_STOPPED:
             await asyncio.sleep(interval)
-            await func(*args, **kwargs)
+            result = func(*args, **kwargs)
+            if inspect.isawaitable(result):
+                await result
 
     def _version_check(self, min_version: str, max_version: str = "") -> bool:
         """Return bool if minimum version is met."""
