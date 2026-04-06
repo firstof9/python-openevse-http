@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from typing import Any
 
 from .const import BAT_LVL, BAT_RANGE, GRID, SOLAR, TTF, VOLTAGE
@@ -22,7 +23,11 @@ class SensorsMixin:
 
     async def process_request(
         self, url: str, method: str = "", data: Any = None, rapi: Any = None
-    ) -> dict[str, str] | dict[str, Any]:
+    ) -> Mapping[str, Any] | list[Any] | str:
+        raise NotImplementedError
+
+    def _normalize_response(self, response: Any) -> dict[str, Any] | list[Any]:
+        """Normalize response to a dict or list."""
         raise NotImplementedError
 
     # HTTP Posting of grid voltage
@@ -43,7 +48,9 @@ class SensorsMixin:
         else:
             _LOGGER.debug("Posting voltage: %s", data)
             response = await self.process_request(url=url, method="post", data=data)
-            _LOGGER.debug("Voltage posting response: %s", response)
+            _LOGGER.debug(
+                "Voltage posting response: %s", self._normalize_response(response)
+            )
 
     # Self production HTTP Posting
     async def self_production(
@@ -78,7 +85,9 @@ class SensorsMixin:
         else:
             _LOGGER.debug("Posting self-production: %s", data)
             response = await self.process_request(url=url, method="post", data=data)
-            _LOGGER.debug("Self-production response: %s", response)
+            _LOGGER.debug(
+                "Self-production response: %s", self._normalize_response(response)
+            )
 
     # State of charge HTTP posting
     async def soc(
@@ -111,7 +120,7 @@ class SensorsMixin:
         else:
             _LOGGER.debug("Posting SOC data: %s", data)
             response = await self.process_request(url=url, method="post", data=data)
-            _LOGGER.debug("SOC response: %s", response)
+            _LOGGER.debug("SOC response: %s", self._normalize_response(response))
 
     # Shaper HTTP Posting
     async def set_shaper_live_pwr(self, power: int) -> None:
@@ -125,4 +134,4 @@ class SensorsMixin:
 
         _LOGGER.debug("Posting shaper data: %s", data)
         response = await self.process_request(url=url, method="post", data=data)
-        _LOGGER.debug("Shaper response: %s", response)
+        _LOGGER.debug("Shaper response: %s", self._normalize_response(response))

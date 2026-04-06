@@ -77,6 +77,32 @@ async def test_update_status(test_charger):
     assert test_charger._status == data
 
 
+async def test_update_non_dict(mock_aioclient, caplog):
+    """Test update() handles non-dict responses for status and config."""
+    # Use a unique host to avoid hitting mocks from conftest.py
+    unique_host = "non-dict.test.tld"
+    test_charger = OpenEVSE(unique_host)
+    url_status = f"http://{unique_host}/status"
+    url_config = f"http://{unique_host}/config"
+
+    # Test /status returning a string
+    mock_aioclient.get(url_status, status=200, body="not a json")
+    mock_aioclient.get(url_config, status=200, body=json.dumps({"wifi_serial": "123"}))
+
+    with caplog.at_level(logging.WARNING):
+        await test_charger.update()
+    assert "Received non-JSON response from /status: not a json" in caplog.text
+
+    # Test /config returning a string
+    caplog.clear()
+    mock_aioclient.get(url_status, status=200, body=json.dumps({"state": "sleeping"}))
+    mock_aioclient.get(url_config, status=200, body="not a json")
+
+    with caplog.at_level(logging.WARNING):
+        await test_charger.update()
+    assert "Received non-JSON response from /config: not a json" in caplog.text
+
+
 async def test_get_status_auth_err(test_charger_auth_err):
     """Test v4 Status reply."""
     with pytest.raises(main.AuthenticationError):

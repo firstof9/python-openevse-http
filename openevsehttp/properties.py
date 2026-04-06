@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -25,7 +26,7 @@ class PropertiesMixin:
     async def list_claims(self, target: bool | None = None) -> Any:
         raise NotImplementedError
 
-    async def get_override(self) -> dict[str, str] | dict[str, Any]:
+    async def get_override(self) -> Mapping[str, Any] | list[Any]:
         raise NotImplementedError
 
     @property

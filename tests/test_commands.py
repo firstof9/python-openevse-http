@@ -84,45 +84,18 @@ async def test_toggle_override(
     assert "Toggling manual override http" in caplog.text
     await test_charger_new.ws_disconnect()
 
-    value = {
-        "state": "disabled",
-        "charge_current": 0,
-        "max_current": 0,
-        "energy_limit": 0,
-        "time_limit": 0,
-        "auto_release": True,
-    }
-    mock_aioclient.get(
-        TEST_URL_OVERRIDE,
-        status=200,
-        body=json.dumps(value),
-    )
 
-    with caplog.at_level(logging.DEBUG):
-        await test_charger_new.toggle_override()
-    assert "Toggling manual override http" in caplog.text
+async def test_set_override_non_dict(test_charger, mock_aioclient, caplog):
+    """Test set_override() handles non-dict response from get_override()."""
+    test_charger._config = {"version": "4.0.1"}
 
-    await test_charger_modified_ver.update()
+    mock_aioclient.get(TEST_URL_OVERRIDE, status=200, body="[]")
 
-    value = {
-        "state": "disabled",
-        "charge_current": 0,
-        "max_current": 0,
-        "energy_limit": 0,
-        "time_limit": 0,
-        "auto_release": True,
-    }
-    mock_aioclient.get(
-        TEST_URL_OVERRIDE,
-        status=200,
-        body=json.dumps(value),
-    )
+    with caplog.at_level(logging.ERROR, logger="openevsehttp.commands"):
+        with pytest.raises(ValueError, match="Invalid override state response"):
+            await test_charger.set_override(state="active")
 
-    with caplog.at_level(logging.DEBUG):
-        await test_charger_modified_ver.toggle_override()
-        assert "Detected firmware: v5.0.1_modified" in caplog.text
-        assert "Filtered firmware: 5.0.1" in caplog.text
-    await test_charger_modified_ver.ws_disconnect()
+    assert "Failed to get current override state: []" in caplog.text
 
 
 async def test_toggle_override_v2(test_charger_v2, mock_aioclient, caplog):

@@ -7,6 +7,7 @@ import aiohttp
 import pytest
 
 from openevsehttp.__main__ import OpenEVSE
+from openevsehttp.websocket import OpenEVSEWebsocket
 from tests.common import load_fixture
 
 pytestmark = pytest.mark.asyncio
@@ -187,11 +188,19 @@ async def test_session_not_closed_when_external(mock_aioclient):
         # Create OpenEVSE instance with external session
         charger = OpenEVSE(TEST_TLD, session=session)
 
-        # Update to initialize websocket
+        # Update and start websocket
         await charger.update()
+        # Manually attach a mock websocket to simulate an active connection
+        mock_ws = MagicMock(spec=OpenEVSEWebsocket)
+        mock_ws._tasks = set()
+        mock_ws.close = AsyncMock()
+        charger.websocket = mock_ws
 
-        # Disconnect websocket
+        # Disconnect websocket - this should call mock_ws.close()
         await charger.ws_disconnect()
+
+        # Verify the shutdown path was exercised
+        mock_ws.close.assert_called_once()
 
         # Session should still be open (not closed by library)
         assert not session.closed

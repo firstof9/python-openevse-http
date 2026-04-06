@@ -8,7 +8,7 @@ import json
 import logging
 import re
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from typing import Any
 
 import aiohttp  # type: ignore
@@ -76,7 +76,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
         method: str = "",
         data: Any = None,
         rapi: Any = None,
-    ) -> dict[str, str] | dict[str, Any]:
+    ) -> Mapping[str, Any] | list[Any] | str:
         """Return result of processed HTTP request."""
         auth = None
         allowed_methods = ["get", "post", "put", "delete", "patch", "head", "options"]
@@ -97,6 +97,13 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
                 session, url, method, data, rapi, auth
             )
 
+    def _normalize_response(self, response: Any) -> dict[str, Any] | list[Any]:
+        """Normalize response to a dict or list."""
+        if isinstance(response, dict | list):
+            return response
+        _LOGGER.debug("Normalizing non-json response: %s", response)
+        return {"msg": response}
+
     async def _process_request_with_session(
         self,
         session: aiohttp.ClientSession,
@@ -105,7 +112,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
         data: Any,
         rapi: Any,
         auth: Any,
-    ) -> dict[str, str] | dict[str, Any]:
+    ) -> Mapping[str, Any] | list[Any] | str:
         """Process a request with a given session."""
         if not hasattr(session, method):
             raise MissingMethod
@@ -170,8 +177,8 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
 
         _LOGGER.debug("Posting data: %s to %s", command, url)
         value = await self.process_request(url=url, method="post", rapi=data)
-        if "ret" not in value:
-            if "msg" in value:
+        if not isinstance(value, Mapping) or "ret" not in value:
+            if isinstance(value, Mapping) and "msg" in value:
                 return (False, value["msg"])
             return (False, "")
         return (value["cmd"], value["ret"])
@@ -188,12 +195,22 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
             _LOGGER.debug("Updating data from %s", url)
             response = await self.process_request(url, method="get")
             if "/status" in url:
-                self._status = response
-                _LOGGER.debug("Status update: %s", self._status)
+                if isinstance(response, Mapping):
+                    self._status = dict(response)
+                    _LOGGER.debug("Status update: %s", self._status)
+                else:
+                    _LOGGER.warning(
+                        "Received non-JSON response from /status: %s", response
+                    )
 
             else:
-                self._config = response
-                _LOGGER.debug("Config update: %s", self._config)
+                if isinstance(response, Mapping):
+                    self._config = dict(response)
+                    _LOGGER.debug("Config update: %s", self._config)
+                else:
+                    _LOGGER.warning(
+                        "Received non-JSON response from /config: %s", response
+                    )
 
     async def test_and_get(self) -> dict:
         """Test connection.
@@ -204,6 +221,10 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
         data = {}
 
         response = await self.process_request(url, method="get")
+        if not isinstance(response, Mapping):
+            _LOGGER.debug("Invalid response from config: %s", response)
+            raise MissingSerial
+
         if "wifi_serial" in response:
             serial = response["wifi_serial"]
         else:
@@ -287,7 +308,10 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
             # TODO: update specific endpoints based on _version prefix
             if any(key in keys for key in UPDATE_TRIGGERS):
                 await self.update()
-            self._status.update(data)
+            if isinstance(data, Mapping):
+                self._status.update(data)
+            else:
+                _LOGGER.warning("Received non-Mapping websocket data: %s", data)
 
             if self.callback is not None:
                 if self.is_coroutine_function(self.callback):

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from typing import Any
 
 from .const import CLIENT, RELEASE, TYPE, VALUE
@@ -22,7 +23,11 @@ class ManagersMixin:
 
     async def process_request(
         self, url: str, method: str = "", data: Any = None, rapi: Any = None
-    ) -> dict[str, str] | dict[str, Any]:
+    ) -> Mapping[str, Any] | list[Any] | str:
+        raise NotImplementedError
+
+    def _normalize_response(self, response: Any) -> dict[str, Any] | list[Any]:
+        """Normalize response to a dict or list."""
         raise NotImplementedError
 
     # Limit endpoint
@@ -49,7 +54,7 @@ class ManagersMixin:
         _LOGGER.debug("Limit data: %s", data)
         _LOGGER.debug("Setting limit config on %s", url)
         response = await self.process_request(url=url, method="post", data=data)
-        return response
+        return self._normalize_response(response)
 
     async def clear_limit(self) -> Any:
         """Clear charge limit."""
@@ -61,7 +66,7 @@ class ManagersMixin:
 
         _LOGGER.debug("Clearing limit config on %s", url)
         response = await self.process_request(url=url, method="delete")
-        return response
+        return self._normalize_response(response)
 
     async def get_limit(self) -> Any:
         """Get charge limit."""
@@ -73,7 +78,7 @@ class ManagersMixin:
 
         _LOGGER.debug("Getting limit config on %s", url)
         response = await self.process_request(url=url, method="get")
-        return response
+        return self._normalize_response(response)
 
     async def make_claim(
         self,
@@ -108,7 +113,7 @@ class ManagersMixin:
         _LOGGER.debug("Claim data: %s", data)
         _LOGGER.debug("Setting up claim on %s", url)
         response = await self.process_request(url=url, method="post", data=data)
-        return response
+        return self._normalize_response(response)
 
     async def release_claim(self, client: int = CLIENT) -> Any:
         """Delete a claim."""
@@ -120,7 +125,7 @@ class ManagersMixin:
 
         _LOGGER.debug("Releasing claim on %s", url)
         response = await self.process_request(url=url, method="delete")
-        return response
+        return self._normalize_response(response)
 
     async def list_claims(self, target: bool | None = None) -> Any:
         """List all claims."""
@@ -136,4 +141,4 @@ class ManagersMixin:
 
         _LOGGER.debug("Getting claims on %s", url)
         response = await self.process_request(url=url, method="get")
-        return response
+        return self._normalize_response(response)

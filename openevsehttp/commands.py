@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Mapping
 from typing import Any
 
 import aiohttp  # type: ignore
@@ -31,7 +32,7 @@ class CommandsMixin:
 
     async def process_request(
         self, url: str, method: str = "", data: Any = None, rapi: Any = None
-    ) -> dict[str, str] | dict[str, Any]:
+    ) -> Mapping[str, Any] | list[Any] | str:
         raise NotImplementedError
 
     async def send_command(self, command: str) -> tuple:
@@ -40,13 +41,11 @@ class CommandsMixin:
     async def update(self) -> None:
         raise NotImplementedError
 
-    def _normalize_response(self, response: Any) -> dict[str, Any]:
-        """Normalize response to a dict."""
-        if isinstance(response, dict):
-            return response
-        return {"msg": str(response)}
+    def _normalize_response(self, response: Any) -> dict[str, Any] | list[Any]:
+        """Normalize response to a dict or list."""
+        raise NotImplementedError
 
-    async def get_schedule(self) -> dict[str, str] | dict[str, Any]:
+    async def get_schedule(self) -> Mapping[str, Any] | list[Any]:
         """Return the current schedule."""
         url = f"{self.url}schedule"
 
@@ -67,12 +66,12 @@ class CommandsMixin:
         _LOGGER.debug("Setting charge mode to %s", mode)
         response = await self.process_request(url=url, method="post", data=data)
         response = self._normalize_response(response)
-        msg = response.get("msg")
+        msg = response.get("msg") if isinstance(response, Mapping) else None
         if msg not in ["done", "no change"]:
             _LOGGER.error("Problem issuing command: %s", response)
             raise UnknownError
 
-    async def divert_mode(self) -> dict[str, str] | dict[str, Any]:
+    async def divert_mode(self) -> Mapping[str, Any] | list[Any]:
         """Set the divert mode to either Normal or Eco modes."""
         if not self._config:
             raise RuntimeError("Missing configuration: self._config is required")
@@ -100,9 +99,9 @@ class CommandsMixin:
             "no change",
         ]:
             self._config["divert_enabled"] = mode
-        return response
+        return self._normalize_response(response)
 
-    async def get_override(self) -> dict[str, str] | dict[str, Any]:
+    async def get_override(self) -> Mapping[str, Any] | list[Any]:
         """Get the manual override status."""
         if not self._version_check("4.0.1"):
             _LOGGER.debug("Feature not supported for older firmware.")
@@ -111,7 +110,7 @@ class CommandsMixin:
 
         _LOGGER.debug("Getting data from %s", url)
         response = await self.process_request(url=url, method="get")
-        return response
+        return self._normalize_response(response)
 
     async def set_override(
         self,
@@ -129,7 +128,10 @@ class CommandsMixin:
         url = f"{self.url}override"
 
         response = await self.get_override()
-        data: dict[str, Any] = self._normalize_response(response)
+        if not isinstance(response, Mapping):
+            _LOGGER.error("Failed to get current override state: %s", response)
+            raise ValueError("Invalid override state response")
+        data: dict[str, Any] = dict(response)
 
         if state not in ["active", "disabled", None]:
             _LOGGER.error("Invalid override state: %s", state)
@@ -151,8 +153,8 @@ class CommandsMixin:
 
         _LOGGER.debug("Override data: %s", data)
         _LOGGER.debug("Setting override config on %s", url)
-        response = await self.process_request(url=url, method="post", data=data)
-        return self._normalize_response(response)
+        reply = await self.process_request(url=url, method="post", data=data)
+        return self._normalize_response(reply)
 
     async def toggle_override(self) -> None:
         """Toggle the manual override status."""
@@ -190,7 +192,8 @@ class CommandsMixin:
         _LOGGER.debug("Clearing manual override %s", url)
         response = await self.process_request(url=url, method="delete")
         response = self._normalize_response(response)
-        _LOGGER.debug("Toggle response: %s", response.get("msg"))
+        msg = response.get("msg") if isinstance(response, Mapping) else None
+        _LOGGER.debug("Toggle response: %s", msg)
 
     async def set_current(self, amps: int = 6) -> None:
         """Set the soft current limit."""
@@ -231,7 +234,7 @@ class CommandsMixin:
         response = await self.process_request(url=url, method="post", data=data)
         response = self._normalize_response(response)
         _LOGGER.debug("service response: %s", response)
-        msg = response.get("msg")
+        msg = response.get("msg") if isinstance(response, Mapping) else None
         if msg not in ["done", "no change"]:
             _LOGGER.error("Problem issuing command: %s", response)
             raise UnknownError
@@ -244,7 +247,12 @@ class CommandsMixin:
 
         response = await self.process_request(url=url, method="post", data=data)
         response = self._normalize_response(response)
-        _LOGGER.debug("WiFi Restart response: %s", response.get("msg", "Unknown error"))
+        msg = (
+            response.get("msg", "Unknown error")
+            if isinstance(response, Mapping)
+            else "Unknown error"
+        )
+        _LOGGER.debug("WiFi Restart response: %s", msg)
 
     # Restart EVSE module
     async def restart_evse(self) -> None:
@@ -255,7 +263,11 @@ class CommandsMixin:
             data = {"device": "evse"}
             reply = await self.process_request(url=url, method="post", data=data)
             reply = self._normalize_response(reply)
-            response = reply.get("msg", "Unknown error")
+            response = (
+                reply.get("msg", "Unknown error")
+                if isinstance(reply, Mapping)
+                else "Unknown error"
+            )
 
         else:
             _LOGGER.debug("Restarting EVSE module via RAPI")
