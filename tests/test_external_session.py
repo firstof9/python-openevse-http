@@ -124,9 +124,8 @@ async def test_websocket_uses_external_session(mock_aioclient):
         assert charger.websocket is not None
         assert charger.websocket.session is session
 
-        # Use manual cleanup instead of problematic async cleanup
-        charger._ws_listening = False
-        charger.websocket = None
+        # Clean up properly including background tasks
+        await charger.ws_disconnect()
 
 
 async def test_firmware_check_with_external_session(mock_aioclient):

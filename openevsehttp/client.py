@@ -324,19 +324,23 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
         if self._owns_loop and self._loop:
             # Schedule shutdown coroutine on the loop thread
             future = asyncio.run_coroutine_threadsafe(self._shutdown(), self._loop)
+            shutdown_succeeded = False
             try:
                 # Wait for the shutdown to complete on the other loop
                 future.result(timeout=2.0)
+                shutdown_succeeded = True
             except (asyncio.TimeoutError, Exception) as err:
                 _LOGGER.debug("Error during shutdown coroutine: %s", err)
 
             if self._loop_thread:
                 self._loop_thread.join(timeout=2.0)
-                self._loop_thread = None
+                if not self._loop_thread.is_alive():
+                    self._loop_thread = None
 
-            self._loop.close()
-            self._loop = None
-            self._owns_loop = False
+            if shutdown_succeeded and self._loop_thread is None:
+                self._loop.close()
+                self._loop = None
+                self._owns_loop = False
         else:
             # Standard async disconnect for caller loop
             await self._shutdown()

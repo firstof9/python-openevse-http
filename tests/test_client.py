@@ -1297,8 +1297,10 @@ async def test_websocket_listen():
 
         mock_running.side_effect = side_effect
 
-        await ws.listen()
-        await ws.close()
+        try:
+            await ws.listen()
+        finally:
+            await ws.close()
         mock_running.assert_called_once()
 
 
@@ -1379,13 +1381,51 @@ async def test_ws_disconnect_owned_loop():
                 assert charger._loop is mock_loop
 
                 # Mock thread
-                charger._loop_thread = MagicMock()
+                mock_thread = MagicMock()
+                mock_thread.is_alive.return_value = False
+                charger._loop_thread = mock_thread
 
-                await charger.ws_disconnect()
+                # Mock run_coroutine_threadsafe to return a success future
+                mock_future = MagicMock()
+                mock_future.result.return_value = True
+                with patch(
+                    "asyncio.run_coroutine_threadsafe", return_value=mock_future
+                ) as mock_run:
+                    await charger.ws_disconnect()
+                    # Check for threadsafe call
+                    assert mock_run.called
+
                 assert charger._loop is None
-                # Check for threadsafe call to stop
-                assert mock_loop.call_soon_threadsafe.called
                 assert mock_loop.close.called
+
+
+async def test_ws_disconnect_exception():
+    """Test ws_disconnect handled exceptions during shutdown."""
+    charger = OpenEVSE(SERVER_URL)
+    charger.websocket = AsyncMock()
+    charger.websocket.state = STATE_STOPPED
+
+    # Mock loop methods to avoid real async operations
+    mock_loop = MagicMock(spec=asyncio.AbstractEventLoop)
+    charger._loop = mock_loop
+    charger._owns_loop = True
+
+    # Mock thread
+    mock_thread = MagicMock()
+    mock_thread.is_alive.return_value = False
+    charger._loop_thread = mock_thread
+
+    # Mock run_coroutine_threadsafe to return a failing future
+    mock_future = MagicMock()
+    mock_future.result.side_effect = asyncio.TimeoutError
+    with patch(
+        "asyncio.run_coroutine_threadsafe", return_value=mock_future
+    ) as mock_run:
+        await charger.ws_disconnect()
+        assert mock_run.called
+
+    # Shutdown failed, so loop should NOT be closed/cleared
+    assert charger._loop is mock_loop
 
 
 async def test_ws_shutdown_drains_tasks(test_charger):

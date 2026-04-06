@@ -759,3 +759,11 @@ async def test_set_override_auto_release(test_charger_new, mock_aioclient):
         body='{"msg":"OK"}',
     )
     await test_charger_new.set_override(auto_release=False)
+
+
+async def test_normalize_response(test_charger):
+    """Test _normalize_response helper."""
+    # Test with dict
+    assert test_charger._normalize_response({"msg": "OK"}) == {"msg": "OK"}
+    # Test with string
+    assert test_charger._normalize_response("OK") == {"msg": "OK"}

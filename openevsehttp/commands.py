@@ -40,13 +40,19 @@ class CommandsMixin:
     async def update(self) -> None:
         raise NotImplementedError
 
+    def _normalize_response(self, response: Any) -> dict[str, Any]:
+        """Normalize response to a dict."""
+        if isinstance(response, dict):
+            return response
+        return {"msg": str(response)}
+
     async def get_schedule(self) -> dict[str, str] | dict[str, Any]:
         """Return the current schedule."""
         url = f"{self.url}schedule"
 
         _LOGGER.debug("Getting current schedule from %s", url)
         response = await self.process_request(url=url, method="post")
-        return response
+        return self._normalize_response(response)
 
     async def set_charge_mode(self, mode: str = "fast") -> None:
         """Set the charge mode at startup setting."""
@@ -60,6 +66,7 @@ class CommandsMixin:
 
         _LOGGER.debug("Setting charge mode to %s", mode)
         response = await self.process_request(url=url, method="post", data=data)
+        response = self._normalize_response(response)
         msg = response.get("msg")
         if msg not in ["done", "no change"]:
             _LOGGER.error("Problem issuing command: %s", response)
@@ -121,7 +128,8 @@ class CommandsMixin:
             raise UnsupportedFeature
         url = f"{self.url}override"
 
-        data: dict[str, Any] = await self.get_override()
+        response = await self.get_override()
+        data: dict[str, Any] = self._normalize_response(response)
 
         if state not in ["active", "disabled", None]:
             _LOGGER.error("Invalid override state: %s", state)
@@ -144,7 +152,7 @@ class CommandsMixin:
         _LOGGER.debug("Override data: %s", data)
         _LOGGER.debug("Setting override config on %s", url)
         response = await self.process_request(url=url, method="post", data=data)
-        return response
+        return self._normalize_response(response)
 
     async def toggle_override(self) -> None:
         """Toggle the manual override status."""
@@ -181,7 +189,8 @@ class CommandsMixin:
 
         _LOGGER.debug("Clearing manual override %s", url)
         response = await self.process_request(url=url, method="delete")
-        _LOGGER.debug("Toggle response: %s", response.get("msg", response))
+        response = self._normalize_response(response)
+        _LOGGER.debug("Toggle response: %s", response.get("msg"))
 
     async def set_current(self, amps: int = 6) -> None:
         """Set the soft current limit."""
@@ -220,6 +229,7 @@ class CommandsMixin:
 
         _LOGGER.debug("Set service level to: %s", level)
         response = await self.process_request(url=url, method="post", data=data)
+        response = self._normalize_response(response)
         _LOGGER.debug("service response: %s", response)
         msg = response.get("msg")
         if msg not in ["done", "no change"]:
@@ -243,6 +253,7 @@ class CommandsMixin:
             url = f"{self.url}restart"
             data = {"device": "evse"}
             reply = await self.process_request(url=url, method="post", data=data)
+            reply = self._normalize_response(reply)
             response = reply.get("msg", "Unknown error")
 
         else:

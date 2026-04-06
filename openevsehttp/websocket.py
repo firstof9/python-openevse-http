@@ -34,7 +34,7 @@ class OpenEVSEWebsocket:
         session: aiohttp.ClientSession | None = None,
     ):
         """Initialize a OpenEVSEWebsocket instance."""
-        self.session = session if session is not None else aiohttp.ClientSession()
+        self.session = session
         self._session_external = session is not None
         self.uri = self._get_uri(server)
         self._user = user
@@ -99,6 +99,7 @@ class OpenEVSEWebsocket:
 
     async def running(self):
         """Open a persistent websocket connection and act on events."""
+        await self._ensure_session()
         await self._set_state(STATE_STARTING)
         auth = None
 
@@ -169,6 +170,7 @@ class OpenEVSEWebsocket:
 
     async def listen(self):
         """Start the listening websocket."""
+        await self._ensure_session()
         self.failed_attempts = 0
         self._listener_loop = asyncio.get_running_loop()
         try:
@@ -177,12 +179,19 @@ class OpenEVSEWebsocket:
         finally:
             self._listener_loop = None
 
+    async def _ensure_session(self):
+        """Ensure aiohttp.ClientSession exists."""
+        if self.session is None:
+            self.session = aiohttp.ClientSession()
+            self._session_external = False
+
     async def close(self):
         """Close the listening websocket."""
         await self._set_state(STATE_STOPPED)
         # Only close the session if we created it
-        if not self._session_external:
+        if not self._session_external and self.session is not None:
             await self.session.close()
+            self.session = None
 
     async def keepalive(self):
         """Send ping requests to websocket."""
