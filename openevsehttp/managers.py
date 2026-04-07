@@ -40,11 +40,17 @@ class ManagersMixin:
             raise UnsupportedFeature
 
         url = f"{self.url}limit"
-        data: dict[str, Any] = await self.get_limit()
+        fetched_data = await self.get_limit()
         valid_types = ["time", "energy", "soc", "range"]
 
         if limit_type not in valid_types:
             raise InvalidType
+
+        data: dict[str, Any] = {}
+        if isinstance(fetched_data, Mapping):
+            for key in (TYPE, VALUE, RELEASE):
+                if key in fetched_data:
+                    data[key] = fetched_data[key]
 
         data[TYPE] = limit_type
         data[VALUE] = value

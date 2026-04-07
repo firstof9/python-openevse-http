@@ -243,7 +243,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
         if self.websocket and self.websocket.state != STATE_STOPPED:
             raise AlreadyListening
 
-        if not self.websocket:
+        if not self.websocket or self.websocket.state == STATE_STOPPED:
             self.websocket = OpenEVSEWebsocket(
                 self.url, self._update_status, self._user, self._pwd, self._session
             )

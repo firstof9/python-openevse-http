@@ -67,7 +67,7 @@ class CommandsMixin:
         response = await self.process_request(url=url, method="post", data=data)
         response = self._normalize_response(response)
         msg = response.get("msg") if isinstance(response, Mapping) else None
-        if msg not in ["done", "no change"]:
+        if msg not in ["OK", "done", "no change"]:
             _LOGGER.error("Problem issuing command: %s", response)
             raise UnknownError
 
@@ -234,6 +234,13 @@ class CommandsMixin:
             _LOGGER.debug("Setting current limit to %s", amps)
             response = await self.set_override(charge_current=amps)
             _LOGGER.debug("Set current response: %s", response)
+            if not isinstance(response, Mapping) or response.get("msg") not in [
+                "OK",
+                "done",
+                "no change",
+            ]:
+                _LOGGER.error("Problem setting current limit: %s", response)
+                raise UnknownError
 
         else:
             # RAPI commands
@@ -244,6 +251,9 @@ class CommandsMixin:
                 command = f"$SC {amps} V"
             response, msg = await self.send_command(command)
             _LOGGER.debug("Set current response: %s", msg)
+            if response in [False, "NK"]:
+                _LOGGER.error("Problem setting current via RAPI: %s", msg)
+                raise UnknownError
 
     async def set_service_level(self, level: int = 2) -> None:
         """Set the service level of the EVSE."""
@@ -259,7 +269,7 @@ class CommandsMixin:
         response = self._normalize_response(response)
         _LOGGER.debug("service response: %s", response)
         msg = response.get("msg") if isinstance(response, Mapping) else None
-        if msg not in ["done", "no change"]:
+        if msg not in ["OK", "done", "no change"]:
             _LOGGER.error("Problem issuing command: %s", response)
             raise UnknownError
 
@@ -393,7 +403,12 @@ class CommandsMixin:
 
         data["led_brightness"] = level
         _LOGGER.debug("Setting LED brightness to %s", level)
-        await self.process_request(url=url, method="post", data=data)
+        response = await self.process_request(url=url, method="post", data=data)
+        response = self._normalize_response(response)
+        msg = response.get("msg") if isinstance(response, Mapping) else None
+        if msg not in ["OK", "done", "no change"]:
+            _LOGGER.error("Problem issuing command: %s", response)
+            raise UnknownError
 
     async def set_divert_mode(self, mode: str = "fast") -> None:
         """Set the divert mode."""

@@ -185,12 +185,12 @@ class OpenEVSEWebsocket:
 
     async def _handle_connection_error(self, error):
         """Handle connection errors."""
+        self.failed_attempts += 1
         if self.failed_attempts > MAX_FAILED_ATTEMPTS:
             self._error_reason = ERROR_TOO_MANY_RETRIES
             await self._set_state(STATE_STOPPED)
         elif self.state != STATE_STOPPED:
             retry_delay = min(2 ** (self.failed_attempts - 1) * 30, 300)
-            self.failed_attempts += 1
             _LOGGER.error(
                 "Websocket connection failed, retrying in %ds: %s",
                 retry_delay,
