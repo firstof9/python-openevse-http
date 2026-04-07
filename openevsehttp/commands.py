@@ -12,7 +12,7 @@ from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
 from awesomeversion import AwesomeVersion
 from awesomeversion.exceptions import AwesomeVersionCompareException
 
-from .const import MAX_AMPS, MIN_AMPS, divert_mode
+from .const import MAX_AMPS, MIN_AMPS, RAPI_ERRORS, divert_mode
 from .exceptions import UnknownError, UnsupportedFeature
 
 _LOGGER = logging.getLogger(__name__)
@@ -192,7 +192,9 @@ class CommandsMixin:
             command = "$FE" if self._status.get("state") == 254 else "$FS"
             response, msg = await self.send_command(command)
             _LOGGER.debug("Toggle response: %s", msg)
-            if response in [False, "NK"]:
+            if response in [False, "NK"] or (
+                isinstance(msg, str) and (msg.startswith("$NK") or msg in RAPI_ERRORS)
+            ):
                 _LOGGER.error("Problem toggling override via RAPI: %s", msg)
                 raise RuntimeError(f"Failed to toggle override via RAPI: {msg}")
 
@@ -251,7 +253,9 @@ class CommandsMixin:
                 command = f"$SC {amps} V"
             response, msg = await self.send_command(command)
             _LOGGER.debug("Set current response: %s", msg)
-            if response in [False, "NK"]:
+            if response in [False, "NK"] or (
+                isinstance(msg, str) and (msg.startswith("$NK") or msg in RAPI_ERRORS)
+            ):
                 _LOGGER.error("Problem setting current via RAPI: %s", msg)
                 raise UnknownError
 
@@ -307,6 +311,11 @@ class CommandsMixin:
             _LOGGER.debug("Restarting EVSE module via RAPI")
             command = "$FR"
             reply, response = await self.send_command(command)
+            if reply in [False, "NK"] or (
+                isinstance(response, str)
+                and (response.startswith("$NK") or response in RAPI_ERRORS)
+            ):
+                _LOGGER.error("Problem restarting EVSE module via RAPI: %s", response)
 
         _LOGGER.debug("EVSE Restart response: %s", response)
 

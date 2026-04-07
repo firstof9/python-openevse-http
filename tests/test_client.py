@@ -63,11 +63,12 @@ async def test_ws_state(test_charger):
     """Test v4 Status reply."""
     await test_charger.update()
     assert test_charger.ws_state == STATE_STOPPED
-    test_charger.ws_start()
-    value = test_charger.ws_state
-    assert value == STATE_DISCONNECTED
-    await test_charger.ws_disconnect()
-    assert test_charger.ws_state == STATE_STOPPED
+    with patch("openevsehttp.client.OpenEVSEWebsocket.listen", AsyncMock()):
+        test_charger.ws_start()
+        value = test_charger.ws_state
+        assert value == STATE_DISCONNECTED
+        await test_charger.ws_disconnect()
+        assert test_charger.ws_state == STATE_STOPPED
 
 
 async def test_update_status(test_charger):
@@ -561,8 +562,9 @@ async def test_websocket_functions(test_charger, mock_aioclient, caplog):
         body=load_fixture("websocket.json"),
     )
     await test_charger.update()
-    test_charger.ws_start()
-    await test_charger.ws_disconnect()
+    with patch("openevsehttp.client.OpenEVSEWebsocket.listen", AsyncMock()):
+        test_charger.ws_start()
+        await test_charger.ws_disconnect()
 
 
 async def test_ws_start_already_listening():
@@ -796,10 +798,34 @@ async def test_send_command_msg_fallback():
         assert ret == "ErrorMsg"
 
 
+async def test_send_command_rapi_rejection(test_charger, mock_aioclient):
+    """Test send_command with RAPI rejection patterns."""
+    # Mock charger state for toggle_override
+    test_charger._status["state"] = 2  # connected, not sleeping
+    test_charger._config["version"] = "3.11.0"  # Force RAPI path
+
+    # Test $NK rejection
+    value = {"cmd": "$FS", "ret": "$NK^21"}
+    mock_aioclient.post(TEST_URL_RAPI, status=200, body=json.dumps(value))
+
+    with pytest.raises(
+        RuntimeError, match=r"Failed to toggle override via RAPI: \$NK\^21"
+    ):
+        await test_charger.toggle_override()
+
+    # Test ESP32 timeout error
+    value = {"cmd": "$FS", "ret": "RAPI_RESPONSE_TIMEOUT"}
+    mock_aioclient.post(TEST_URL_RAPI, status=200, body=json.dumps(value))
+
+    with pytest.raises(
+        RuntimeError, match="Failed to toggle override via RAPI: RAPI_RESPONSE_TIMEOUT"
+    ):
+        await test_charger.toggle_override()
+
+
 async def test_send_command_empty_fallback():
     """Test send_command empty fallback."""
     charger = OpenEVSE(SERVER_URL)
-
     # Mock response with neither 'msg' nor 'ret'
     with patch.object(charger, "process_request", return_value={}):
         cmd, ret = await charger.send_command("$ST")

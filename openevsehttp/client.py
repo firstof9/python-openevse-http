@@ -243,9 +243,23 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
         if self.websocket and self.websocket.state != STATE_STOPPED:
             raise AlreadyListening
 
+        # Detect loop mismatch
+        use_session = self._session
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            # We are about to create a private loop in _start_listening
+            # If we have a session, it's likely bound to another loop
+            if self._session:
+                _LOGGER.warning(
+                    "Caller-provided session may not work on private event loop. "
+                    "Creating a loop-local session."
+                )
+                use_session = None
+
         if not self.websocket or self.websocket.state == STATE_STOPPED:
             self.websocket = OpenEVSEWebsocket(
-                self.url, self._update_status, self._user, self._pwd, self._session
+                self.url, self._update_status, self._user, self._pwd, use_session
             )
 
         self._start_listening()
