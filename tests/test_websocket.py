@@ -327,3 +327,51 @@ async def test_state_setter_threadsafe_fallback(ws_client):
     ws_client.callback = None
     ws_client.state = STATE_STOPPED
     assert ws_client.state == STATE_STOPPED
+
+
+@pytest.mark.asyncio
+async def test_websocket_sync_callback(ws_client):
+    """Test state setter with a synchronous callback."""
+    # MagicMock is not awaitable, so it triggers the return at line 73.
+    sync_callback = MagicMock(return_value=None)
+    ws_client.callback = sync_callback
+    ws_client.state = STATE_CONNECTED
+    assert ws_client.state == STATE_CONNECTED
+    sync_callback.assert_called_once()
+    assert ws_client._error_reason is None
+
+
+@pytest.mark.asyncio
+async def test_websocket_schedule_failure_sync(ws_client, mock_callback):
+    """Test state setter handles RuntimeError during call_soon_threadsafe."""
+    # Use AsyncMock to ensure it's awaitable and triggers the try...except block
+    async_mock = AsyncMock()
+
+    # Trigger RuntimeError in both create_task and get_event_loop/call_soon_threadsafe
+    with (
+        patch("asyncio.create_task", side_effect=RuntimeError("No loop")),
+        patch("asyncio.get_event_loop", side_effect=RuntimeError("Loop closed")),
+        patch("openevsehttp.websocket._LOGGER") as mock_logger,
+    ):
+        ws_client.callback = async_mock
+        ws_client.state = STATE_CONNECTED
+        assert mock_logger.error.called
+        assert (
+            "Failed to schedule callback from sync context"
+            in mock_logger.error.call_args[0][0]
+        )
+
+
+@pytest.mark.asyncio
+async def test_websocket_schedule_failure_async(ws_client):
+    """Test _schedule_task handles RuntimeError during create_task."""
+    async_mock = AsyncMock()
+    mock_coro = async_mock()
+
+    with (
+        patch("asyncio.create_task", side_effect=RuntimeError("Failed")),
+        patch("openevsehttp.websocket._LOGGER") as mock_logger,
+    ):
+        ws_client._schedule_task(mock_coro)
+        assert mock_logger.error.called
+        assert "Failed to schedule callback task" in mock_logger.error.call_args[0][0]
