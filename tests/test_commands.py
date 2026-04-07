@@ -95,7 +95,20 @@ async def test_set_override_non_dict(test_charger, mock_aioclient, caplog):
         with pytest.raises(ValueError, match="Invalid override state response"):
             await test_charger.set_override(state="active")
 
-    assert "Failed to get current override state: []" in caplog.text
+    assert "Invalid override payload: []" in caplog.text
+
+
+async def test_set_override_msg_only(test_charger, mock_aioclient, caplog):
+    """Test set_override() rejects response from get_override() with only 'msg' key."""
+    test_charger._config = {"version": "4.0.1"}
+
+    mock_aioclient.get(TEST_URL_OVERRIDE, status=200, body='{"msg": "OK"}')
+
+    with caplog.at_level(logging.ERROR, logger="openevsehttp.commands"):
+        with pytest.raises(ValueError, match="Invalid override state response"):
+            await test_charger.set_override(state="active")
+
+    assert "Invalid override payload: {'msg': 'OK'}" in caplog.text
 
 
 async def test_toggle_override_v2(test_charger_v2, mock_aioclient, caplog):
@@ -665,6 +678,22 @@ async def test_async_charge_current_list(test_charger, mock_aioclient):
 
     value = await test_charger.get_charge_current()
     assert value == 30
+    await test_charger.ws_disconnect()
+
+
+async def test_async_charge_current_list_multi(test_charger, mock_aioclient):
+    """Test async_charge_current function with a list of claims, searching for charge_current."""
+    await test_charger.update()
+    # Mock a list-based response where the first claim doesn't have charge_current
+    mock_aioclient.get(
+        TEST_URL_CLAIMS_TARGET,
+        status=200,
+        body='[{"properties":{"state":"disabled"}}, {"properties":{"charge_current":35}}]',
+        repeat=False,
+    )
+
+    value = await test_charger.get_charge_current()
+    assert value == 35
     await test_charger.ws_disconnect()
 
 

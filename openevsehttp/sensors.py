@@ -60,7 +60,7 @@ class SensorsMixin:
         invert: bool = True,
         voltage: int | None = None,
     ) -> None:
-        """Send pushed sensor data to self-prodcution."""
+        """Send pushed sensor data to self-production."""
         if not self._version_check("2.9.1"):
             _LOGGER.debug("Feature not supported for older firmware.")
             raise UnsupportedFeature
@@ -97,7 +97,7 @@ class SensorsMixin:
         time_to_full: int | None = None,
         voltage: int | None = None,
     ) -> None:
-        """Send pushed sensor data to self-prodcution."""
+        """Send pushed sensor data to State of Charge."""
         if not self._version_check("4.1.0"):
             _LOGGER.debug("Feature not supported for older firmware.")
             raise UnsupportedFeature

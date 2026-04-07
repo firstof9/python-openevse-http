@@ -102,23 +102,18 @@ class PropertiesMixin:
     async def get_charge_current(self) -> int | None:
         """Get the charge current."""
         try:
-            claims = await self.list_claims(target=True)
-            # Normalize list to find an element with properties or use the first one
-            if isinstance(claims, list):
-                claims = next(
-                    (c for c in claims if isinstance(c, dict) and "properties" in c),
-                    claims[0] if claims else {},
-                )
-
-            if isinstance(claims, dict):
-                properties = claims.get("properties")
-                if isinstance(properties, dict) and "charge_current" in properties:
-                    try:
-                        charge_current = int(properties["charge_current"])
-                        max_hard = int(self._config.get("max_current_hard", 48))
-                        return min(charge_current, max_hard)
-                    except (TypeError, ValueError):
-                        pass
+            claims_data = await self.list_claims(target=True)
+            claims = claims_data if isinstance(claims_data, list) else [claims_data]
+            for claim in claims:
+                if isinstance(claim, dict):
+                    properties = claim.get("properties")
+                    if isinstance(properties, dict) and "charge_current" in properties:
+                        try:
+                            charge_current = int(properties["charge_current"])
+                            max_hard = int(self._config.get("max_current_hard", 48))
+                            return min(charge_current, max_hard)
+                        except (TypeError, ValueError):
+                            pass
         except (UnsupportedFeature, IndexError, KeyError):
             pass
 

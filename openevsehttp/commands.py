@@ -93,13 +93,14 @@ class CommandsMixin:
         _LOGGER.debug("Toggling divert: %s", mode)
         response = await self.process_request(url=url, method="post", data=data)
         _LOGGER.debug("divert_mode response: %s", response)
-        if isinstance(response, dict) and response.get("msg") in [
+        normalized_response = self._normalize_response(response)
+        if isinstance(normalized_response, dict) and normalized_response.get("msg") in [
             "OK",
             "done",
             "no change",
         ]:
             self._config["divert_enabled"] = mode
-        return self._normalize_response(response)
+        return normalized_response
 
     async def get_override(self) -> Mapping[str, Any] | list[Any]:
         """Get the manual override status."""
@@ -128,8 +129,10 @@ class CommandsMixin:
         url = f"{self.url}override"
 
         response = await self.get_override()
-        if not isinstance(response, Mapping):
-            _LOGGER.error("Failed to get current override state: %s", response)
+        if not isinstance(response, Mapping) or (
+            len(response) == 1 and "msg" in response
+        ):
+            _LOGGER.error("Invalid override payload: %s", response)
             raise ValueError("Invalid override state response")
         data: dict[str, Any] = dict(response)
 
