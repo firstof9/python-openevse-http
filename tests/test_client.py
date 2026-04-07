@@ -833,6 +833,40 @@ async def test_send_command_empty_fallback():
         assert ret == ""
 
 
+async def test_restart_evse_rapi_failure(test_charger, mock_aioclient, caplog):
+    """Test restart_evse with RAPI failure."""
+    test_charger._config["version"] = "4.0.0"
+    mock_aioclient.post(
+        TEST_URL_RAPI, status=200, body='{"cmd": "$FR", "ret": "$NK^21"}'
+    )
+    with caplog.at_level(logging.ERROR):
+        await test_charger.restart_evse()
+    assert "Problem restarting EVSE module via RAPI: $NK^21" in caplog.text
+
+
+def test_ws_start_no_loop_with_session(caplog):
+    """Test ws_start when no loop is running but a session exists."""
+    charger = OpenEVSE("test.host", session=MagicMock())
+    with (
+        patch("asyncio.get_running_loop", side_effect=RuntimeError),
+        patch.object(charger, "_start_listening"),
+        caplog.at_level(logging.WARNING),
+    ):
+        charger.ws_start()
+    assert "Caller-provided session may not work on private event loop" in caplog.text
+    # charger.websocket.session should be None so it can be auto-created on the new loop
+    assert charger.websocket.session is None
+
+
+def test_ws_start_no_loop_no_session():
+    """Test ws_start when no loop is running and no session exists."""
+    charger = OpenEVSE("test.host")
+    with patch("asyncio.get_running_loop", side_effect=RuntimeError):
+        with patch.object(charger, "_start_listening"):
+            charger.ws_start()
+    assert charger.websocket is not None
+
+
 # ── process_request error handling ───────────────────────────────────
 
 
