@@ -277,6 +277,33 @@ async def test_set_current_error(
     assert "Unable to find firmware version." in caplog.text
 
 
+async def test_set_current_http_fail(test_charger, mock_aioclient, caplog):
+    """Test set_current HTTP failure."""
+    await test_charger.update()
+    value = {
+        "state": "active",
+        "charge_current": 0,
+        "max_current": 0,
+        "energy_limit": 0,
+        "time_limit": 0,
+        "auto_release": True,
+    }
+    mock_aioclient.get(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body=json.dumps(value),
+    )
+    mock_aioclient.post(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body='{"msg": "failure!"}',
+    )
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(UnknownError):
+            await test_charger.set_current(12)
+    assert "Problem setting current limit: {'msg': 'failure!'}" in caplog.text
+
+
 async def test_set_current_v2(
     test_charger_v2, test_charger_dev, mock_aioclient, caplog
 ):
@@ -314,6 +341,21 @@ async def test_set_current_v2(
     with caplog.at_level(logging.DEBUG):
         await test_charger_dev.set_current(12)
     assert "Stripping 'dev' from version." in caplog.text
+
+
+async def test_set_current_rapi_fail(test_charger_v2, mock_aioclient, caplog):
+    """Test set_current RAPI failure."""
+    await test_charger_v2.update()
+    value = {"cmd": "NK", "ret": "$NK^21"}
+    mock_aioclient.post(
+        TEST_URL_RAPI,
+        status=200,
+        body=json.dumps(value),
+    )
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(UnknownError):
+            await test_charger_v2.set_current(12)
+    assert "Problem setting current via RAPI: $NK^21" in caplog.text
 
 
 # ── set_divertmode (toggle divert) ───────────────────────────────────
@@ -665,6 +707,21 @@ async def test_set_led_brightness(
         with caplog.at_level(logging.DEBUG):
             await test_charger_v2.set_led_brightness(255)
     assert "Feature not supported for older firmware." in caplog.text
+
+
+async def test_set_led_brightness_fail(test_charger_new, mock_aioclient, caplog):
+    """Test set_led_brightness failure."""
+    await test_charger_new.update()
+    value = '{"msg": "failure!"}'
+    mock_aioclient.post(
+        TEST_URL_CONFIG,
+        status=200,
+        body=value,
+    )
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(UnknownError):
+            await test_charger_new.set_led_brightness(255)
+    assert "Problem issuing command: {'msg': 'failure!'}" in caplog.text
 
 
 # ── async_charge_current / async_override_state ──────────────────────
