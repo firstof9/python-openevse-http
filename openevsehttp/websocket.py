@@ -131,9 +131,9 @@ class OpenEVSEWebsocket:
                 heartbeat=15,
                 auth=auth,
             ) as ws_client:
+                self._client = ws_client
                 await self._set_state(STATE_CONNECTED)
                 self.failed_attempts = 0
-                self._client = ws_client
                 await self._handle_messages(ws_client)
 
         except aiohttp.ClientResponseError as error:
@@ -149,6 +149,10 @@ class OpenEVSEWebsocket:
             if self.state != STATE_STOPPED:
                 await self._set_state(STATE_DISCONNECTED)
                 await asyncio.sleep(5)
+        finally:
+            if self._client is not None:
+                await self._client.close()
+                self._client = None
 
     async def _handle_messages(self, ws_client):
         """Handle incoming websocket messages."""

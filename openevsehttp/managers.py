@@ -39,12 +39,13 @@ class ManagersMixin:
             _LOGGER.debug("Feature not supported for older firmware.")
             raise UnsupportedFeature
 
-        url = f"{self.url}limit"
-        fetched_data = await self.get_limit()
         valid_types = ["time", "energy", "soc", "range"]
 
         if limit_type not in valid_types:
             raise InvalidType
+
+        url = f"{self.url}limit"
+        fetched_data = await self.get_limit()
 
         data: dict[str, Any] = {}
         if isinstance(fetched_data, Mapping):

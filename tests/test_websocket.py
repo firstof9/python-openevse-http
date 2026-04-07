@@ -57,7 +57,7 @@ async def test_run_success(ws_client, mock_callback):
     msg.json.return_value = {"key": "value"}
 
     # Mock context manager and iterator
-    mock_ws = MagicMock()
+    mock_ws = AsyncMock()
     mock_ws.__aenter__ = AsyncMock(return_value=mock_ws)
     mock_ws.__aexit__ = AsyncMock(return_value=None)
 
@@ -167,7 +167,7 @@ async def ws_client_auth():
 @pytest.mark.asyncio
 async def test_websocket_auth(ws_client_auth):
     """Test WebSocket connection with authentication."""
-    mock_ws = MagicMock()
+    mock_ws = AsyncMock()
     mock_ws.__aenter__ = AsyncMock(return_value=mock_ws)
     mock_ws.__aexit__ = AsyncMock(return_value=None)
 
@@ -199,7 +199,7 @@ async def test_websocket_message_types(ws_client_auth):
     msg_closed = MagicMock()
     msg_closed.type = aiohttp.WSMsgType.CLOSED
 
-    mock_ws = MagicMock()
+    mock_ws = AsyncMock()
     mock_ws.__aenter__ = AsyncMock(return_value=mock_ws)
     mock_ws.__aexit__ = AsyncMock(return_value=None)
 
@@ -392,7 +392,7 @@ async def test_websocket_async_sync_callback(ws_client):
     msg.type = aiohttp.WSMsgType.TEXT
     msg.json.return_value = {"key": "value"}
 
-    mock_ws = MagicMock()
+    mock_ws = AsyncMock()
     mock_ws.__aenter__ = AsyncMock(return_value=mock_ws)
     mock_ws.__aexit__ = AsyncMock(return_value=None)
 

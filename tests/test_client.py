@@ -1447,15 +1447,20 @@ async def test_ws_disconnect_owned_loop():
                 charger._loop_thread = mock_thread
 
                 # Mock run_coroutine_threadsafe to return a success future
-                mock_future = MagicMock()
-                mock_future.result.return_value = True
+                from concurrent.futures import Future as ConcurrentFuture
+
+                mock_future = ConcurrentFuture()
+                mock_future.set_result(True)
                 with (
                     patch(
                         "asyncio.run_coroutine_threadsafe", return_value=mock_future
                     ) as mock_run,
-                    patch.object(
-                        charger, "_shutdown", return_value=MagicMock()
-                    ) as mock_shutdown,
+                    patch("asyncio.wait_for", AsyncMock(return_value=True)),
+                    patch(
+                        "asyncio.to_thread",
+                        AsyncMock(side_effect=lambda func, *args: func(*args)),
+                    ),
+                    patch.object(charger, "_shutdown", AsyncMock()) as mock_shutdown,
                 ):
                     await charger.ws_disconnect()
                     # Check for threadsafe call
@@ -1483,11 +1488,17 @@ async def test_ws_disconnect_exception():
     charger._loop_thread = mock_thread
 
     # Mock run_coroutine_threadsafe to return a failing future
-    mock_future = MagicMock()
-    mock_future.result.side_effect = asyncio.TimeoutError
+    from concurrent.futures import Future as ConcurrentFuture
+
+    mock_future = ConcurrentFuture()
+    mock_future.set_exception(asyncio.TimeoutError)
     with (
         patch("asyncio.run_coroutine_threadsafe", return_value=mock_future) as mock_run,
-        patch.object(charger, "_shutdown", return_value=MagicMock()) as mock_shutdown,
+        patch("asyncio.wait_for", AsyncMock(side_effect=asyncio.TimeoutError)),
+        patch(
+            "asyncio.to_thread", AsyncMock(side_effect=lambda func, *args: func(*args))
+        ),
+        patch.object(charger, "_shutdown", AsyncMock()) as mock_shutdown,
     ):
         await charger.ws_disconnect()
         assert mock_run.called

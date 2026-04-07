@@ -267,7 +267,6 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
             self._ws_keepalive_task = self._loop.create_task(
                 self.repeat(300, self.websocket.keepalive)
             )
-            self._ws_listening = True
 
             if self._owns_loop:
                 self._loop_thread = threading.Thread(
@@ -330,21 +329,23 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
             tasks.append(self._ws_listen_task)
 
         if self.websocket:
-            # Cancel all pending callback tasks
+            # Close the websocket (this cancels running() internal tasks)
+            await self.websocket.close()
+
+            # Cancel any remaining callback tasks
             for task in list(self.websocket._tasks):
-                task.cancel()
-                tasks.append(task)
+                if not task.done():
+                    task.cancel()
+                    tasks.append(task)
             self.websocket._tasks.clear()
 
         if tasks:
             await asyncio.gather(
-                *(t for t in tasks if isinstance(t, asyncio.Future)),
+                *(t for t in tasks if isinstance(t, asyncio.Future | asyncio.Task)),
                 return_exceptions=True,
             )
 
         if self.websocket:
-            # Close the websocket (this cancels running() internal tasks)
-            await self.websocket.close()
             self.websocket = None
 
         self._ws_listen_task = None
@@ -362,13 +363,13 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
             shutdown_succeeded = False
             try:
                 # Wait for the shutdown to complete on the other loop
-                future.result(timeout=2.0)
+                await asyncio.wait_for(asyncio.wrap_future(future), timeout=2.0)
                 shutdown_succeeded = True
-            except (asyncio.TimeoutError, asyncio.CancelledError) as err:
+            except (TimeoutError, asyncio.CancelledError) as err:
                 _LOGGER.debug("Error during shutdown coroutine: %s", err)
 
             if self._loop_thread:
-                self._loop_thread.join(timeout=2.0)
+                await asyncio.to_thread(self._loop_thread.join, 2.0)
                 if not self._loop_thread.is_alive():
                     self._loop_thread = None
 

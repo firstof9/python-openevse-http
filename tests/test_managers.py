@@ -219,6 +219,7 @@ async def test_set_limit(
     with pytest.raises(InvalidType):
         await test_charger_modified_ver.set_limit("invalid", 15)
 
+    await test_charger.update()
     with pytest.raises(UnsupportedFeature):
         with caplog.at_level(logging.DEBUG):
             await test_charger.set_limit("energy", 15)
@@ -249,6 +250,7 @@ async def test_get_limit(
         response = await test_charger_modified_ver.get_limit()
         assert response == {"msg": "No limit"}
 
+    await test_charger.update()
     with pytest.raises(UnsupportedFeature):
         with caplog.at_level(logging.DEBUG):
             await test_charger.get_limit()
@@ -279,6 +281,7 @@ async def test_clear_limit(
         response = await test_charger_modified_ver.clear_limit()
         assert response == {"msg": "No limit to clear"}
 
+    await test_charger.update()
     with pytest.raises(UnsupportedFeature):
         with caplog.at_level(logging.DEBUG):
             await test_charger.clear_limit()

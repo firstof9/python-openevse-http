@@ -78,6 +78,7 @@ async def test_toggle_override(
         body=json.dumps(value),
     )
 
+    caplog.clear()
     await test_charger_new.update()
     with caplog.at_level(logging.DEBUG):
         await test_charger_new.toggle_override()
@@ -197,7 +198,7 @@ async def test_toggle_override_refresh_fail(mock_aioclient, caplog):
 
     with caplog.at_level(logging.ERROR):
         with pytest.raises(
-            RuntimeError, match="Cannot toggle override: unknown charger state."
+            RuntimeError, match=r"Cannot toggle override: unknown charger state\."
         ):
             await charger.toggle_override()
     assert "Cannot toggle override: unknown charger state." in caplog.text
@@ -393,6 +394,7 @@ async def test_set_divertmode(
         assert "Toggling divert: True" in caplog.text
         assert "Non JSON response: Divert Mode changed" in caplog.text
 
+    caplog.clear()
     mock_aioclient.post(
         TEST_URL_CONFIG,
         status=200,
@@ -403,6 +405,7 @@ async def test_set_divertmode(
         await test_charger_new.divert_mode()
         assert "Toggling divert: False" in caplog.text
 
+    caplog.clear()
     mock_aioclient.post(
         TEST_URL_CONFIG,
         status=200,
