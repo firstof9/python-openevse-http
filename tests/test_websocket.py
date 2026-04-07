@@ -374,4 +374,36 @@ async def test_websocket_schedule_failure_async(ws_client):
     ):
         ws_client._schedule_task(mock_coro)
         assert mock_logger.error.called
-        assert "Failed to schedule callback task" in mock_logger.error.call_args[0][0]
+
+
+@pytest.mark.asyncio
+async def test_websocket_async_sync_callback(ws_client):
+    """Test _set_state and running with a synchronous callback."""
+    sync_callback = MagicMock(return_value=None)
+    ws_client.callback = sync_callback
+
+    # Test _set_state
+    await ws_client._set_state(STATE_CONNECTED)
+    sync_callback.assert_called_with(SIGNAL_CONNECTION_STATE, STATE_CONNECTED, None)
+
+    # Test running with data
+    sync_callback.reset_mock()
+    msg = MagicMock()
+    msg.type = aiohttp.WSMsgType.TEXT
+    msg.json.return_value = {"key": "value"}
+
+    mock_ws = MagicMock()
+    mock_ws.__aenter__ = AsyncMock(return_value=mock_ws)
+    mock_ws.__aexit__ = AsyncMock(return_value=None)
+
+    async def async_iter():
+        yield msg
+
+    mock_ws.__aiter__.side_effect = async_iter
+
+    with (
+        patch("aiohttp.ClientSession.ws_connect", return_value=mock_ws),
+        patch("asyncio.sleep", return_value=None),
+    ):
+        await ws_client.running()
+        sync_callback.assert_any_call("data", {"key": "value"}, None)

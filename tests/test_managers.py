@@ -135,13 +135,27 @@ async def test_clear_override(test_charger, test_charger_v2, mock_aioclient, cap
     )
     with caplog.at_level(logging.DEBUG):
         await test_charger.clear_override()
-        assert "Toggle response: OK" in caplog.text
+        assert "Clear override response: OK" in caplog.text
 
     await test_charger_v2.update()
     with pytest.raises(UnsupportedFeature):
         with caplog.at_level(logging.DEBUG):
             await test_charger_v2.clear_override()
     assert "Feature not supported for older firmware." in caplog.text
+
+
+async def test_clear_override_fail(test_charger, mock_aioclient, caplog):
+    """Test clear_override HTTP failure."""
+    await test_charger.update()
+    mock_aioclient.delete(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body='{"msg": "failure!"}',
+    )
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(RuntimeError, match="Failed to clear override:"):
+            await test_charger.clear_override()
+    assert "Problem clearing override: {'msg': 'failure!'}" in caplog.text
 
 
 # ── get_override ────────────────────────────────────────────────────

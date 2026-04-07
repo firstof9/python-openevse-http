@@ -147,6 +147,35 @@ async def test_toggle_override_v2_err(test_charger_v2, mock_aioclient, caplog):
     )
 
 
+async def test_toggle_override_v2_fail(test_charger_v2, mock_aioclient, caplog):
+    """Test toggle_override RAPI failure on V2 firmware."""
+    await test_charger_v2.update()
+    value = {"cmd": "NK", "ret": "$NK^21"}
+    mock_aioclient.post(
+        TEST_URL_RAPI,
+        status=200,
+        body=json.dumps(value),
+    )
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(RuntimeError, match="Failed to toggle override via RAPI:"):
+            await test_charger_v2.toggle_override()
+    assert "Problem toggling override via RAPI: $NK^21" in caplog.text
+
+
+async def test_toggle_override_fail(test_charger, mock_aioclient, caplog):
+    """Test toggle_override HTTP failure."""
+    await test_charger.update()
+    mock_aioclient.patch(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body='{"msg": "failure!"}',
+    )
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(RuntimeError, match="Failed to toggle override:"):
+            await test_charger.toggle_override()
+    assert "Problem toggling override: {'msg': 'failure!'}" in caplog.text
+
+
 async def test_toggle_override_refresh_fail(mock_aioclient, caplog):
     """Test toggle_override when state is missing and refresh fails."""
     # Use a fresh charger to avoid fixture mock interference
@@ -167,7 +196,10 @@ async def test_toggle_override_refresh_fail(mock_aioclient, caplog):
     charger._config = {"version": "3.3.1"}
 
     with caplog.at_level(logging.ERROR):
-        await charger.toggle_override()
+        with pytest.raises(
+            RuntimeError, match="Cannot toggle override: unknown charger state."
+        ):
+            await charger.toggle_override()
     assert "Cannot toggle override: unknown charger state." in caplog.text
 
 
@@ -228,6 +260,11 @@ async def test_set_current_error(
         with pytest.raises(ValueError):
             await test_charger.set_current(60)
     assert "Invalid value for current limit: 60" in caplog.text
+
+    with pytest.raises(ValueError, match="Current limit must be an integer, got bool"):
+        await test_charger.set_current(True)
+    with pytest.raises(ValueError, match="Current limit must be an integer, got float"):
+        await test_charger.set_current(12.5)
 
     await test_charger_broken.update()
     mock_aioclient.post(

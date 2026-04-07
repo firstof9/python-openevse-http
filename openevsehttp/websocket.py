@@ -5,7 +5,7 @@ import datetime
 import inspect
 import logging
 
-import aiohttp  # type: ignore
+import aiohttp
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -106,7 +106,9 @@ class OpenEVSEWebsocket:
         self._state = value
         _LOGGER.debug("Websocket %s", value)
         if self.callback:
-            await self.callback(SIGNAL_CONNECTION_STATE, value, self._error_reason)
+            result = self.callback(SIGNAL_CONNECTION_STATE, value, self._error_reason)
+            if inspect.isawaitable(result):
+                await result
         self._error_reason = None
 
     @staticmethod
@@ -132,49 +134,12 @@ class OpenEVSEWebsocket:
                 await self._set_state(STATE_CONNECTED)
                 self.failed_attempts = 0
                 self._client = ws_client
-
-                async for message in ws_client:
-                    if self.state == STATE_STOPPED:
-                        break
-
-                    if message.type == aiohttp.WSMsgType.TEXT:
-                        msg = message.json()
-                        msgtype = "data"
-                        if self.callback:
-                            await self.callback(msgtype, msg, None)
-                        if "pong" in msg.keys():
-                            self._pong = datetime.datetime.now()
-
-                    elif message.type == aiohttp.WSMsgType.CLOSED:
-                        _LOGGER.warning("Websocket connection closed")
-                        break
-
-                    elif message.type == aiohttp.WSMsgType.ERROR:
-                        _LOGGER.error("Websocket error")
-                        break
+                await self._handle_messages(ws_client)
 
         except aiohttp.ClientResponseError as error:
-            if error.status == 401:
-                _LOGGER.error("Credentials rejected: %s", error)
-                self._error_reason = ERROR_AUTH_FAILURE
-            else:
-                _LOGGER.error("Unexpected response received: %s", error)
-                self._error_reason = error
-            await self._set_state(STATE_STOPPED)
+            await self._handle_response_error(error)
         except (aiohttp.ClientConnectionError, asyncio.TimeoutError) as error:
-            if self.failed_attempts > MAX_FAILED_ATTEMPTS:
-                self._error_reason = ERROR_TOO_MANY_RETRIES
-                await self._set_state(STATE_STOPPED)
-            elif self.state != STATE_STOPPED:
-                retry_delay = min(2 ** (self.failed_attempts - 1) * 30, 300)
-                self.failed_attempts += 1
-                _LOGGER.error(
-                    "Websocket connection failed, retrying in %ds: %s",
-                    retry_delay,
-                    error,
-                )
-                await self._set_state(STATE_DISCONNECTED)
-                await asyncio.sleep(retry_delay)
+            await self._handle_connection_error(error)
         except Exception as error:  # pylint: disable=broad-except
             if self.state != STATE_STOPPED:
                 _LOGGER.exception("Unexpected exception occurred: %s", error)
@@ -184,6 +149,55 @@ class OpenEVSEWebsocket:
             if self.state != STATE_STOPPED:
                 await self._set_state(STATE_DISCONNECTED)
                 await asyncio.sleep(5)
+
+    async def _handle_messages(self, ws_client):
+        """Handle incoming websocket messages."""
+        async for message in ws_client:
+            if self.state == STATE_STOPPED:
+                break
+
+            if message.type == aiohttp.WSMsgType.TEXT:
+                msg = message.json()
+                msgtype = "data"
+                if self.callback:
+                    result = self.callback(msgtype, msg, None)
+                    if inspect.isawaitable(result):
+                        await result
+                if "pong" in msg:
+                    self._pong = datetime.datetime.now()
+
+            elif message.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
+                if message.type == aiohttp.WSMsgType.CLOSED:
+                    _LOGGER.warning("Websocket connection closed")
+                else:
+                    _LOGGER.error("Websocket error")
+                break
+
+    async def _handle_response_error(self, error):
+        """Handle ClientResponseError."""
+        if error.status == 401:
+            _LOGGER.error("Credentials rejected: %s", error)
+            self._error_reason = ERROR_AUTH_FAILURE
+        else:
+            _LOGGER.error("Unexpected response received: %s", error)
+            self._error_reason = error
+        await self._set_state(STATE_STOPPED)
+
+    async def _handle_connection_error(self, error):
+        """Handle connection errors."""
+        if self.failed_attempts > MAX_FAILED_ATTEMPTS:
+            self._error_reason = ERROR_TOO_MANY_RETRIES
+            await self._set_state(STATE_STOPPED)
+        elif self.state != STATE_STOPPED:
+            retry_delay = min(2 ** (self.failed_attempts - 1) * 30, 300)
+            self.failed_attempts += 1
+            _LOGGER.error(
+                "Websocket connection failed, retrying in %ds: %s",
+                retry_delay,
+                error,
+            )
+            await self._set_state(STATE_DISCONNECTED)
+            await asyncio.sleep(retry_delay)
 
     async def listen(self):
         """Start the listening websocket."""

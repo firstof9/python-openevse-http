@@ -177,7 +177,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
 
         _LOGGER.debug("Posting data: %s to %s", command, url)
         value = await self.process_request(url=url, method="post", rapi=data)
-        if not isinstance(value, Mapping) or "ret" not in value:
+        if not isinstance(value, Mapping) or "ret" not in value or "cmd" not in value:
             if isinstance(value, Mapping) and "msg" in value:
                 return (False, value["msg"])
             return (False, "")

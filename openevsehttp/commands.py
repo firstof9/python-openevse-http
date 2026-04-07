@@ -170,7 +170,15 @@ class CommandsMixin:
 
             _LOGGER.debug("Toggling manual override %s", url)
             response = await self.process_request(url=url, method="patch")
+            response = self._normalize_response(response)
             _LOGGER.debug("Toggle response: %s", response)
+            if not isinstance(response, Mapping) or response.get("msg") not in [
+                "OK",
+                "done",
+                "no change",
+            ]:
+                _LOGGER.error("Problem toggling override: %s", response)
+                raise RuntimeError(f"Failed to toggle override: {response}")
         else:
             # Older firmware use RAPI commands
             _LOGGER.debug("Toggling manual override via RAPI")
@@ -179,11 +187,14 @@ class CommandsMixin:
 
             if "state" not in self._status:
                 _LOGGER.error("Cannot toggle override: unknown charger state.")
-                return
+                raise RuntimeError("Cannot toggle override: unknown charger state.")
 
             command = "$FE" if self._status.get("state") == 254 else "$FS"
             response, msg = await self.send_command(command)
             _LOGGER.debug("Toggle response: %s", msg)
+            if response in [False, "NK"]:
+                _LOGGER.error("Problem toggling override via RAPI: %s", msg)
+                raise RuntimeError(f"Failed to toggle override via RAPI: {msg}")
 
     async def clear_override(self) -> None:
         """Clear the manual override status."""
@@ -196,18 +207,28 @@ class CommandsMixin:
         response = await self.process_request(url=url, method="delete")
         response = self._normalize_response(response)
         msg = response.get("msg") if isinstance(response, Mapping) else None
-        _LOGGER.debug("Toggle response: %s", msg)
+        _LOGGER.debug("Clear override response: %s", msg)
+        if msg not in ["OK", "done", "no change"]:
+            _LOGGER.error("Problem clearing override: %s", response)
+            raise RuntimeError(f"Failed to clear override: {response}")
 
     async def set_current(self, amps: int = 6) -> None:
         """Set the soft current limit."""
         #   3.x - 4.1.0: use RAPI commands $SC <amps>
         #   4.1.2: use HTTP API call
-        amps = int(amps)
+        if isinstance(amps, bool) or not isinstance(amps, int):
+            _LOGGER.error("Invalid type for current limit: %s (%s)", amps, type(amps))
+            raise ValueError(
+                f"Current limit must be an integer, got {type(amps).__name__}"
+            )
+
         min_current = self._config.get("min_current_hard", MIN_AMPS)
         max_current = self._config.get("max_current_hard", MAX_AMPS)
         if amps < min_current or amps > max_current:
             _LOGGER.error("Invalid value for current limit: %s", amps)
-            raise ValueError
+            raise ValueError(
+                f"Current limit {amps} is out of range ({min_current}-{max_current})"
+            )
 
         if self._version_check("4.1.2"):
             _LOGGER.debug("Setting current limit to %s", amps)

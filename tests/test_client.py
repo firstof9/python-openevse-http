@@ -137,8 +137,20 @@ async def test_send_command_failed(test_charger, mock_aioclient):
 
 
 async def test_send_command_missing(test_charger, mock_aioclient):
-    """Test v4 Status reply."""
+    """Test v4 Status reply with missing 'ret'."""
     value = {"cmd": "OK", "what": "$NK^21"}
+    mock_aioclient.post(
+        TEST_URL_RAPI,
+        status=200,
+        body=json.dumps(value),
+    )
+    status = await test_charger.send_command("test")
+    assert status == (False, "")
+
+
+async def test_send_command_missing_cmd(test_charger, mock_aioclient):
+    """Test v4 Status reply with missing 'cmd'."""
+    value = {"ret": "$OK^20"}
     mock_aioclient.post(
         TEST_URL_RAPI,
         status=200,
