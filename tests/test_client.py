@@ -695,6 +695,19 @@ async def test_websocket_utils(test_charger):
     assert test_charger._ws_listening is False
 
 
+async def test_is_coroutine_function(test_charger):
+    """Test is_coroutine_function utility."""
+
+    async def async_func():
+        pass
+
+    def sync_func():
+        pass
+
+    assert test_charger.is_coroutine_function(async_func) is True
+    assert test_charger.is_coroutine_function(sync_func) is False
+
+
 # ── get_schedule ─────────────────────────────────────────────────────
 
 
