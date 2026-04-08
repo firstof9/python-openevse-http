@@ -12,6 +12,7 @@ from aiohttp.client_reqrep import ConnectionKey
 from awesomeversion.exceptions import AwesomeVersionCompareException
 
 import openevsehttp.__main__ as main
+from openevsehttp import OpenEVSE as PublicOpenEVSE
 from openevsehttp.__main__ import OpenEVSE
 from openevsehttp.const import (
     UPDATE_TRIGGERS,
@@ -49,6 +50,12 @@ DUMMY_PWD = "fakepassword"
 
 
 # ── Auth / update / status ────────────────────────────────────────────
+
+
+async def test_public_api_export():
+    """Verify OpenEVSE is exported from the package root."""
+    assert PublicOpenEVSE is not None
+    assert PublicOpenEVSE is OpenEVSE
 
 
 async def test_get_status_auth(test_charger_auth):

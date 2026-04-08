@@ -577,14 +577,17 @@ async def test_set_service_level(test_charger, mock_aioclient, caplog):
             await test_charger.set_service_level(1)
     assert "Problem issuing command: {'msg': 'error'}" in caplog.text
 
-    value = {"msg": "done"}
     mock_aioclient.post(
         TEST_URL_CONFIG,
         status=200,
-        body=json.dumps(value),
+        body='{"msg": "done"}',
     )
-    with pytest.raises(ValueError):
+    with caplog.at_level(logging.DEBUG):
         await test_charger.set_service_level("A")
+    assert "Set service level to: A" in caplog.text
+
+    with pytest.raises(ValueError):
+        await test_charger.set_service_level("B")
     await test_charger.ws_disconnect()
 
 

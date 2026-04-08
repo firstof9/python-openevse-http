@@ -162,13 +162,17 @@ class OpenEVSEWebsocket:
 
             if message.type == aiohttp.WSMsgType.TEXT:
                 msg = message.json()
+                if isinstance(msg, dict) and "pong" in msg:
+                    self._pong = datetime.datetime.now()
+                    if len(msg) == 1:
+                        # Pure pong frame, skip callback
+                        continue
+
                 msgtype = "data"
                 if self.callback:
                     result = self.callback(msgtype, msg, None)
                     if inspect.isawaitable(result):
                         await result
-                if "pong" in msg:
-                    self._pong = datetime.datetime.now()
 
             elif message.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
                 if message.type == aiohttp.WSMsgType.CLOSED:

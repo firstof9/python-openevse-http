@@ -164,7 +164,6 @@ class CommandsMixin:
         #   3.x: use RAPI commands $FE (enable) and $FS (sleep)
         #   4.x: use HTTP API call
         lower = "4.0.1"
-        msg = ""
         if self._version_check(lower):
             url = f"{self.url}override"
 
@@ -259,9 +258,9 @@ class CommandsMixin:
                 _LOGGER.error("Problem setting current via RAPI: %s", msg)
                 raise UnknownError
 
-    async def set_service_level(self, level: int = 2) -> None:
+    async def set_service_level(self, level: int | str = 2) -> None:
         """Set the service level of the EVSE."""
-        if not isinstance(level, int) or not 0 <= level <= 2:
+        if not (isinstance(level, int) and 0 <= level <= 2) and level != "A":
             _LOGGER.error("Invalid service level: %s", level)
             raise ValueError
 
@@ -291,6 +290,12 @@ class CommandsMixin:
             else "Unknown error"
         )
         _LOGGER.debug("WiFi Restart response: %s", msg)
+
+        if not isinstance(response, Mapping) or (
+            response.get("result") != "OK" and response.get("success") is False
+        ):
+            _LOGGER.error("Problem restarting WiFi: %s", response)
+            raise RuntimeError(f"Failed to restart WiFi: {msg}")
 
     # Restart EVSE module
     async def restart_evse(self) -> None:
