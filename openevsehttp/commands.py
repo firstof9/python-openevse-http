@@ -134,12 +134,12 @@ class CommandsMixin:
         ):
             _LOGGER.error("Invalid override payload: %s", response)
             raise ValueError("Invalid override state response")
-        data: dict[str, Any] = dict(response)
 
         if state not in ["active", "disabled", None]:
             _LOGGER.error("Invalid override state: %s", state)
             raise ValueError
 
+        data: dict[str, Any] = {}
         if auto_release is not None:
             data["auto_release"] = auto_release
 
@@ -284,6 +284,7 @@ class CommandsMixin:
 
         response = await self.process_request(url=url, method="post", data=data)
         response = self._normalize_response(response)
+
         msg = (
             response.get("msg", "Unknown error")
             if isinstance(response, Mapping)
@@ -291,9 +292,22 @@ class CommandsMixin:
         )
         _LOGGER.debug("WiFi Restart response: %s", msg)
 
-        if not isinstance(response, Mapping) or (
-            response.get("result") != "OK" and response.get("success") is False
-        ):
+        # Strict success check:
+        # 1. Must be a Mapping
+        # 2. Must have "result" == "OK" OR "success" is True
+        # 3. Must NOT have an "error" key
+        # 4. If "msg" is present, it must be "OK" or contain "ok" (case-insensitive)
+        success = (
+            isinstance(response, Mapping)
+            and (response.get("result") == "OK" or response.get("success") is True)
+            and not response.get("error")
+        )
+        if success and isinstance(response, Mapping) and "msg" in response:
+            msg_val = str(response["msg"]).lower()
+            if msg_val != "ok" and "ok" not in msg_val:
+                success = False
+
+        if not success:
             _LOGGER.error("Problem restarting WiFi: %s", response)
             raise RuntimeError(f"Failed to restart WiFi: {msg}")
 

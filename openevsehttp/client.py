@@ -195,18 +195,26 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
             _LOGGER.debug("Updating data from %s", url)
             response = await self.process_request(url, method="get")
             if "/status" in url:
-                if isinstance(response, Mapping):
+                if isinstance(response, Mapping) and "error" not in response:
                     self._status = dict(response)
                     _LOGGER.debug("Status update: %s", self._status)
+                elif isinstance(response, Mapping):
+                    _LOGGER.warning(
+                        "Error in /status response: %s", response.get("error")
+                    )
                 else:
                     _LOGGER.warning(
                         "Received non-JSON response from /status: %s", response
                     )
 
             else:
-                if isinstance(response, Mapping):
+                if isinstance(response, Mapping) and "error" not in response:
                     self._config = dict(response)
                     _LOGGER.debug("Config update: %s", self._config)
+                elif isinstance(response, Mapping):
+                    _LOGGER.warning(
+                        "Error in /config response: %s", response.get("error")
+                    )
                 else:
                     _LOGGER.warning(
                         "Received non-JSON response from /config: %s", response
@@ -256,6 +264,10 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
                     "Creating a loop-local session."
                 )
                 use_session = None
+                # Clear self._session so subsequent await self.update() uses
+                # a loop-local session as well.
+                self._session = None
+                self._session_external = False
 
         if not self.websocket or self.websocket.state == STATE_STOPPED:
             self.websocket = OpenEVSEWebsocket(

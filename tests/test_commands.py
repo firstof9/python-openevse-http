@@ -7,7 +7,7 @@ from unittest import mock
 import pytest
 from aiohttp.client_exceptions import ContentTypeError
 
-import openevsehttp.__main__ as main
+import openevsehttp as main
 from openevsehttp.exceptions import (
     UnknownError,
     UnsupportedFeature,
@@ -600,7 +600,7 @@ async def test_restart_wifi(test_charger_modified_ver, mock_aioclient, caplog):
     mock_aioclient.post(
         TEST_URL_RESTART,
         status=200,
-        body='{"msg": "restart gateway"}',
+        body='{"result": "OK", "msg": "restart gateway ok"}',
     )
     with caplog.at_level(logging.DEBUG):
         await test_charger_modified_ver.restart_wifi()

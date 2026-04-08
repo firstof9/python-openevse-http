@@ -1411,7 +1411,7 @@ async def test_websocket_pong():
             async def side_effect(msgtype, data, error):
                 if msgtype == SIGNAL_CONNECTION_STATE and data == STATE_STOPPED:
                     pass
-                elif msgtype == "data" and "pong" in data:
+                elif msgtype == "data" and "data" in data:
                     ws.state = "stopped"
 
             callback.side_effect = side_effect
