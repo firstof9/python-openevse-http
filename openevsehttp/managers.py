@@ -137,13 +137,17 @@ class ManagersMixin:
         return self._normalize_response(response)
 
     async def list_claims(self, target: bool | None = None) -> Any:
-        """List all claims."""
+        """List all claims.
+
+        :param target: If True, returns the target (active) claim.
+                       If False or None (default), returns a list of all claims.
+        """
         if not self._version_check("4.1.0"):
             _LOGGER.debug("Feature not supported for older firmware.")
             raise UnsupportedFeature
 
         target_check = ""
-        if target:
+        if target is True:
             target_check = "/target"
 
         url = f"{self.url}claims{target_check}"

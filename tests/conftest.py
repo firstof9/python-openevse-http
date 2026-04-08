@@ -207,8 +207,8 @@ def test_charger_v2(mock_aioclient):
     return main.OpenEVSE(TEST_TLD)
 
 
-@pytest.fixture(name="test_charger_v1")
-def test_charger_v1(mock_aioclient):
+@pytest.fixture(name="test_charger_v4_0")
+def test_charger_v4_0(mock_aioclient):
     """Load the charger data."""
     mock_aioclient.get(
         TEST_URL_STATUS,

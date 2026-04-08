@@ -293,7 +293,7 @@ async def test_clear_limit(
 
 
 async def test_list_claims(
-    test_charger, test_charger_v1, test_charger_v2, mock_aioclient, caplog
+    test_charger, test_charger_v4_0, test_charger_v2, mock_aioclient, caplog
 ):
     """Test list_claims function."""
     await test_charger.update()
@@ -307,10 +307,10 @@ async def test_list_claims(
         await test_charger.list_claims()
         assert f"Getting claims on {TEST_URL_CLAIMS}" in caplog.text
 
-    await test_charger_v1.update()
+    await test_charger_v4_0.update()
     with pytest.raises(UnsupportedFeature):
         with caplog.at_level(logging.DEBUG):
-            await test_charger_v1.list_claims()
+            await test_charger_v4_0.list_claims()
     assert "Feature not supported for older firmware." in caplog.text
 
 
