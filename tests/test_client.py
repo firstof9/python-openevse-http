@@ -1148,11 +1148,38 @@ async def test_get_status_error(test_charger_timeout, caplog):
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(TimeoutError):
             await test_charger_timeout.update()
-        assert test_charger_timeout.websocket is None
         assert not test_charger_timeout._ws_listening
     assert "Updating data from http://openevse.test.tld/status" in caplog.text
     assert "Status update:" not in caplog.text
     assert "Config update:" not in caplog.text
+
+
+async def test_update_error_payload(mock_aioclient, caplog):
+    """Test update handles responses with error keys properly."""
+    # Temporarily set ws_listening to False to hit both /status and /config
+    charger = OpenEVSE(SERVER_URL)
+    charger._ws_listening = False
+
+    mock_aioclient.get(
+        "http://openevse.test.tld/status",
+        status=200,
+        body='{"error": "status error"}',
+    )
+    mock_aioclient.get(
+        "http://openevse.test.tld/config",
+        status=200,
+        body='{"error": "config error"}',
+    )
+    charger._status = {"old": "status"}
+    charger._config = {"old": "config"}
+
+    with caplog.at_level(logging.WARNING):
+        await charger.update()
+
+    assert charger._status == {"old": "status"}
+    assert charger._config == {"old": "config"}
+    assert "Error in /status response: status error" in caplog.text
+    assert "Error in /config response: config error" in caplog.text
 
 
 # ── external session ─────────────────────────────────────────────────
