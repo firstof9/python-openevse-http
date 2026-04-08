@@ -607,6 +607,36 @@ async def test_restart_wifi(test_charger_modified_ver, mock_aioclient, caplog):
     assert "Restart response: restart gateway" in caplog.text
 
 
+async def test_restart_wifi_fail(test_charger, mock_aioclient, caplog):
+    """Test restart_wifi failure."""
+    await test_charger.update()
+    # Test Mapping failure (result != OK and success is False)
+    mock_aioclient.post(
+        TEST_URL_RESTART,
+        status=200,
+        body='{"result": "error", "success": false, "msg": "failed"}',
+    )
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(RuntimeError, match="Failed to restart WiFi: failed"):
+            await test_charger.restart_wifi()
+    assert (
+        "Problem restarting WiFi: {'result': 'error', 'success': False, 'msg': 'failed'}"
+        in caplog.text
+    )
+
+    # Test Non-Mapping failure (returning a list)
+    caplog.clear()
+    mock_aioclient.post(
+        TEST_URL_RESTART,
+        status=200,
+        body="[]",
+    )
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(RuntimeError, match="Failed to restart WiFi: Unknown error"):
+            await test_charger.restart_wifi()
+    assert "Problem restarting WiFi: []" in caplog.text
+
+
 async def test_evse_restart(
     test_charger_v2, test_charger_modified_ver, mock_aioclient, caplog
 ):
