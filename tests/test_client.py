@@ -693,11 +693,12 @@ async def test_repeat():
     """Test repeat helper."""
     charger = OpenEVSE(SERVER_URL)
     charger.websocket = MagicMock()
+    charger._ws_listening = True
     # Mock ws_state to stop after one iteration
     with patch(
         "openevsehttp.__main__.OpenEVSE.ws_state", new_callable=PropertyMock
     ) as mock_state:
-        mock_state.side_effect = ["connected", "stopped"]
+        mock_state.side_effect = ["connected", "connected", "stopped", "stopped"]
 
         mock_func = AsyncMock()
         with patch("asyncio.sleep", AsyncMock()):
@@ -1415,7 +1416,7 @@ async def test_websocket_pong():
 
     callback = AsyncMock()
     async with aiohttp.ClientSession() as session:
-        ws = OpenEVSEWebsocket(f"http://{SERVER_URL}", callback, session=session)
+        ws = OpenEVSEWebsocket(f"http://{SERVER_URL}/", callback, session=session)
 
         mock_ws = AsyncMock()
         # Mock the async iterator of ws_client
@@ -1451,7 +1452,7 @@ async def test_websocket_listen():
     """Test websocket listen calls running."""
 
     callback = AsyncMock()
-    ws = OpenEVSEWebsocket(f"http://{SERVER_URL}", callback)
+    ws = OpenEVSEWebsocket(f"http://{SERVER_URL}/", callback)
 
     with patch.object(ws, "running", AsyncMock()) as mock_running:
         # Break loop after first call
@@ -1474,7 +1475,7 @@ async def test_websocket_stop_break():
 
     callback = AsyncMock()
     async with aiohttp.ClientSession() as session:
-        ws = OpenEVSEWebsocket(f"http://{SERVER_URL}", callback, session=session)
+        ws = OpenEVSEWebsocket(f"http://{SERVER_URL}/", callback, session=session)
 
         mock_ws = AsyncMock()
         msg = MagicMock()
@@ -1506,6 +1507,7 @@ async def test_repeat_task():
     charger = OpenEVSE(SERVER_URL)
     charger.websocket = MagicMock()
     charger.websocket.state = "connected"
+    charger._ws_listening = True
 
     mock_func = MagicMock(return_value=asyncio.Future())
     mock_func.return_value.set_result(None)

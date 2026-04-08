@@ -426,8 +426,10 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
 
         *args and **kwargs are passed as the arguments to func.
         """
-        while self.ws_state != STATE_STOPPED:
+        while self.ws_state != STATE_STOPPED and self._ws_listening:
             await asyncio.sleep(interval)
+            if self.ws_state == STATE_STOPPED or not self._ws_listening:
+                break
             result = func(*args, **kwargs)
             if inspect.isawaitable(result):
                 await result

@@ -595,7 +595,7 @@ async def test_set_service_level(test_charger, mock_aioclient, caplog):
 
 
 async def test_restart_wifi(test_charger_modified_ver, mock_aioclient, caplog):
-    """Test v4 set divert mode."""
+    """Test restart_wifi sends restart request and logs response."""
     await test_charger_modified_ver.update()
     mock_aioclient.post(
         TEST_URL_RESTART,

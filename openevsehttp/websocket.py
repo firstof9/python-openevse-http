@@ -229,6 +229,13 @@ class OpenEVSEWebsocket:
     async def close(self):
         """Close the listening websocket."""
         await self._set_state(STATE_STOPPED)
+
+        if self._tasks:
+            for task in self._tasks:
+                task.cancel()
+            await asyncio.gather(*self._tasks, return_exceptions=True)
+            self._tasks.clear()
+
         if self._client is not None:
             await self._client.close()
             self._client = None

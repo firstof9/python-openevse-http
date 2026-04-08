@@ -260,7 +260,9 @@ class CommandsMixin:
 
     async def set_service_level(self, level: int | str = 2) -> None:
         """Set the service level of the EVSE."""
-        if not (isinstance(level, int) and 0 <= level <= 2) and level != "A":
+        if isinstance(level, bool) or (
+            not (isinstance(level, int) and 0 <= level <= 2) and level != "A"
+        ):
             _LOGGER.error("Invalid service level: %s", level)
             raise ValueError
 
