@@ -316,6 +316,9 @@ class CommandsMixin:
                 and (response.startswith("$NK") or response in RAPI_ERRORS)
             ):
                 _LOGGER.error("Problem restarting EVSE module via RAPI: %s", response)
+                raise RuntimeError(
+                    f"Failed to restart EVSE module via RAPI: {response}"
+                )
 
         _LOGGER.debug("EVSE Restart response: %s", response)
 

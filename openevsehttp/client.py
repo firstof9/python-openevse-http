@@ -256,6 +256,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
                     "Creating a loop-local session."
                 )
                 use_session = None
+                self._session = None
 
         if not self.websocket or self.websocket.state == STATE_STOPPED:
             self.websocket = OpenEVSEWebsocket(
@@ -436,10 +437,13 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
         firmware_search = re.search(r"\d+\.\d+\.\d+", self._config["version"])
         if firmware_search:
             firmware_filtered = firmware_search.group(0)
-        else:
+
+        if firmware_filtered is None:
             _LOGGER.warning(
                 "Non-standard versioning string: %s", self._config["version"]
             )
+            _LOGGER.debug("Non-semver firmware version detected.")
+            return False
 
         _LOGGER.debug("Detected firmware: %s", self._config["version"])
         _LOGGER.debug("Filtered firmware: %s", firmware_filtered)
@@ -458,7 +462,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
 
         if limit:
             try:
-                if cutoff <= current <= limit:
+                if cutoff <= current < limit:
                     return True
             except AwesomeVersionCompareException:
                 _LOGGER.debug("Non-semver firmware version detected.")

@@ -618,6 +618,7 @@ async def test_evse_restart(
     with caplog.at_level(logging.DEBUG):
         await test_charger_v2.restart_evse()
     assert "EVSE Restart response: $OK^20" in caplog.text
+    caplog.clear()
 
     await test_charger_modified_ver.update()
     mock_aioclient.post(
@@ -628,6 +629,25 @@ async def test_evse_restart(
     with caplog.at_level(logging.DEBUG):
         await test_charger_modified_ver.restart_evse()
     assert "Restarting EVSE module via HTTP" in caplog.text
+    caplog.clear()
+
+
+async def test_evse_restart_fail(test_charger_v2, mock_aioclient, caplog):
+    """Test EVSE module restart failure."""
+    await test_charger_v2.update()
+    value = {"cmd": "NK", "ret": "$NK^21"}
+    mock_aioclient.post(
+        TEST_URL_RAPI,
+        status=200,
+        body=json.dumps(value),
+    )
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(
+            RuntimeError, match="Failed to restart EVSE module via RAPI:"
+        ):
+            await test_charger_v2.restart_evse()
+    assert "Problem restarting EVSE module via RAPI: $NK^21" in caplog.text
+    caplog.clear()
 
 
 # ── set_divert_mode ──────────────────────────────────────────────────

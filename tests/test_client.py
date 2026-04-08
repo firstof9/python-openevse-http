@@ -531,6 +531,14 @@ async def test_version_check_exceptions():
         charger._config = {"version": "2.9.1"}
         assert charger._version_check("2.0.0", "3.0.0") is False
 
+    # Trigger AwesomeVersionCompareException in GE comparison
+    with patch(
+        "awesomeversion.AwesomeVersion.__ge__",
+        side_effect=AwesomeVersionCompareException,
+    ):
+        charger._config = {"version": "2.9.1"}
+        assert charger._version_check("2.0.0") is False
+
 
 async def test_version_check_master():
     """Test _version_check with 'master' in version."""
@@ -840,7 +848,10 @@ async def test_restart_evse_rapi_failure(test_charger, mock_aioclient, caplog):
         TEST_URL_RAPI, status=200, body='{"cmd": "$FR", "ret": "$NK^21"}'
     )
     with caplog.at_level(logging.ERROR):
-        await test_charger.restart_evse()
+        with pytest.raises(
+            RuntimeError, match="Failed to restart EVSE module via RAPI:"
+        ):
+            await test_charger.restart_evse()
     assert "Problem restarting EVSE module via RAPI: $NK^21" in caplog.text
 
 

@@ -114,6 +114,7 @@ async def test_set_override(
         with caplog.at_level(logging.DEBUG):
             status = await test_charger_v2.set_override("active")
     assert "Feature not supported for older firmware." in caplog.text
+    caplog.clear()
 
     await test_charger_unknown_semver.update()
     with pytest.raises(UnsupportedFeature):
