@@ -1,12 +1,13 @@
 """Test external session management."""
 
 import json
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiohttp
 import pytest
 
 from openevsehttp.__main__ import OpenEVSE
+from openevsehttp.websocket import OpenEVSEWebsocket
 from tests.common import load_fixture
 
 pytestmark = pytest.mark.asyncio
@@ -114,15 +115,17 @@ async def test_websocket_uses_external_session(mock_aioclient):
         # Create OpenEVSE instance with external session
         charger = OpenEVSE(TEST_TLD, session=session)
 
-        # Update to initialize websocket
+        # Update should initialize things (mock results are fine)
         await charger.update()
+
+        with patch("openevsehttp.websocket.OpenEVSEWebsocket.listen"):
+            charger.ws_start()
 
         # Verify websocket was created with the session
         assert charger.websocket is not None
         assert charger.websocket.session is session
-        assert charger.websocket._session_external is True
 
-        # Cleanup
+        # Clean up properly including background tasks
         await charger.ws_disconnect()
 
 
@@ -185,11 +188,19 @@ async def test_session_not_closed_when_external(mock_aioclient):
         # Create OpenEVSE instance with external session
         charger = OpenEVSE(TEST_TLD, session=session)
 
-        # Update to initialize websocket
+        # Update and start websocket
         await charger.update()
+        # Manually attach a mock websocket to simulate an active connection
+        mock_ws = MagicMock(spec=OpenEVSEWebsocket)
+        mock_ws._tasks = set()
+        mock_ws.close = AsyncMock()
+        charger.websocket = mock_ws
 
-        # Disconnect websocket
+        # Disconnect websocket - this should call mock_ws.close()
         await charger.ws_disconnect()
+
+        # Verify the shutdown path was exercised
+        mock_ws.close.assert_called_once()
 
         # Session should still be open (not closed by library)
         assert not session.closed
