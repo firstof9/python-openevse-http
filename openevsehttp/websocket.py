@@ -223,6 +223,9 @@ class OpenEVSEWebsocket:
     async def close(self):
         """Close the listening websocket."""
         await self._set_state(STATE_STOPPED)
+        if self._client is not None:
+            await self._client.close()
+            self._client = None
         # Only close the session if we created it
         if not self._session_external and self.session is not None:
             await self.session.close()

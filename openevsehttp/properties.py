@@ -515,7 +515,8 @@ class PropertiesMixin:
             _LOGGER.debug("Override state unavailable on older firmware.")
             return None
         if isinstance(override, dict):
-            return override.get("state", "auto")
+            state = override.get("state", "auto")
+            return "auto" if state is None else state
         return "auto"
 
     @property

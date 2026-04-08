@@ -1,5 +1,6 @@
 """Tests for OpenEVSE Websocket."""
 
+import asyncio
 import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -33,9 +34,7 @@ async def ws_client(mock_callback):
     # OpenEVSEWebsocket initializes aiohttp.ClientSession
     client = OpenEVSEWebsocket(SERVER_URL, mock_callback)
     yield client
-    # Clean up session to prevent unclosed session warnings
-    if client.session and not client.session.closed:
-        await client.session.close()
+    await client.close()
 
 
 def test_get_uri():
@@ -156,12 +155,9 @@ async def test_keepalive_timeout(ws_client, mock_callback):
 async def ws_client_auth():
     """Fixture for authenticated websocket client."""
     callback = AsyncMock()
-    client = OpenEVSEWebsocket(
-        f"http://{SERVER_URL}", callback, user="test", password="pw"
-    )
+    client = OpenEVSEWebsocket(SERVER_URL, callback, user="test", password="pw")
     yield client
-    if client.session and not client.session.closed:
-        await client.session.close()
+    await client.close()
 
 
 @pytest.mark.asyncio
@@ -407,3 +403,133 @@ async def test_websocket_async_sync_callback(ws_client):
     ):
         await ws_client.running()
         sync_callback.assert_any_call("data", {"key": "value"}, None)
+
+
+@pytest.mark.asyncio
+async def test_websocket_pong_handling(ws_client_auth):
+    """Test handling of PONG messages."""
+    msg = MagicMock()
+    msg.type = aiohttp.WSMsgType.TEXT
+    msg.json.return_value = {"pong": 1}
+
+    mock_ws = AsyncMock()
+    mock_ws.__aenter__ = AsyncMock(return_value=mock_ws)
+    mock_ws.__aexit__ = AsyncMock(return_value=None)
+
+    async def async_iter():
+        yield msg
+
+    mock_ws.__aiter__.side_effect = async_iter
+    initial_pong = datetime.datetime.now() - datetime.timedelta(minutes=1)
+    ws_client_auth._pong = initial_pong
+
+    with (
+        patch("aiohttp.ClientSession.ws_connect", return_value=mock_ws),
+        patch("asyncio.sleep", return_value=None),
+    ):
+        await ws_client_auth.running()
+        assert ws_client_auth._pong > initial_pong
+
+
+@pytest.mark.asyncio
+async def test_websocket_stop_loop_break(ws_client_auth):
+    """Test that setting state to STOPPED breaks the message loop."""
+    msg = MagicMock()
+    msg.type = aiohttp.WSMsgType.TEXT
+    msg.json.return_value = {"key": "value"}
+
+    mock_ws = AsyncMock()
+    mock_ws.__aenter__ = AsyncMock(return_value=mock_ws)
+    mock_ws.__aexit__ = AsyncMock(return_value=None)
+
+    async def async_iter():
+        yield msg
+        ws_client_auth.state = STATE_STOPPED
+        yield msg  # Should not be processed in loop due to break
+
+    mock_ws.__aiter__.side_effect = async_iter
+
+    with (
+        patch("aiohttp.ClientSession.ws_connect", return_value=mock_ws),
+        patch("asyncio.sleep", return_value=None),
+    ):
+        await ws_client_auth.running()
+        # Callback should be called for data before STOPPED
+        assert (
+            ws_client_auth.callback.call_count == 4
+        )  # STARTING, CONNECTED, data, STOPPED
+
+
+@pytest.mark.asyncio
+async def test_websocket_listen(ws_client_auth):
+    """Test the listen() method."""
+    captured_loop = None
+
+    async def mock_run_impl():
+        nonlocal captured_loop
+        captured_loop = ws_client_auth._listener_loop
+        ws_client_auth._state = STATE_STOPPED
+
+    with patch.object(ws_client_auth, "running", side_effect=mock_run_impl) as mock_run:
+        # We need to mock state to NOT be STOPPED initially
+        ws_client_auth._state = STATE_DISCONNECTED
+
+        await ws_client_auth.listen()
+        mock_run.assert_called()
+        assert captured_loop is not None
+
+
+@pytest.mark.asyncio
+async def test_websocket_close_owned_session(mock_callback):
+    """Test close() when the session is owned by the client."""
+    client = OpenEVSEWebsocket(SERVER_URL, mock_callback)
+    # Ensure session is created
+    await client._ensure_session()
+    session = client.session
+    assert session is not None
+    assert not session.closed
+
+    mock_ws = AsyncMock()
+    client._client = mock_ws
+
+    await client.close()
+    assert client.state == STATE_STOPPED
+    assert client._client is None
+    mock_ws.close.assert_called_once()
+    assert session.closed
+    assert client.session is None
+
+
+@pytest.mark.asyncio
+async def test_websocket_close_external_session(mock_callback):
+    """Test close() when an external session is provided."""
+    async with aiohttp.ClientSession() as session:
+        client = OpenEVSEWebsocket(SERVER_URL, mock_callback, session=session)
+        assert client._session_external is True
+
+        mock_ws = AsyncMock()
+        client._client = mock_ws
+
+        await client.close()
+        assert client.state == STATE_STOPPED
+        assert client._client is None
+        mock_ws.close.assert_called_once()
+        # Session should NOT be closed
+        assert not session.closed
+        assert client.session == session
+
+
+@pytest.mark.asyncio
+async def test_websocket_state_task_management(ws_client):
+    """Test task management in state setter."""
+    # Ensure a loop is running
+    asyncio.get_running_loop()
+
+    # Trigger async task creation
+    ws_client.state = STATE_CONNECTED
+    assert ws_client.state == STATE_CONNECTED
+    assert len(ws_client._tasks) == 1
+
+    # Wait for task to complete
+    await asyncio.gather(*ws_client._tasks)
+    assert len(ws_client._tasks) == 0

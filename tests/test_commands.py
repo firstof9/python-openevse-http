@@ -650,6 +650,39 @@ async def test_evse_restart_fail(test_charger_v2, mock_aioclient, caplog):
     caplog.clear()
 
 
+async def test_restart_evse_http_failure(test_charger, mock_aioclient):
+    """Test restart_evse HTTP failure detection."""
+    # Force version check to >= 5.0.0
+    test_charger._config["version"] = "5.0.0"
+
+    # 1. Test False reply
+    mock_aioclient.post(TEST_URL_RESTART, status=200, body="false")
+    with pytest.raises(
+        RuntimeError, match=r"Failed to restart EVSE module via HTTP: \{'msg': False\}"
+    ):
+        await test_charger.restart_evse()
+
+    # 2. Test NK message
+    mock_aioclient.post(TEST_URL_RESTART, status=200, body='{"msg": "NK"}')
+    with pytest.raises(
+        RuntimeError, match=r"Failed to restart EVSE module via HTTP: \{'msg': 'NK'\}"
+    ):
+        await test_charger.restart_evse()
+
+    # 3. Test RAPI Error in msg
+    from openevsehttp.const import RAPI_ERRORS
+
+    error_msg = RAPI_ERRORS[0]
+    mock_aioclient.post(
+        TEST_URL_RESTART, status=200, body=json.dumps({"msg": error_msg})
+    )
+    with pytest.raises(
+        RuntimeError,
+        match=f"Failed to restart EVSE module via HTTP: {{'msg': '{error_msg}'}}",
+    ):
+        await test_charger.restart_evse()
+
+
 # ── set_divert_mode ──────────────────────────────────────────────────
 
 
@@ -745,6 +778,29 @@ async def test_set_led_brightness_fail(test_charger_new, mock_aioclient, caplog)
         with pytest.raises(UnknownError):
             await test_charger_new.set_led_brightness(255)
     assert "Problem issuing command: {'msg': 'failure!'}" in caplog.text
+
+
+async def test_set_led_brightness_validation(test_charger):
+    """Test set_led_brightness input validation."""
+    # 1. Test non-int (bool)
+    with pytest.raises(TypeError, match="LED brightness must be an integer, got bool"):
+        await test_charger.set_led_brightness(True)
+
+    # 2. Test non-int (str)
+    with pytest.raises(TypeError, match="LED brightness must be an integer, got str"):
+        await test_charger.set_led_brightness("100")
+
+    # 3. Test out of range (low)
+    with pytest.raises(
+        ValueError, match=r"LED brightness -1 is out of range \(0-255\)"
+    ):
+        await test_charger.set_led_brightness(-1)
+
+    # 4. Test out of range (high)
+    with pytest.raises(
+        ValueError, match=r"LED brightness 256 is out of range \(0-255\)"
+    ):
+        await test_charger.set_led_brightness(256)
 
 
 # ── async_charge_current / async_override_state ──────────────────────

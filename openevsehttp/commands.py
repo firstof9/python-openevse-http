@@ -301,6 +301,15 @@ class CommandsMixin:
             data = {"device": "evse"}
             reply = await self.process_request(url=url, method="post", data=data)
             reply = self._normalize_response(reply)
+            if reply in [False, "NK"] or (
+                isinstance(reply, Mapping)
+                and (
+                    reply.get("msg") in RAPI_ERRORS or reply.get("msg") in ["NK", False]
+                )
+            ):
+                _LOGGER.error("Problem restarting EVSE module via HTTP: %s", reply)
+                raise RuntimeError(f"Failed to restart EVSE module via HTTP: {reply}")
+
             response = (
                 reply.get("msg", "Unknown error")
                 if isinstance(reply, Mapping)
@@ -406,6 +415,17 @@ class CommandsMixin:
 
     async def set_led_brightness(self, level: int) -> None:
         """Set LED brightness level."""
+        if isinstance(level, bool) or not isinstance(level, int):
+            _LOGGER.error(
+                "Invalid type for LED brightness: %s (%s)", level, type(level)
+            )
+            raise TypeError(
+                f"LED brightness must be an integer, got {type(level).__name__}"
+            )
+        if not 0 <= level <= 255:
+            _LOGGER.error("Invalid value for LED brightness: %s", level)
+            raise ValueError(f"LED brightness {level} is out of range (0-255)")
+
         if not self._version_check("4.1.0"):
             _LOGGER.debug("Feature not supported for older firmware.")
             raise UnsupportedFeature

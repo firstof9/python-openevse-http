@@ -52,7 +52,7 @@ DUMMY_PWD = "fakepassword"
 
 
 async def test_get_status_auth(test_charger_auth):
-    """Test v4 Status reply."""
+    """Test authenticated status update."""
     await test_charger_auth.update()
     status = test_charger_auth.status
     assert status == "sleeping"
@@ -60,7 +60,7 @@ async def test_get_status_auth(test_charger_auth):
 
 
 async def test_ws_state(test_charger):
-    """Test v4 Status reply."""
+    """Test websocket state transitions."""
     await test_charger.update()
     assert test_charger.ws_state == STATE_STOPPED
     with patch("openevsehttp.client.OpenEVSEWebsocket.listen", AsyncMock()):
@@ -72,7 +72,7 @@ async def test_ws_state(test_charger):
 
 
 async def test_update_status(test_charger):
-    """Test v4 Status reply."""
+    """Test internal _update_status method."""
     data = json.loads(load_fixture("v4_json/status.json"))
     await test_charger._update_status("data", data, None)
     assert test_charger._status == data
@@ -105,7 +105,7 @@ async def test_update_non_dict(mock_aioclient, caplog):
 
 
 async def test_get_status_auth_err(test_charger_auth_err):
-    """Test v4 Status reply."""
+    """Test status update with authentication failure."""
     with pytest.raises(main.AuthenticationError):
         await test_charger_auth_err.update()
 
@@ -114,7 +114,7 @@ async def test_get_status_auth_err(test_charger_auth_err):
 
 
 async def test_send_command(test_charger, mock_aioclient):
-    """Test v4 Status reply."""
+    """Test sending a RAPI command."""
     value = {"cmd": "OK", "ret": "$OK^20"}
     mock_aioclient.post(
         TEST_URL_RAPI,
@@ -126,7 +126,7 @@ async def test_send_command(test_charger, mock_aioclient):
 
 
 async def test_send_command_failed(test_charger, mock_aioclient):
-    """Test v4 Status reply."""
+    """Test sending a RAPI command with failed response."""
     value = {"cmd": "OK", "ret": "$NK^21"}
     mock_aioclient.post(
         TEST_URL_RAPI,
@@ -162,7 +162,7 @@ async def test_send_command_missing_cmd(test_charger, mock_aioclient):
 
 
 async def test_send_command_auth(test_charger_auth, mock_aioclient):
-    """Test v4 Status reply."""
+    """Test authenticated RAPI command."""
     value = {"cmd": "OK", "ret": "$OK^20"}
     mock_aioclient.post(
         TEST_URL_RAPI,
@@ -174,7 +174,7 @@ async def test_send_command_auth(test_charger_auth, mock_aioclient):
 
 
 async def test_send_command_parse_err(test_charger_auth, mock_aioclient):
-    """Test v4 Status reply."""
+    """Test RAPI command with JSON parse error."""
     mock_aioclient.post(
         TEST_URL_RAPI, status=400, body='{"msg": "Could not parse JSON"}'
     )
@@ -197,7 +197,7 @@ async def test_send_command_parse_err(test_charger_auth, mock_aioclient):
 
 
 async def test_send_command_auth_err(test_charger_auth, mock_aioclient):
-    """Test v4 Status reply."""
+    """Test RAPI command with authentication failure."""
     mock_aioclient.post(
         TEST_URL_RAPI,
         status=401,
@@ -207,7 +207,7 @@ async def test_send_command_auth_err(test_charger_auth, mock_aioclient):
 
 
 async def test_send_command_async_timeout(test_charger_auth, mock_aioclient, caplog):
-    """Test v4 Status reply."""
+    """Test RAPI command with async timeout."""
     mock_aioclient.post(
         TEST_URL_RAPI,
         exception=TimeoutError,
@@ -219,7 +219,7 @@ async def test_send_command_async_timeout(test_charger_auth, mock_aioclient, cap
 
 
 async def test_send_command_server_timeout(test_charger_auth, mock_aioclient, caplog):
-    """Test v4 Status reply."""
+    """Test RAPI command with server timeout."""
     mock_aioclient.post(
         TEST_URL_RAPI,
         exception=ServerTimeoutError,
@@ -234,7 +234,7 @@ async def test_send_command_server_timeout(test_charger_auth, mock_aioclient, ca
 
 
 async def test_test_and_get(test_charger, test_charger_v2, mock_aioclient, caplog):
-    """Test v4 Status reply."""
+    """Test test_and_get (identify) method."""
     mock_aioclient.get(
         TEST_URL_CONFIG,
         status=200,
@@ -275,7 +275,7 @@ async def test_firmware_check(
     mock_aioclient,
     caplog,
 ):
-    """Test v4 Status reply."""
+    """Test firmware check functionality."""
     await test_charger.update()
     mock_aioclient.get(
         TEST_URL_GITHUB_v4,
@@ -563,7 +563,7 @@ async def test_version_check_limit():
 
 
 async def test_websocket_functions(test_charger, mock_aioclient, caplog):
-    """Test v4 Status reply."""
+    """Test websocket lifecycle methods."""
     mock_aioclient.get(
         TEST_URL_WS,
         status=200,
@@ -1137,7 +1137,7 @@ async def test_send_command_no_ret_no_msg(mock_aioclient):
 
 
 async def test_get_status_error(test_charger_timeout, caplog):
-    """Test v4 Status reply."""
+    """Test status update with timeout error."""
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(TimeoutError):
             await test_charger_timeout.update()

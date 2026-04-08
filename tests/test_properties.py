@@ -24,7 +24,7 @@ SERVER_URL = "openevse.test.tld"
     [("test_charger", "sleeping"), ("test_charger_v2", "not connected")],
 )
 async def test_get_status(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test status property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.status
@@ -37,7 +37,7 @@ async def test_get_status(fixture, expected, request):
     [("test_charger", "sleeping"), ("test_charger_v2", "not connected")],
 )
 async def test_get_state(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test state property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.state
@@ -50,7 +50,7 @@ async def test_get_state(fixture, expected, request):
     [("test_charger", 254), ("test_charger_v2", 1)],
 )
 async def test_get_state_raw(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test state_raw property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.state_raw
@@ -90,7 +90,7 @@ async def test_get_state_unknown():
     [("test_charger", "Datanode-IoT"), ("test_charger_v2", "nsavanup_IoT")],
 )
 async def test_get_ssid(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test wifi_ssid property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.wifi_ssid
@@ -103,7 +103,7 @@ async def test_get_ssid(fixture, expected, request):
     [("test_charger", "openevse-7b2c"), ("test_charger_v2", "openevse")],
 )
 async def test_get_hostname(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test hostname property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.hostname
@@ -116,7 +116,7 @@ async def test_get_hostname(fixture, expected, request):
     [("test_charger", "192.168.21.10"), ("test_charger_v2", "192.168.1.67")],
 )
 async def test_get_ip_address(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test ip_address property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.ip_address
@@ -128,7 +128,7 @@ async def test_get_ip_address(fixture, expected, request):
     "fixture, expected", [("test_charger", -61), ("test_charger_v2", -56)]
 )
 async def test_get_wifi_signal(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test wifi_signal property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.wifi_signal
@@ -153,7 +153,7 @@ async def test_wifi_serial(fixture, expected, request):
     [("test_charger", "STA"), ("test_charger_v2", "STA")],
 )
 async def test_get_mode(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test mode property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.mode
@@ -165,7 +165,7 @@ async def test_get_mode(fixture, expected, request):
     "fixture, expected", [("test_charger", False), ("test_charger_v2", False)]
 )
 async def test_get_using_ethernet(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test using_ethernet property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.using_ethernet
@@ -180,7 +180,7 @@ async def test_get_using_ethernet(fixture, expected, request):
     "fixture, expected", [("test_charger", "7.1.3"), ("test_charger_v2", "5.0.1")]
 )
 async def test_get_firmware(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test openevse_firmware property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.openevse_firmware
@@ -198,7 +198,7 @@ async def test_get_firmware(fixture, expected, request):
     ],
 )
 async def test_get_wifi_firmware(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test wifi_firmware property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.wifi_firmware
@@ -210,7 +210,7 @@ async def test_get_wifi_firmware(fixture, expected, request):
     "fixture, expected", [("test_charger", None), ("test_charger_v2", "4.0.1")]
 )
 async def test_get_protocol_version(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test protocol_version property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.protocol_version
@@ -225,7 +225,7 @@ async def test_get_protocol_version(fixture, expected, request):
     "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
 )
 async def test_get_ammeter_offset(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test ammeter_offset property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     await charger.ws_disconnect()
@@ -237,7 +237,7 @@ async def test_get_ammeter_offset(fixture, expected, request):
     "fixture, expected", [("test_charger", 220), ("test_charger_v2", 220)]
 )
 async def test_get_ammeter_scale_factor(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test ammeter_scale_factor property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.ammeter_scale_factor
@@ -249,7 +249,7 @@ async def test_get_ammeter_scale_factor(fixture, expected, request):
     "fixture, expected", [("test_charger", 2), ("test_charger_v2", 2)]
 )
 async def test_get_service_level(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test service_level property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.service_level
@@ -264,7 +264,7 @@ async def test_get_service_level(fixture, expected, request):
     "fixture, expected", [("test_charger", False), ("test_charger_v2", False)]
 )
 async def test_get_tempt(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test temp_check_enabled property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.temp_check_enabled
@@ -276,7 +276,7 @@ async def test_get_tempt(fixture, expected, request):
     "fixture, expected", [("test_charger", False), ("test_charger_v2", True)]
 )
 async def test_get_diodet(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test diode_check_enabled property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.diode_check_enabled
@@ -288,7 +288,7 @@ async def test_get_diodet(fixture, expected, request):
     "fixture, expected", [("test_charger", False), ("test_charger_v2", False)]
 )
 async def test_get_ventt(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test vent_required_enabled property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.vent_required_enabled
@@ -300,7 +300,7 @@ async def test_get_ventt(fixture, expected, request):
     "fixture, expected", [("test_charger", False), ("test_charger_v2", False)]
 )
 async def test_get_groundt(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test ground_check_enabled property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.ground_check_enabled
@@ -312,7 +312,7 @@ async def test_get_groundt(fixture, expected, request):
     "fixture, expected", [("test_charger", False), ("test_charger_v2", False)]
 )
 async def test_get_relayt(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test stuck_relay_check_enabled property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.stuck_relay_check_enabled
@@ -327,7 +327,7 @@ async def test_get_relayt(fixture, expected, request):
     "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
 )
 async def test_get_stuck_relay_trip_count(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test stuck_relay_trip_count property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.stuck_relay_trip_count
@@ -339,7 +339,7 @@ async def test_get_stuck_relay_trip_count(fixture, expected, request):
     "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
 )
 async def test_get_no_gnd_trip_count(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test no_gnd_trip_count property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.no_gnd_trip_count
@@ -351,7 +351,7 @@ async def test_get_no_gnd_trip_count(fixture, expected, request):
     "fixture, expected", [("test_charger", 1), ("test_charger_v2", 0)]
 )
 async def test_get_gfi_trip_count(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test gfi_trip_count property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.gfi_trip_count
@@ -382,7 +382,7 @@ async def test_checks_count(fixture, expected, request):
     "fixture, expected", [("test_charger", 246), ("test_charger_v2", 8751)]
 )
 async def test_get_charge_time_elapsed(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test charge_time_elapsed property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.charge_time_elapsed
@@ -394,7 +394,7 @@ async def test_get_charge_time_elapsed(fixture, expected, request):
     "fixture, expected", [("test_charger", 32.2), ("test_charger_v2", 0)]
 )
 async def test_get_charging_current(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test charging_current property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.charging_current
@@ -406,7 +406,7 @@ async def test_get_charging_current(fixture, expected, request):
     "fixture, expected", [("test_charger", 48), ("test_charger_v2", 25)]
 )
 async def test_get_current_capacity(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test current_capacity property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.current_capacity
@@ -418,7 +418,7 @@ async def test_get_current_capacity(fixture, expected, request):
     "fixture, expected", [("test_charger", 240), ("test_charger_v2", 240)]
 )
 async def test_get_charging_voltage(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test charging_voltage property."""
     charger = request.getfixturevalue(fixture)
     try:
         await charger.update()
@@ -433,7 +433,7 @@ async def test_get_charging_voltage(fixture, expected, request):
     [("test_charger", 7728), ("test_charger_v2", 0), ("test_charger_broken", None)],
 )
 async def test_get_charging_power(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test charging_power property."""
     charger = request.getfixturevalue(fixture)
     try:
         await charger.update()
@@ -456,7 +456,7 @@ async def test_charging_power_non_numeric():
     "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
 )
 async def test_get_charge_rate(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test charge_rate property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.charge_rate
@@ -468,7 +468,7 @@ async def test_get_charge_rate(fixture, expected, request):
     "fixture, expected", [("test_charger", None), ("test_charger_v2", None)]
 )
 async def test_get_available_current(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test available_current property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.available_current
@@ -480,7 +480,7 @@ async def test_get_available_current(fixture, expected, request):
     "fixture, expected", [("test_charger", None), ("test_charger_v2", None)]
 )
 async def test_get_smoothed_available_current(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test smoothed_available_current property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.smoothed_available_current
@@ -492,7 +492,7 @@ async def test_get_smoothed_available_current(fixture, expected, request):
     "fixture, expected", [("test_charger", 6), ("test_charger_v2", 6)]
 )
 async def test_get_min_amps(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test min_amps property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.min_amps
@@ -504,7 +504,7 @@ async def test_get_min_amps(fixture, expected, request):
     "fixture, expected", [("test_charger", 48), ("test_charger_v2", 48)]
 )
 async def test_get_max_amps(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test max_amps property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.max_amps
@@ -548,7 +548,7 @@ async def test_max_current(fixture, expected, request):
     ],
 )
 async def test_get_usage_total(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test usage_total property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.usage_total
@@ -565,7 +565,7 @@ async def test_get_usage_total(fixture, expected, request):
     ],
 )
 async def test_get_usage_session(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test usage_session property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.usage_session
@@ -602,7 +602,7 @@ async def test_get_total_day(fixture, expected, request):
     ],
 )
 async def test_get_total_week(fixture, expected, request):
-    """Test total_week reply."""
+    """Test total_week property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.total_week
@@ -619,7 +619,7 @@ async def test_get_total_week(fixture, expected, request):
     ],
 )
 async def test_get_total_month(fixture, expected, request):
-    """Test total_month reply."""
+    """Test total_month property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.total_month
@@ -636,7 +636,7 @@ async def test_get_total_month(fixture, expected, request):
     ],
 )
 async def test_get_total_year(fixture, expected, request):
-    """Test total_year reply."""
+    """Test total_year property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.total_year
@@ -651,7 +651,7 @@ async def test_get_total_year(fixture, expected, request):
     "fixture, expected", [("test_charger", 50.3), ("test_charger_v2", 34.0)]
 )
 async def test_get_ambient_temperature(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test ambient_temperature property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.ambient_temperature
@@ -687,7 +687,7 @@ async def test_get_ambient_temperature_none():
     "fixture, expected", [("test_charger", 50.3), ("test_charger_v2", None)]
 )
 async def test_get_rtc_temperature(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test rtc_temperature property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.rtc_temperature
@@ -699,7 +699,7 @@ async def test_get_rtc_temperature(fixture, expected, request):
     "fixture, expected", [("test_charger", None), ("test_charger_v2", None)]
 )
 async def test_get_ir_temperature(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test ir_temperature property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.ir_temperature
@@ -718,7 +718,7 @@ async def test_ir_temperature():
     "fixture, expected", [("test_charger", 56.0), ("test_charger_v2", None)]
 )
 async def test_get_esp_temperature(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test esp_temperature property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.esp_temperature
@@ -734,7 +734,7 @@ async def test_get_esp_temperature(fixture, expected, request):
     [("test_charger", "2021-08-10T23:00:11Z"), ("test_charger_v2", None)],
 )
 async def test_get_time(fixture, expected_str, request):
-    """Test v4 Status reply."""
+    """Test time property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
 
@@ -821,12 +821,26 @@ async def test_get_override_state_non_dict(test_charger_new):
     await test_charger_new.ws_disconnect()
 
 
+async def test_get_override_state_null_handling(test_charger_new):
+    """Test get_override_state handles None (null in JSON)."""
+    # Mock get_override to return a dict with state=None
+    with patch.object(test_charger_new, "get_override", return_value={"state": None}):
+        assert await test_charger_new.get_override_state() == "auto"
+
+    # Mock get_override to return a dict with state="active"
+    with patch.object(
+        test_charger_new, "get_override", return_value={"state": "active"}
+    ):
+        assert await test_charger_new.get_override_state() == "active"
+    await test_charger_new.ws_disconnect()
+
+
 @pytest.mark.parametrize(
     "fixture, expected",
     [("test_charger", True), ("test_charger_v2", False), ("test_charger_new", False)],
 )
 async def test_get_divert_active(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test divert_active property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.divert_active
@@ -871,7 +885,7 @@ async def test_charge_mode(fixture, expected, request):
     "fixture, expected", [("test_charger", False), ("test_charger_v2", False)]
 )
 async def test_get_manual_override(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test manual_override property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.manual_override
@@ -884,7 +898,7 @@ async def test_get_manual_override(fixture, expected, request):
 
 @pytest.mark.parametrize("fixture, expected", [("test_charger", 1)])
 async def test_get_vehicle(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test vehicle property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.vehicle
@@ -1001,7 +1015,7 @@ async def test_shaper_max_power(fixture, expected, request):
     ],
 )
 async def test_get_shaper_updated(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test shaper_updated property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.shaper_updated
@@ -1029,7 +1043,7 @@ async def test_get_has_limit(fixture, expected, request):
     "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
 )
 async def test_get_ota_update(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test ota_update property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.ota_update
@@ -1049,7 +1063,7 @@ async def test_get_ota_update(fixture, expected, request):
     ],
 )
 async def test_get_mqtt_connected(fixture, expected, request):
-    """Test v4 Status reply."""
+    """Test mqtt_connected property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.mqtt_connected
