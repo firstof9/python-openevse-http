@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pytest
 from freezegun import freeze_time
 
-from openevsehttp.__main__ import OpenEVSE
+from openevsehttp import OpenEVSE
 from openevsehttp.exceptions import UnsupportedFeature
 
 pytestmark = pytest.mark.asyncio
@@ -1197,6 +1197,19 @@ async def test_sensor_numeric_errors():
     # wattsec for usage_session
     charger._status = {"wattsec": "fail"}
     assert charger.usage_session is None
+
+
+async def test_config_boolean_coercion():
+    """Test boolean properties reading from config handle non-numeric data."""
+    charger = OpenEVSE(SERVER_URL)
+    # Test with None values (which return False via bool() coercion)
+    charger._config = {"ventt": None, "groundt": None, "relayt": None}
     assert charger.vent_required_enabled is False
     assert charger.ground_check_enabled is False
     assert charger.stuck_relay_check_enabled is False
+
+    # Test with string values that are truthy
+    charger._config = {"ventt": "1", "groundt": "true", "relayt": "yes"}
+    assert charger.vent_required_enabled is True
+    assert charger.ground_check_enabled is True
+    assert charger.stuck_relay_check_enabled is True

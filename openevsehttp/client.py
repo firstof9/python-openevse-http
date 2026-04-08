@@ -256,7 +256,6 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
                     "Creating a loop-local session."
                 )
                 use_session = None
-                self._session = None
 
         if not self.websocket or self.websocket.state == STATE_STOPPED:
             self.websocket = OpenEVSEWebsocket(

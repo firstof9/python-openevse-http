@@ -306,11 +306,11 @@ class CommandsMixin:
             data = {"device": "evse"}
             reply = await self.process_request(url=url, method="post", data=data)
             reply = self._normalize_response(reply)
-            if reply in [False, "NK"] or (
-                isinstance(reply, Mapping)
-                and (
-                    reply.get("msg") in RAPI_ERRORS or reply.get("msg") in ["NK", False]
-                )
+            if not isinstance(reply, Mapping) or (
+                reply.get("result") not in (None, 0, "OK", "ok", True)
+                or reply.get("msg") in RAPI_ERRORS
+                or reply.get("msg") in ["NK", False]
+                or reply.get("error")
             ):
                 _LOGGER.error("Problem restarting EVSE module via HTTP: %s", reply)
                 raise RuntimeError(f"Failed to restart EVSE module via HTTP: {reply}")

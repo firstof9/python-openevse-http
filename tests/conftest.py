@@ -1,5 +1,7 @@
 """Provide common pytest fixtures."""
 
+import json
+
 import pytest
 from aioresponses import aioresponses
 
@@ -201,6 +203,25 @@ def test_charger_v2(mock_aioclient):
         TEST_URL_CONFIG,
         status=200,
         body=load_fixture("v2_json/config.json"),
+    )
+    return main.OpenEVSE(TEST_TLD)
+
+
+@pytest.fixture(name="test_charger_v1")
+def test_charger_v1(mock_aioclient):
+    """Load the charger data."""
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=200,
+        body=load_fixture("v4_json/status.json"),
+    )
+    # Load and modify config for v4.0.0
+    config = json.loads(load_fixture("v4_json/config.json"))
+    config["version"] = "4.0.0"
+    mock_aioclient.get(
+        TEST_URL_CONFIG,
+        status=200,
+        body=json.dumps(config),
     )
     return main.OpenEVSE(TEST_TLD)
 

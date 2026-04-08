@@ -1392,10 +1392,13 @@ async def test_websocket_pong():
 
         mock_ws = AsyncMock()
         # Mock the async iterator of ws_client
-        msg = MagicMock()
-        msg.type = aiohttp.WSMsgType.TEXT
-        msg.json.return_value = {"pong": 1}
-        mock_ws.__aiter__.return_value = [msg]
+        msg1 = MagicMock()
+        msg1.type = aiohttp.WSMsgType.TEXT
+        msg1.json.return_value = {"pong": 1}
+        msg2 = MagicMock()
+        msg2.type = aiohttp.WSMsgType.TEXT
+        msg2.json.return_value = {"data": 1}
+        mock_ws.__aiter__.return_value = [msg1, msg2]
 
         with patch.object(session, "ws_connect") as mock_ws_connect:
             mock_context = AsyncMock()

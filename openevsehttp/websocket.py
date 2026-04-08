@@ -74,7 +74,7 @@ class OpenEVSEWebsocket:
 
         # Schedule the callback asynchronously without awaiting here.
         try:
-            task = asyncio.create_task(coro)
+            task = asyncio.ensure_future(coro)
             self._tasks.add(task)
             task.add_done_callback(self._tasks.discard)
         except RuntimeError:
@@ -91,7 +91,7 @@ class OpenEVSEWebsocket:
     def _schedule_task(self, coro):
         """Schedule a task from a thread-safe context."""
         try:
-            task = asyncio.create_task(coro)
+            task = asyncio.ensure_future(coro)
             self._tasks.add(task)
             task.add_done_callback(self._tasks.discard)
         except RuntimeError:

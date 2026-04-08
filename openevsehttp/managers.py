@@ -102,7 +102,9 @@ class ManagersMixin:
 
         if state not in ["active", "disabled", None]:
             _LOGGER.error("Invalid claim state: %s", state)
-            raise ValueError
+            raise ValueError(
+                f"Invalid claim state: {state}. Allowed: ['active', 'disabled', None]"
+            )
 
         url = f"{self.url}claims/{client}"
 

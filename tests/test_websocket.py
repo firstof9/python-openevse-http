@@ -295,7 +295,7 @@ async def test_state_setter_threadsafe_fallback(ws_client):
     ws_client._error_reason = "Previous Error"
 
     with (
-        patch("asyncio.create_task", side_effect=RuntimeError("No running loop")),
+        patch("asyncio.ensure_future", side_effect=RuntimeError("No running loop")),
         patch("asyncio.get_event_loop", return_value=mock_loop),
     ):
         ws_client.state = STATE_CONNECTED
@@ -306,7 +306,7 @@ async def test_state_setter_threadsafe_fallback(ws_client):
         args, _ = mock_loop.call_soon_threadsafe.call_args
         assert args[0] == ws_client._schedule_task
         # Cover _schedule_task by manual invocation
-        with patch("asyncio.create_task") as mock_ct:
+        with patch("asyncio.ensure_future") as mock_ct:
             task = mock_ct.return_value
             args[0](args[1])
             mock_ct.assert_called_once_with(args[1])
@@ -345,7 +345,7 @@ async def test_websocket_schedule_failure_sync(ws_client, mock_callback):
 
     # Trigger RuntimeError in both create_task and get_event_loop/call_soon_threadsafe
     with (
-        patch("asyncio.create_task", side_effect=RuntimeError("No loop")),
+        patch("asyncio.ensure_future", side_effect=RuntimeError("No loop")),
         patch("asyncio.get_event_loop", side_effect=RuntimeError("Loop closed")),
         patch("openevsehttp.websocket._LOGGER") as mock_logger,
     ):
@@ -365,7 +365,7 @@ async def test_websocket_schedule_failure_async(ws_client):
     mock_coro = async_mock()
 
     with (
-        patch("asyncio.create_task", side_effect=RuntimeError("Failed")),
+        patch("asyncio.ensure_future", side_effect=RuntimeError("Failed")),
         patch("openevsehttp.websocket._LOGGER") as mock_logger,
     ):
         ws_client._schedule_task(mock_coro)
