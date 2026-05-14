@@ -1,4 +1,4 @@
 -r requirements.txt
-prek==0.2.28
+prek==0.4.0
 ruff==0.15.13
 mypy==2.1.0
