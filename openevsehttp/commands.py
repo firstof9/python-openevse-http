@@ -517,5 +517,9 @@ class CommandsMixin:
             await self.update()
             shaper_active = self._status.get("shaper")
 
+        if shaper_active is None:
+            _LOGGER.error("Cannot toggle shaper: unknown shaper state.")
+            raise RuntimeError("Cannot toggle shaper: unknown shaper state.")
+
         new_state = not bool(shaper_active)
         await self.set_shaper(new_state)

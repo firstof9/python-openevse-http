@@ -100,3 +100,29 @@ async def test_toggle_shaper_missing_state(test_charger, mock_aioclient, caplog)
         await test_charger.toggle_shaper()
         # status.json has shaper: 1, so it should toggle to 0
         assert "Setting shaper to 0" in caplog.text
+
+
+async def test_toggle_shaper_failed_update(mock_aioclient, caplog):
+    """Test toggle_shaper when state is still missing after update()."""
+    from openevsehttp import OpenEVSE
+
+    charger = OpenEVSE("openevse.test.tld")
+
+    # Mock the /status call but return status without shaper
+    mock_aioclient.get(
+        "http://openevse.test.tld/status",
+        status=200,
+        body='{"mode": 1}',  # No shaper key
+    )
+    mock_aioclient.get(
+        "http://openevse.test.tld/config",
+        status=200,
+        body='{"firmware": "4.1.2"}',
+    )
+
+    with pytest.raises(
+        RuntimeError, match="Cannot toggle shaper: unknown shaper state."
+    ):
+        await charger.toggle_shaper()
+
+    assert "Cannot toggle shaper: unknown shaper state." in caplog.text
