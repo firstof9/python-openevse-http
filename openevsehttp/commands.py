@@ -506,7 +506,7 @@ class CommandsMixin:
         response = await self.process_request(url=url, method="post", data=data)
         response = self._normalize_response(response)
         msg = response.get("msg") if isinstance(response, Mapping) else None
-        if msg not in ["OK", "done", "no change"]:
+        if msg not in ["OK", "done", "no change", "Current Shaper state changed"]:
             _LOGGER.error("Problem issuing command: %s", response)
             raise UnknownError
 
