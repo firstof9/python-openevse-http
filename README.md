@@ -70,7 +70,7 @@ if __name__ == "__main__":
 | `/restart` | POST | ✅ | Reboot WiFi gateway or EVSE module |
 | `/divertmode` | POST | ✅ | Solar divert mode control |
 | `/ws` | GET | ✅ | WebSocket real-time updates |
-| `/time` | GET, POST | ⚠️ | RTC/NTP settings (GET supported via status) |
+| `/time` | GET, POST | ❌ | RTC and NTP time settings |
 | `/logs` | GET | ❌ | System and debug event logs |
 | `/emeter` | DELETE | ❌ | Energy meter reset |
 | `/wifi` | GET, POST | ❌ | Network scanning and configuration |
