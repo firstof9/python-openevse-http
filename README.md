@@ -60,7 +60,7 @@ if __name__ == "__main__":
 
 | Endpoint | Methods | Supported | Description |
 | :--- | :--- | :---: | :--- |
-| `/status` | GET, POST | ✅ | Sensors, real-time state, and data pushing |
+| `/status` | GET, POST | ✅ | Real-time status, sensors, and **Vehicle SoC** pushing |
 | `/config` | GET, POST | ✅ | System and WiFi configuration |
 | `/override` | GET, POST, PATCH, DELETE | ✅ | Manual charging overrides & current limits |
 | `/claims` | GET, POST, DELETE | ✅ | Client-based charging claims |
@@ -73,7 +73,6 @@ if __name__ == "__main__":
 | `/time` | GET, POST | ⚠️ | RTC/NTP settings (GET supported via status) |
 | `/logs` | GET | ❌ | System and debug event logs |
 | `/emeter` | DELETE | ❌ | Energy meter reset |
-| `/vstatus` | GET | ❌ | Detailed vehicle communication status |
 | `/wifi` | GET, POST | ❌ | Network scanning and configuration |
 | `/tesla` | GET | ❌ | Tesla vehicle integration |
 | `/certificates`| GET, POST, DELETE | ❌ | SSL/TLS certificate management |
