@@ -1,12 +1,19 @@
+# .pre-commit-config.yaml
 default_install_hook_types: [pre-commit, pre-push]
+
 repos:
+  - repo: builtin
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.9.7
     hooks:
       - id: ruff
-        args:
-          - --fix
+        args: [--fix]
       - id: ruff-format
+
   - repo: https://github.com/codespell-project/codespell
     rev: v2.4.1
     hooks:
@@ -16,30 +23,31 @@ repos:
           - --skip="./.*,*.csv,*.json"
           - --quiet-level=2
         exclude_types: [csv, json]
+
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
-      - id: check-executables-have-shebangs
-        stages: [manual]
-      - id: no-commit-to-branch
-        args:
-          - --branch=main
-      - id: trailing-whitespace
-      - id: end-of-file-fixer
-      - id: check-docstring-first
       - id: check-yaml
       - id: debug-statements
+      - id: check-docstring-first
+      - id: no-commit-to-branch
+        args: [--branch=main]
+      - id: check-executables-have-shebangs
+        stages: [manual]
+
   - repo: https://github.com/adrienverge/yamllint.git
     rev: v1.35.1
     hooks:
       - id: yamllint
+
   - repo: https://github.com/prettier/prettier
     rev: 2.0.4
     hooks:
       - id: prettier
         stages: [manual]
+
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: "v1.15.0"
+    rev: v1.15.0
     hooks:
       - id: mypy
         files: ^openevsehttp/.+\.py$
