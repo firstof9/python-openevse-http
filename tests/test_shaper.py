@@ -73,3 +73,30 @@ async def test_toggle_shaper(test_charger, mock_aioclient, caplog):
     with caplog.at_level(logging.DEBUG):
         await test_charger.toggle_shaper()
         assert "Setting shaper to 0" in caplog.text
+
+
+async def test_toggle_shaper_missing_state(test_charger, mock_aioclient, caplog):
+    """Test toggle_shaper when state is missing."""
+    # Clear status to force update()
+    test_charger._status = {}
+
+    # Mock the /status call that update() will make
+    from tests.common import load_fixture
+
+    TEST_URL_STATUS = "http://openevse.test.tld/status"
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=200,
+        body=load_fixture("v4_json/status.json"),
+    )
+
+    mock_aioclient.post(
+        TEST_URL_SHAPER,
+        status=200,
+        body='{"msg": "OK"}',
+    )
+
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.toggle_shaper()
+        # status.json has shaper: 1, so it should toggle to 0
+        assert "Setting shaper to 0" in caplog.text
