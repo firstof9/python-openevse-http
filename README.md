@@ -69,13 +69,17 @@ if __name__ == "__main__":
 | `/shaper` | POST | ✅ | Grid shaper control (v4.0.0+) |
 | `/restart` | POST | ✅ | Reboot WiFi gateway or EVSE module |
 | `/divertmode` | POST | ✅ | Solar divert mode control |
+| `/r` (RAPI) | POST | ✅ | Direct RAPI command interface |
 | `/ws` | GET | ✅ | WebSocket real-time updates |
 | `/time` | GET, POST | ❌ | RTC and NTP time settings |
 | `/logs` | GET | ❌ | System and debug event logs |
 | `/emeter` | DELETE | ❌ | Energy meter reset |
-| `/wifi` | GET, POST | ❌ | Network scanning and configuration |
+| `/wifi` | GET, POST | ❌ | Network scanning and AP configuration |
 | `/tesla` | GET | ❌ | Tesla vehicle integration |
 | `/certificates`| GET, POST, DELETE | ❌ | SSL/TLS certificate management |
+| `/schedule/plan`| GET | ❌ | Schedule planning and optimization |
+| `/update` | POST | ❌ | Firmware update interface |
+| `/rfid/add` | POST | ❌ | RFID tag management |
 
 ✅ = Fully Supported \| ⚠️ = Partial Support \| ❌ = Not yet implemented
 
