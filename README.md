@@ -56,13 +56,32 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-## Roadmap & Missing Features
+## API Support Matrix
 
-Based on the latest OpenEVSE ESP32 firmware, future updates may include:
-- Dedicated **`/time`** management.
-- **`/logs`** retrieval for diagnostics.
-- **`/emeter`** resets.
-- Advanced **Schedule Planning** visualization.
+| Endpoint | Methods | Supported | Description |
+| :--- | :--- | :---: | :--- |
+| `/status` | GET, POST | ✅ | Real-time status, sensors, and **Vehicle SoC** pushing |
+| `/config` | GET, POST | ✅ | System and WiFi configuration |
+| `/override` | GET, POST, PATCH, DELETE | ✅ | Manual charging overrides & current limits |
+| `/claims` | GET, POST, DELETE | ✅ | Client-based charging claims |
+| `/schedule` | GET, POST | ✅ | Charging schedule management |
+| `/limit` | GET, POST, DELETE | ✅ | Charge limits (Time, Energy, SoC) |
+| `/shaper` | POST | ✅ | Grid shaper control (v4.0.0+) |
+| `/restart` | POST | ✅ | Reboot WiFi gateway or EVSE module |
+| `/divertmode` | POST | ✅ | Solar divert mode control |
+| `/r` (RAPI) | POST | ✅ | Direct RAPI command interface |
+| `/ws` | GET | ✅ | WebSocket real-time updates |
+| `/time` | GET, POST | ❌ | RTC and NTP time settings |
+| `/logs` | GET | ❌ | System and debug event logs |
+| `/emeter` | DELETE | ❌ | Energy meter reset |
+| `/wifi` | GET, POST | ❌ | Network scanning and AP configuration |
+| `/tesla` | GET | ❌ | Tesla vehicle integration |
+| `/certificates`| GET, POST, DELETE | ❌ | SSL/TLS certificate management |
+| `/schedule/plan`| GET | ❌ | Schedule planning and optimization |
+| `/update` | POST | ❌ | Firmware update interface |
+| `/rfid/add` | POST | ❌ | RFID tag management |
+
+✅ = Fully Supported \| ⚠️ = Partial Support \| ❌ = Not yet implemented
 
 ## License
 
