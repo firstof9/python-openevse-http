@@ -56,13 +56,25 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-## Roadmap & Missing Features
+## API Support Matrix
 
-Based on the latest OpenEVSE ESP32 firmware, future updates may include:
-- Dedicated **`/time`** management.
-- **`/logs`** retrieval for diagnostics.
-- **`/emeter`** resets.
-- Advanced **Schedule Planning** visualization.
+| Endpoint | Methods | Supported | Description |
+| :--- | :--- | :---: | :--- |
+| `/status` | GET | ✅ | Real-time charger status and sensors |
+| `/config` | GET, POST | ✅ | System configuration and settings |
+| `/override` | GET, POST, PATCH, DELETE | ✅ | Manual charging overrides |
+| `/schedule` | GET, POST | ✅ | Charging schedules |
+| `/shaper` | POST | ✅ | Grid shaper toggle (v4.0.0+) |
+| `/claims` | GET, POST | ✅ | Current charging claims |
+| `/restart` | POST | ✅ | Reboot WiFi or EVSE module |
+| `/divertmode` | POST | ✅ | Solar divert mode control |
+| `/time` | GET, POST | ❌ | RTC and NTP time settings |
+| `/logs` | GET | ❌ | System and debug logs |
+| `/emeter` | GET, POST | ❌ | Energy meter data and reset |
+| `/vstatus` | GET | ❌ | Vehicle status (EV communication) |
+| `/wifi` | GET, POST | ❌ | WiFi network configuration |
+
+✅ = Supported \| ❌ = Planned / Not yet implemented
 
 ## License
 
