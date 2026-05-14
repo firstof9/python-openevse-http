@@ -4,6 +4,9 @@ on:
   release:
     types: [published, prereleased]
 
+permissions:
+  contents: read
+
 jobs:
   build-and-publish:
     name: Builds and publishes releases to PyPI
