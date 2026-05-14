@@ -491,3 +491,35 @@ class CommandsMixin:
         if not success:
             _LOGGER.error("Problem issuing command: %s", response)
             raise UnknownError
+
+    async def set_shaper(self, enable: bool = True) -> None:
+        """Set shaper mode."""
+        if not self._version_check("4.0.0"):
+            _LOGGER.debug("Feature not supported for older firmware.")
+            raise UnsupportedFeature
+
+        url = f"{self.url}shaper"
+        mode = 1 if enable else 0
+        data = {"mode": mode}
+
+        _LOGGER.debug("Setting shaper to %s", mode)
+        response = await self.process_request(url=url, method="post", data=data)
+        response = self._normalize_response(response)
+        msg = response.get("msg") if isinstance(response, Mapping) else None
+        if msg not in ["OK", "done", "no change"]:
+            _LOGGER.error("Problem issuing command: %s", response)
+            raise UnknownError
+
+    async def toggle_shaper(self) -> None:
+        """Toggle shaper mode."""
+        shaper_active = self._status.get("shaper")
+        if shaper_active is None:
+            await self.update()
+            shaper_active = self._status.get("shaper")
+
+        if shaper_active is None:
+            _LOGGER.error("Cannot toggle shaper: unknown shaper state.")
+            raise RuntimeError("Cannot toggle shaper: unknown shaper state.")
+
+        new_state = not bool(shaper_active)
+        await self.set_shaper(new_state)
