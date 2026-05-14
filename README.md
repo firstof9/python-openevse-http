@@ -60,21 +60,25 @@ if __name__ == "__main__":
 
 | Endpoint | Methods | Supported | Description |
 | :--- | :--- | :---: | :--- |
-| `/status` | GET | ✅ | Real-time charger status and sensors |
-| `/config` | GET, POST | ✅ | System configuration and settings |
-| `/override` | GET, POST, PATCH, DELETE | ✅ | Manual charging overrides |
-| `/schedule` | GET, POST | ✅ | Charging schedules |
-| `/shaper` | POST | ✅ | Grid shaper toggle (v4.0.0+) |
-| `/claims` | GET, POST | ✅ | Current charging claims |
-| `/restart` | POST | ✅ | Reboot WiFi or EVSE module |
+| `/status` | GET, POST | ✅ | Sensors, real-time state, and data pushing |
+| `/config` | GET, POST | ✅ | System and WiFi configuration |
+| `/override` | GET, POST, PATCH, DELETE | ✅ | Manual charging overrides & current limits |
+| `/claims` | GET, POST, DELETE | ✅ | Client-based charging claims |
+| `/schedule` | GET, POST | ✅ | Charging schedule management |
+| `/limit` | GET, POST, DELETE | ✅ | Charge limits (Time, Energy, SoC) |
+| `/shaper` | POST | ✅ | Grid shaper control (v4.0.0+) |
+| `/restart` | POST | ✅ | Reboot WiFi gateway or EVSE module |
 | `/divertmode` | POST | ✅ | Solar divert mode control |
-| `/time` | GET, POST | ❌ | RTC and NTP time settings |
-| `/logs` | GET | ❌ | System and debug logs |
-| `/emeter` | GET, POST | ❌ | Energy meter data and reset |
-| `/vstatus` | GET | ❌ | Vehicle status (EV communication) |
-| `/wifi` | GET, POST | ❌ | WiFi network configuration |
+| `/ws` | GET | ✅ | WebSocket real-time updates |
+| `/time` | GET, POST | ⚠️ | RTC/NTP settings (GET supported via status) |
+| `/logs` | GET | ❌ | System and debug event logs |
+| `/emeter` | DELETE | ❌ | Energy meter reset |
+| `/vstatus` | GET | ❌ | Detailed vehicle communication status |
+| `/wifi` | GET, POST | ❌ | Network scanning and configuration |
+| `/tesla` | GET | ❌ | Tesla vehicle integration |
+| `/certificates`| GET, POST, DELETE | ❌ | SSL/TLS certificate management |
 
-✅ = Supported \| ❌ = Planned / Not yet implemented
+✅ = Fully Supported \| ⚠️ = Partial Support \| ❌ = Not yet implemented
 
 ## License
 
