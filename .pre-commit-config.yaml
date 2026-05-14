@@ -2,11 +2,6 @@
 default_install_hook_types: [pre-commit, pre-push]
 
 repos:
-  - repo: builtin
-    hooks:
-      - id: trailing-whitespace
-      - id: end-of-file-fixer
-
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.9.7
     hooks:
@@ -27,6 +22,8 @@ repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
       - id: check-yaml
       - id: debug-statements
       - id: check-docstring-first
