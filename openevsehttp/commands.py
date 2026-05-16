@@ -492,6 +492,8 @@ class CommandsMixin:
             _LOGGER.error("Problem issuing command: %s", response)
             raise UnknownError
 
+        self._status["divertmode"] = new_mode
+
     async def set_shaper(self, enable: bool = True) -> None:
         """Set shaper mode."""
         if not self._version_check("4.0.0"):
@@ -500,15 +502,17 @@ class CommandsMixin:
 
         url = f"{self.url}shaper"
         mode = 1 if enable else 0
-        data = {"mode": mode}
+        data = {"shaper": mode}
 
         _LOGGER.debug("Setting shaper to %s", mode)
-        response = await self.process_request(url=url, method="post", data=data)
+        response = await self.process_request(url=url, method="post", rapi=data)
         response = self._normalize_response(response)
         msg = response.get("msg") if isinstance(response, Mapping) else None
         if msg not in ["OK", "done", "no change", "Current Shaper state changed"]:
             _LOGGER.error("Problem issuing command: %s", response)
             raise UnknownError
+
+        self._status["shaper"] = mode
 
     async def toggle_shaper(self) -> None:
         """Toggle shaper mode."""
