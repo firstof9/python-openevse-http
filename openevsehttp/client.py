@@ -139,7 +139,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
                 try:
                     message = json.loads(message)
                 except ValueError:
-                    _LOGGER.warning("Non JSON response: %s", message)
+                    _LOGGER.debug("Non JSON response: %s", message)
 
                 if resp.status == 400:
                     if isinstance(message, dict) and "msg" in message:

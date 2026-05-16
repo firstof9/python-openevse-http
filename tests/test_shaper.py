@@ -46,6 +46,33 @@ async def test_set_shaper_fail(test_charger, mock_aioclient, caplog):
         await test_charger.set_shaper(True)
 
 
+async def test_set_shaper_non_json(test_charger, mock_aioclient, caplog):
+    """Test set_shaper with a non-JSON response."""
+    await test_charger.update()
+    test_charger._status["shaper"] = 0
+
+    mock_aioclient.post(
+        TEST_URL_SHAPER,
+        status=200,
+        body="Current Shaper state changed",
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.set_shaper(True)
+        assert "Setting shaper to 1" in caplog.text
+        assert test_charger.shaper_active == 1
+
+    test_charger._status["shaper"] = 1
+    mock_aioclient.post(
+        TEST_URL_SHAPER,
+        status=200,
+        body="Current Shaper state changed",
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.set_shaper(False)
+        assert "Setting shaper to 0" in caplog.text
+        assert test_charger.shaper_active == 0
+
+
 async def test_toggle_shaper(test_charger, mock_aioclient, caplog):
     """Test toggle_shaper command."""
     await test_charger.update()
