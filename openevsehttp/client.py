@@ -31,6 +31,7 @@ from .exceptions import (
 from .managers import ManagersMixin
 from .properties import PropertiesMixin
 from .sensors import SensorsMixin
+from .utils import get_awesome_version
 from .websocket import (
     SIGNAL_CONNECTION_STATE,
     STATE_CONNECTED,
@@ -441,37 +442,31 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
             _LOGGER.warning("Unable to find firmware version.")
             return False
         cutoff = AwesomeVersion(min_version)
-        current = ""
         limit = ""
         if max_version != "":
             limit = AwesomeVersion(max_version)
 
-        firmware_filtered = None
+        # Check if version is standard semver or has dev/master
         firmware_search = re.search(r"\d+\.\d+\.\d+", self._config["version"])
-        if firmware_search:
-            firmware_filtered = firmware_search.group(0)
-
-        if firmware_filtered is None:
+        if (
+            not firmware_search
+            and "dev" not in self._config["version"]
+            and "master" not in self._config["version"]
+        ):
             _LOGGER.warning(
                 "Non-standard versioning string: %s", self._config["version"]
             )
             _LOGGER.debug("Non-semver firmware version detected.")
             return False
 
-        _LOGGER.debug("Detected firmware: %s", self._config["version"])
-        _LOGGER.debug("Filtered firmware: %s", firmware_filtered)
-
-        if "dev" in self._config["version"]:
-            value = self._config["version"]
-            _LOGGER.debug("Stripping 'dev' from version.")
-            value = value.split(".")
-            value = ".".join(value[0:3])
-        elif "master" in self._config["version"]:
-            value = "dev"
-        else:
-            value = firmware_filtered
-
-        current = AwesomeVersion(value)
+        try:
+            current = get_awesome_version(self._config["version"])
+        except AwesomeVersionCompareException:
+            _LOGGER.warning(
+                "Non-standard versioning string: %s", self._config["version"]
+            )
+            _LOGGER.debug("Non-semver firmware version detected.")
+            return False
 
         if limit:
             try:

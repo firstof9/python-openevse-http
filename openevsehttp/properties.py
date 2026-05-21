@@ -9,6 +9,7 @@ from typing import Any
 
 from .const import MAX_AMPS, MIN_AMPS, states
 from .exceptions import UnsupportedFeature
+from .utils import normalize_version
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -130,10 +131,8 @@ class PropertiesMixin:
     def wifi_firmware(self) -> str | None:
         """Return the ESP firmware version."""
         value = self._config.get("version")
-        if value is not None and "dev" in value:
-            _LOGGER.debug("Stripping 'dev' from version.")
-            value = value.split(".")
-            value = ".".join(value[0:3])
+        if value is not None:
+            value = normalize_version(value)
         return value
 
     @property
