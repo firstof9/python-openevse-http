@@ -459,14 +459,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
             _LOGGER.debug("Non-semver firmware version detected.")
             return False
 
-        try:
-            current = get_awesome_version(self._config["version"])
-        except AwesomeVersionCompareException:
-            _LOGGER.warning(
-                "Non-standard versioning string: %s", self._config["version"]
-            )
-            _LOGGER.debug("Non-semver firmware version detected.")
-            return False
+        current = get_awesome_version(self._config["version"])
 
         if limit:
             try:

@@ -367,12 +367,8 @@ class CommandsMixin:
         cutoff = AwesomeVersion("3.0.0")
         _LOGGER.debug("Detected firmware: %s", self._config["version"])
 
-        try:
-            current = get_awesome_version(self._config["version"])
-            _LOGGER.debug("Using version: %s", current)
-        except AwesomeVersionCompareException:
-            _LOGGER.warning("Non-semver firmware version detected.")
-            return None
+        current = get_awesome_version(self._config["version"])
+        _LOGGER.debug("Using version: %s", current)
 
         try:
             if current >= cutoff:
