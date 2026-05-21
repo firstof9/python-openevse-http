@@ -452,7 +452,7 @@ async def test_set_divertmode(
     with pytest.raises(UnsupportedFeature):
         with caplog.at_level(logging.DEBUG):
             await test_charger_unknown_semver.divert_mode()
-    assert "Non-semver firmware version detected." in caplog.text
+    assert "Non-semver firmware version detected" in caplog.text
 
 
 async def test_set_divertmode_dict(test_charger_new, mock_aioclient):

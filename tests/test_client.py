@@ -365,7 +365,7 @@ async def test_firmware_check(
     with caplog.at_level(logging.DEBUG):
         firmware = await test_charger_unknown_semver.firmware_check()
         assert "Using version: random_a4f11e" in caplog.text
-        assert "Non-semver firmware version detected." in caplog.text
+        assert "Non-semver firmware version detected" in caplog.text
         assert firmware is None
 
 
