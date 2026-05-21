@@ -438,7 +438,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
         """Return bool if minimum version is met."""
         if "version" not in self._config:
             # Throw warning if we can't find the version
-            _LOGGER.warning("Unable to find firmware version.")
+            _LOGGER.debug("Unable to find firmware version.")
             return False
         cutoff = AwesomeVersion(min_version)
         limit = ""
@@ -447,10 +447,10 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
 
         current = get_awesome_version(self._config["version"])
         if current.strategy == "unknown":
-            _LOGGER.warning(
-                "Non-standard versioning string: %s", self._config["version"]
+            _LOGGER.debug(
+                "Non-semver firmware version detected: %s",
+                self._config["version"],
             )
-            _LOGGER.debug("Non-semver firmware version detected.")
             return False
 
         if limit:

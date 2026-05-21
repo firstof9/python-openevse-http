@@ -358,7 +358,7 @@ class CommandsMixin:
         """Return the latest firmware version."""
         if "version" not in self._config:
             # Throw warning if we can't find the version
-            _LOGGER.warning("Unable to find firmware version.")
+            _LOGGER.debug("Unable to find firmware version.")
             return None
         base_url = "https://api.github.com/repos/OpenEVSE/"
         url = None
@@ -376,7 +376,7 @@ class CommandsMixin:
             else:
                 url = f"{base_url}ESP8266_WiFi_v2.x/releases/latest"
         except AwesomeVersionCompareException:
-            _LOGGER.warning("Non-semver firmware version detected.")
+            _LOGGER.debug("Non-semver firmware version detected.")
             return None
 
         try:
