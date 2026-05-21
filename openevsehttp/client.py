@@ -6,7 +6,6 @@ import asyncio
 import inspect
 import json
 import logging
-import re
 import threading
 from collections.abc import Callable, Mapping
 from typing import Any
@@ -446,20 +445,13 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
         if max_version != "":
             limit = AwesomeVersion(max_version)
 
-        # Check if version is standard semver or has dev/master
-        firmware_search = re.search(r"\d+\.\d+\.\d+", self._config["version"])
-        if (
-            not firmware_search
-            and "dev" not in self._config["version"]
-            and "master" not in self._config["version"]
-        ):
+        current = get_awesome_version(self._config["version"])
+        if current.strategy == "unknown":
             _LOGGER.warning(
                 "Non-standard versioning string: %s", self._config["version"]
             )
             _LOGGER.debug("Non-semver firmware version detected.")
             return False
-
-        current = get_awesome_version(self._config["version"])
 
         if limit:
             try:
