@@ -19,15 +19,11 @@ def normalize_version(version: str) -> str:
 
 def get_awesome_version(version: str) -> AwesomeVersion:
     """Parse and normalize the version string, returning an AwesomeVersion."""
-    if "dev" in version:
-        value = normalize_version(version)
-    elif "master" in version:
-        value = "dev"
-    else:
-        firmware_search = re.search(r"\d+\.\d+\.\d+", version)
+    if "master" in version:
+        version = "dev"
+    value = normalize_version(version)
+    if "dev" not in version:
+        firmware_search = re.search(r"\d+\.\d+\.\d+", value)
         if firmware_search:
             value = firmware_search.group(0)
-        else:
-            value = version
-
     return AwesomeVersion(value)
