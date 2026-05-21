@@ -14,6 +14,7 @@ from awesomeversion.exceptions import AwesomeVersionCompareException
 
 from .const import MAX_AMPS, MIN_AMPS, RAPI_ERRORS, divert_mode
 from .exceptions import UnknownError, UnsupportedFeature
+from .utils import get_awesome_version
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -364,22 +365,10 @@ class CommandsMixin:
         method = "get"
 
         cutoff = AwesomeVersion("3.0.0")
-        current = ""
-
         _LOGGER.debug("Detected firmware: %s", self._config["version"])
 
-        if "dev" in self._config["version"]:
-            value = self._config["version"]
-            _LOGGER.debug("Stripping 'dev' from version.")
-            value = value.split(".")
-            value = ".".join(value[0:3])
-        elif "master" in self._config["version"]:
-            value = "dev"
-        else:
-            value = self._config["version"]
-
-        _LOGGER.debug("Using version: %s", value)
-        current = AwesomeVersion(value)
+        current = get_awesome_version(self._config["version"])
+        _LOGGER.debug("Using version: %s", current)
 
         try:
             if current >= cutoff:
