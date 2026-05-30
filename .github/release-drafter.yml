@@ -6,3 +6,21 @@ categories:
 template: |
   ## What’s Changed
   $CHANGES
+
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
+version-resolver:
+  major:
+    labels:
+      - "major"
+      - "breaking change"
+  minor:
+    labels:
+      - "minor"
+      - "feature"
+  patch:
+    labels:
+      - "patch"
+      - "bug"
+      - "fix"
+  default: patch
