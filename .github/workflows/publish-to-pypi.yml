@@ -17,6 +17,9 @@ jobs:
   build-and-publish:
     name: Builds and publishes releases to PyPI
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: step-security/harden-runner@fe104658747b27e96e4f7e80cd0a94068e53901d  # v2.16.1
         with:
@@ -26,18 +29,18 @@ jobs:
         with:
           ref: ${{ inputs.tag || github.ref }}
           fetch-depth: 0
-      - name: Set up Python 3.9
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@1edb52594c857e2b5b13128931090f0640537287  # v5.3.0
         with:
-          python-version: 3.9
-      - name: Install wheel
-        run: >-
-          pip install wheel
-      - name: Build
-        run: >-
-          python3 setup.py sdist bdist_wheel
+          enable-cache: true
+          version: "0.10.9"
+
+      - name: Set up Python
+        run: uv python install 3.14
+
+      - name: Build package
+        run: uv build
+
       - name: Publish release to PyPI
-        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b  # release/v1
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_TOKEN }}
+        uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc  # v1.12.4
