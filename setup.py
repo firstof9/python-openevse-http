@@ -6,11 +6,10 @@ from setuptools import find_packages, setup
 
 PROJECT_DIR = Path(__file__).parent.resolve()
 README_FILE = PROJECT_DIR / "README.md"
-VERSION = "0.3.4"
 
 setup(
     name="python_openevse_http",
-    version=VERSION,
+    use_scm_version=True,
     url="https://github.com/firstof9/python-openevse-http",
     download_url="https://github.com/firstof9/python-openevse-http",
     author="firstof9",
