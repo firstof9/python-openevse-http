@@ -3,6 +3,7 @@ name: Publish releases to PyPI
 on:
   release:
     types: [published, prereleased]
+  workflow_dispatch:
 
 permissions:
   contents: read
