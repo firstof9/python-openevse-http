@@ -177,6 +177,54 @@ async def test_toggle_override_fail(test_charger, mock_aioclient, caplog):
     assert "Problem toggling override: {'msg': 'failure!'}" in caplog.text
 
 
+async def test_custom_override_success_responses(test_charger, mock_aioclient, caplog):
+    """Test override methods accept firmware-specific response strings ("Created", "Updated", "Deleted")."""
+    await test_charger.update()
+
+    # 1. toggle_override with "Updated"
+    mock_aioclient.patch(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body='{"msg": "Updated"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.toggle_override()
+    assert "Toggling manual override http" in caplog.text
+
+    # 2. clear_override with "Deleted"
+    mock_aioclient.delete(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body='{"msg": "Deleted"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.clear_override()
+    assert "Clearing manual override http" in caplog.text
+
+    # 3. set_current / set_override with "Created"
+    value = {
+        "state": "active",
+        "charge_current": 0,
+        "max_current": 0,
+        "energy_limit": 0,
+        "time_limit": 0,
+        "auto_release": True,
+    }
+    mock_aioclient.get(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body=json.dumps(value),
+    )
+    mock_aioclient.post(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body='{"msg": "Created"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.set_current(16)
+    assert "Setting current limit to 16" in caplog.text
+
+
 async def test_toggle_override_refresh_fail(mock_aioclient, caplog):
     """Test toggle_override when state is missing and refresh fails."""
     # Use a fresh charger to avoid fixture mock interference

@@ -12,7 +12,7 @@ from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
 from awesomeversion import AwesomeVersion
 from awesomeversion.exceptions import AwesomeVersionCompareException
 
-from .const import MAX_AMPS, MIN_AMPS, RAPI_ERRORS, divert_mode
+from .const import MAX_AMPS, MIN_AMPS, RAPI_ERRORS, SUCCESS_ANSWERS, divert_mode
 from .exceptions import UnknownError, UnsupportedFeature
 from .utils import get_awesome_version
 
@@ -68,7 +68,7 @@ class CommandsMixin:
         response = await self.process_request(url=url, method="post", data=data)
         response = self._normalize_response(response)
         msg = response.get("msg") if isinstance(response, Mapping) else None
-        if msg not in ["OK", "done", "no change"]:
+        if msg not in SUCCESS_ANSWERS:
             _LOGGER.error("Problem issuing command: %s", response)
             raise UnknownError
 
@@ -95,11 +95,10 @@ class CommandsMixin:
         response = await self.process_request(url=url, method="post", data=data)
         _LOGGER.debug("divert_mode response: %s", response)
         normalized_response = self._normalize_response(response)
-        if isinstance(normalized_response, dict) and normalized_response.get("msg") in [
-            "OK",
-            "done",
-            "no change",
-        ]:
+        if (
+            isinstance(normalized_response, dict)
+            and normalized_response.get("msg") in SUCCESS_ANSWERS
+        ):
             self._config["divert_enabled"] = mode
         return normalized_response
 
@@ -172,11 +171,10 @@ class CommandsMixin:
             response = await self.process_request(url=url, method="patch")
             response = self._normalize_response(response)
             _LOGGER.debug("Toggle response: %s", response)
-            if not isinstance(response, Mapping) or response.get("msg") not in [
-                "OK",
-                "done",
-                "no change",
-            ]:
+            if (
+                not isinstance(response, Mapping)
+                or response.get("msg") not in SUCCESS_ANSWERS
+            ):
                 _LOGGER.error("Problem toggling override: %s", response)
                 raise RuntimeError(f"Failed to toggle override: {response}")
         else:
@@ -210,7 +208,7 @@ class CommandsMixin:
         response = self._normalize_response(response)
         msg = response.get("msg") if isinstance(response, Mapping) else None
         _LOGGER.debug("Clear override response: %s", msg)
-        if msg not in ["OK", "done", "no change"]:
+        if msg not in SUCCESS_ANSWERS:
             _LOGGER.error("Problem clearing override: %s", response)
             raise RuntimeError(f"Failed to clear override: {response}")
 
@@ -236,11 +234,10 @@ class CommandsMixin:
             _LOGGER.debug("Setting current limit to %s", amps)
             response = await self.set_override(charge_current=amps)
             _LOGGER.debug("Set current response: %s", response)
-            if not isinstance(response, Mapping) or response.get("msg") not in [
-                "OK",
-                "done",
-                "no change",
-            ]:
+            if (
+                not isinstance(response, Mapping)
+                or response.get("msg") not in SUCCESS_ANSWERS
+            ):
                 _LOGGER.error("Problem setting current limit: %s", response)
                 raise UnknownError
 
@@ -275,7 +272,7 @@ class CommandsMixin:
         response = self._normalize_response(response)
         _LOGGER.debug("service response: %s", response)
         msg = response.get("msg") if isinstance(response, Mapping) else None
-        if msg not in ["OK", "done", "no change"]:
+        if msg not in SUCCESS_ANSWERS:
             _LOGGER.error("Problem issuing command: %s", response)
             raise UnknownError
 
@@ -448,7 +445,7 @@ class CommandsMixin:
         response = await self.process_request(url=url, method="post", data=data)
         response = self._normalize_response(response)
         msg = response.get("msg") if isinstance(response, Mapping) else None
-        if msg not in ["OK", "done", "no change"]:
+        if msg not in SUCCESS_ANSWERS:
             _LOGGER.error("Problem issuing command: %s", response)
             raise UnknownError
 
@@ -470,11 +467,7 @@ class CommandsMixin:
             res_lower = response.lower()
             if "divert" in res_lower and "changed" in res_lower:
                 success = True
-        elif isinstance(response, dict) and response.get("msg") in [
-            "OK",
-            "done",
-            "no change",
-        ]:
+        elif isinstance(response, dict) and response.get("msg") in SUCCESS_ANSWERS:
             success = True
 
         if not success:
@@ -497,7 +490,7 @@ class CommandsMixin:
         response = await self.process_request(url=url, method="post", rapi=data)
         response = self._normalize_response(response)
         msg = response.get("msg") if isinstance(response, Mapping) else None
-        if msg not in ["OK", "done", "no change", "Current Shaper state changed"]:
+        if msg not in SUCCESS_ANSWERS and msg != "Current Shaper state changed":
             _LOGGER.error("Problem issuing command: %s", response)
             raise UnknownError
 
