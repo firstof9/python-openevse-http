@@ -60,3 +60,5 @@ RAPI_ERRORS = [
     "RAPI_RESPONSE_BLOCKED",
     "RAPI_RESPONSE_INVALID_COMMAND",
 ]
+
+SUCCESS_ANSWERS = ["OK", "done", "no change", "Created", "Updated", "Deleted"]
