@@ -414,11 +414,71 @@ class CommandsMixin:
 
             if not isinstance(message, dict):
                 return None
+
+            # Match browser_download_url based on buildenv
+            download_url = None
+            buildenv = self._config.get("buildenv")
+            assets = message.get("assets", [])
+
+            if buildenv and assets:
+                target_filename = f"{buildenv}.bin"
+                for asset in assets:
+                    if asset.get("name") == target_filename:
+                        download_url = asset.get("browser_download_url")
+                        break
+
             return {
                 "latest_version": message.get("tag_name"),
                 "release_notes": message.get("body"),
                 "release_url": message.get("html_url"),
+                "browser_download_url": download_url,
             }
+
+    async def update_firmware(
+        self,
+        firmware_url: str | None = None,
+        firmware_bytes: bytes | None = None,
+        filename: str = "firmware.bin",
+    ) -> Mapping[str, Any] | list[Any] | str:
+        """Instruct the device to update its firmware.
+
+        You can either:
+        1. Pass firmware_bytes to perform a multipart upload of a local file.
+        2. Pass firmware_url to tell the device to download the file directly.
+        3. Pass neither to automatically resolve the latest matching binary URL from GitHub.
+        """
+        url = f"{self.url}update"
+
+        # 1. Handle multipart binary upload
+        if firmware_bytes is not None:
+            data = aiohttp.FormData()
+            data.add_field(
+                name="file",
+                value=firmware_bytes,
+                filename=filename,
+                content_type="application/octet-stream",
+            )
+            _LOGGER.debug(
+                "Uploading firmware binary to %s (%d bytes)", url, len(firmware_bytes)
+            )
+            # Rapi is mapped to http request's data kwarg in process_request
+            return await self.process_request(url=url, method="post", rapi=data)
+
+        # 2. Resolve URL from GitHub if not specified
+        if not firmware_url:
+            check_result = await self.firmware_check()
+            if not check_result or not check_result.get("browser_download_url"):
+                raise RuntimeError(
+                    "Could not resolve latest firmware download URL from GitHub."
+                )
+            firmware_url = check_result["browser_download_url"]
+
+        # 3. Post JSON URL payload
+        data = {"url": firmware_url}
+        _LOGGER.debug(
+            "Requesting OpenEVSE to download and update from: %s", firmware_url
+        )
+        return await self.process_request(url=url, method="post", data=data)
 
     async def set_led_brightness(self, level: int) -> None:
         """Set LED brightness level."""
