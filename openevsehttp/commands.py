@@ -447,6 +447,13 @@ class CommandsMixin:
         2. Pass firmware_url to tell the device to download the file directly.
         3. Pass neither to automatically resolve the latest matching binary URL from GitHub.
         """
+        if firmware_bytes is not None and firmware_url is not None:
+            raise ValueError("Cannot specify both firmware_bytes and firmware_url")
+
+        if firmware_url is not None:
+            if not isinstance(firmware_url, str) or not firmware_url.strip():
+                raise ValueError("Invalid firmware_url")
+
         url = f"{self.url}update"
 
         # 1. Handle multipart binary upload
@@ -465,7 +472,7 @@ class CommandsMixin:
             return await self.process_request(url=url, method="post", rapi=form_data)
 
         # 2. Resolve URL from GitHub if not specified
-        if not firmware_url:
+        if firmware_url is None:
             check_result = await self.firmware_check()
             if not check_result or not check_result.get("browser_download_url"):
                 raise RuntimeError(

@@ -1150,3 +1150,25 @@ async def test_update_firmware_auto_missing_buildenv(test_charger, mock_aioclien
         match="Could not resolve latest firmware download URL from GitHub.",
     ):
         await test_charger.update_firmware()
+
+
+async def test_update_firmware_both_provided(test_charger):
+    """Test update_firmware raises ValueError when both bytes and URL are provided."""
+    with pytest.raises(
+        ValueError, match="Cannot specify both firmware_bytes and firmware_url"
+    ):
+        await test_charger.update_firmware(
+            firmware_url="http://url", firmware_bytes=b"bytes"
+        )
+
+
+async def test_update_firmware_url_invalid(test_charger):
+    """Test update_firmware raises ValueError when firmware_url is empty or invalid type."""
+    with pytest.raises(ValueError, match="Invalid firmware_url"):
+        await test_charger.update_firmware(firmware_url="")
+
+    with pytest.raises(ValueError, match="Invalid firmware_url"):
+        await test_charger.update_firmware(firmware_url="   ")
+
+    with pytest.raises(ValueError, match="Invalid firmware_url"):
+        await test_charger.update_firmware(firmware_url=123)  # type: ignore
