@@ -451,8 +451,8 @@ class CommandsMixin:
 
         # 1. Handle multipart binary upload
         if firmware_bytes is not None:
-            data = aiohttp.FormData()
-            data.add_field(
+            form_data = aiohttp.FormData()
+            form_data.add_field(
                 name="file",
                 value=firmware_bytes,
                 filename=filename,
@@ -462,7 +462,7 @@ class CommandsMixin:
                 "Uploading firmware binary to %s (%d bytes)", url, len(firmware_bytes)
             )
             # Rapi is mapped to http request's data kwarg in process_request
-            return await self.process_request(url=url, method="post", rapi=data)
+            return await self.process_request(url=url, method="post", rapi=form_data)
 
         # 2. Resolve URL from GitHub if not specified
         if not firmware_url:
