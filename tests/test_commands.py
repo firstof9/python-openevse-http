@@ -1040,3 +1040,135 @@ async def test_normalize_response(test_charger):
     assert test_charger._normalize_response({"msg": "OK"}) == {"msg": "OK"}
     # Test with string
     assert test_charger._normalize_response("OK") == {"msg": "OK"}
+
+
+# ── update_firmware ──────────────────────────────────────────────────
+
+
+async def test_update_firmware_bytes(test_charger, mock_aioclient, caplog):
+    """Test update_firmware with bytes upload."""
+    mock_aioclient.post(
+        "http://openevse.test.tld/update",
+        status=200,
+        body="OK",
+    )
+    with caplog.at_level(logging.DEBUG):
+        response = await test_charger.update_firmware(firmware_bytes=b"fakebinarydata")
+        assert response == "OK"
+        assert (
+            "Uploading firmware binary to http://openevse.test.tld/update (14 bytes)"
+            in caplog.text
+        )
+
+
+async def test_update_firmware_url(test_charger, mock_aioclient, caplog):
+    """Test update_firmware with a direct URL."""
+    mock_aioclient.post(
+        "http://openevse.test.tld/update",
+        status=200,
+        body='{"msg":"started"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        response = await test_charger.update_firmware(
+            firmware_url="http://github.com/release.bin"
+        )
+        assert response == {"msg": "started"}
+        assert (
+            "Requesting OpenEVSE to download and update from: http://github.com/release.bin"
+            in caplog.text
+        )
+
+
+async def test_update_firmware_auto(test_charger, mock_aioclient, caplog):
+    """Test update_firmware with auto-resolved URL from GitHub."""
+    # Setup config with a buildenv
+    test_charger._config = {"version": "4.0.1", "buildenv": "openevse_esp32-gateway"}
+
+    # Mock GitHub Releases API to return assets matching buildenv
+    github_response = {
+        "tag_name": "v4.1.2",
+        "body": "release notes",
+        "html_url": "https://github.com/OpenEVSE/releases/v4.1.2",
+        "assets": [
+            {
+                "name": "openevse_esp32-gateway.bin",
+                "browser_download_url": "https://github.com/OpenEVSE/releases/download/v4.1.2/openevse_esp32-gateway.bin",
+            },
+            {
+                "name": "other_env.bin",
+                "browser_download_url": "https://github.com/OpenEVSE/releases/download/v4.1.2/other_env.bin",
+            },
+        ],
+    }
+
+    mock_aioclient.get(
+        "https://api.github.com/repos/OpenEVSE/ESP32_WiFi_V4.x/releases/latest",
+        status=200,
+        body=json.dumps(github_response),
+    )
+
+    mock_aioclient.post(
+        "http://openevse.test.tld/update",
+        status=200,
+        body='{"msg":"started"}',
+    )
+
+    with caplog.at_level(logging.DEBUG):
+        response = await test_charger.update_firmware()
+        assert response == {"msg": "started"}
+        assert (
+            "Requesting OpenEVSE to download and update from: https://github.com/OpenEVSE/releases/download/v4.1.2/openevse_esp32-gateway.bin"
+            in caplog.text
+        )
+
+
+async def test_update_firmware_auto_missing_buildenv(test_charger, mock_aioclient):
+    """Test update_firmware raises RuntimeError when buildenv asset is missing."""
+    test_charger._config = {"version": "4.0.1", "buildenv": "openevse_esp32-gateway"}
+
+    # Mock GitHub releases but without the matching gateway asset
+    github_response = {
+        "tag_name": "v4.1.2",
+        "body": "release notes",
+        "html_url": "https://github.com/OpenEVSE/releases/v4.1.2",
+        "assets": [
+            {
+                "name": "other_env.bin",
+                "browser_download_url": "https://github.com/OpenEVSE/releases/download/v4.1.2/other_env.bin",
+            }
+        ],
+    }
+
+    mock_aioclient.get(
+        "https://api.github.com/repos/OpenEVSE/ESP32_WiFi_V4.x/releases/latest",
+        status=200,
+        body=json.dumps(github_response),
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="Could not resolve latest firmware download URL from GitHub.",
+    ):
+        await test_charger.update_firmware()
+
+
+async def test_update_firmware_both_provided(test_charger):
+    """Test update_firmware raises ValueError when both bytes and URL are provided."""
+    with pytest.raises(
+        ValueError, match="Cannot specify both firmware_bytes and firmware_url"
+    ):
+        await test_charger.update_firmware(
+            firmware_url="http://url", firmware_bytes=b"bytes"
+        )
+
+
+async def test_update_firmware_url_invalid(test_charger):
+    """Test update_firmware raises ValueError when firmware_url is empty or invalid type."""
+    with pytest.raises(ValueError, match="Invalid firmware_url"):
+        await test_charger.update_firmware(firmware_url="")
+
+    with pytest.raises(ValueError, match="Invalid firmware_url"):
+        await test_charger.update_firmware(firmware_url="   ")
+
+    with pytest.raises(ValueError, match="Invalid firmware_url"):
+        await test_charger.update_firmware(firmware_url=123)  # type: ignore
