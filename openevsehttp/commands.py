@@ -447,6 +447,10 @@ class CommandsMixin:
         2. Pass firmware_url to tell the device to download the file directly.
         3. Pass neither to automatically resolve the latest matching binary URL from GitHub.
         """
+        if not self._version_check("4.1.7"):
+            _LOGGER.debug("Feature not supported for older firmware.")
+            raise UnsupportedFeature
+
         if firmware_bytes is not None and firmware_url is not None:
             raise ValueError("Cannot specify both firmware_bytes and firmware_url")
 

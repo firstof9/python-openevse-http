@@ -341,7 +341,17 @@ class PropertiesMixin:
     @property
     def ota_update(self) -> bool:
         """Return if an OTA update is active."""
-        return self._status.get("ota_update", False)
+        return bool(self._status.get("ota_update", False))
+
+    @property
+    def ota_progress(self) -> int | None:
+        """Return the progress of the current OTA update."""
+        return self._status.get("ota_progress")
+
+    @property
+    def ota_state(self) -> str | None:
+        """Return the state of the current OTA update."""
+        return self._status.get("ota")
 
     @property
     def manual_override(self) -> bool:

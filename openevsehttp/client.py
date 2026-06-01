@@ -337,6 +337,15 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
             # TODO: update specific endpoints based on _version prefix
             if any(key in keys for key in UPDATE_TRIGGERS):
                 await self.update()
+
+            if "ota" in keys:
+                ota_val = data["ota"]
+                if ota_val == "started":
+                    self._status["ota_update"] = 1
+                elif ota_val in ("completed", "failed"):
+                    self._status["ota_update"] = 0
+                    self._status.pop("ota_progress", None)
+
             self._status.update(data)
 
             if self.callback is not None:

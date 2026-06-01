@@ -1651,3 +1651,24 @@ async def test_update_status_non_mapping_data(caplog):
     with caplog.at_level(logging.WARNING):
         await charger._update_status("data", "not a dict", None)
     assert "Received non-Mapping websocket data: not a dict" in caplog.text
+
+
+async def test_update_status_ota():
+    """Test _update_status with ota websocket events."""
+    charger = OpenEVSE(SERVER_URL)
+    charger._status = {"ota_update": 0}
+
+    # 1. Started event
+    await charger._update_status("data", {"ota": "started"}, None)
+    assert charger.ota_update is True
+    assert charger.ota_state == "started"
+
+    # 2. Progress event
+    await charger._update_status("data", {"ota_progress": 25}, None)
+    assert charger.ota_progress == 25
+
+    # 3. Completed event
+    await charger._update_status("data", {"ota": "completed"}, None)
+    assert charger.ota_update is False
+    assert charger.ota_progress is None
+    assert charger.ota_state == "completed"
