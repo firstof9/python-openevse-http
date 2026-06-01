@@ -344,6 +344,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
                     self._status["ota_update"] = 1
                 elif ota_val in ("completed", "failed"):
                     self._status["ota_update"] = 0
+                    data.pop("ota_progress", None)
                     self._status.pop("ota_progress", None)
 
             self._status.update(data)

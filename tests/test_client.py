@@ -1667,8 +1667,10 @@ async def test_update_status_ota():
     await charger._update_status("data", {"ota_progress": 25}, None)
     assert charger.ota_progress == 25
 
-    # 3. Completed event
-    await charger._update_status("data", {"ota": "completed"}, None)
+    # 3. Completed event (verifying ota_progress is cleared even if present in the data dict)
+    await charger._update_status(
+        "data", {"ota": "completed", "ota_progress": 100}, None
+    )
     assert charger.ota_update is False
     assert charger.ota_progress is None
     assert charger.ota_state == "completed"
