@@ -1186,3 +1186,19 @@ async def test_update_firmware_unsupported(test_charger):
     test_charger._config["version"] = "4.1.2"
     with pytest.raises(UnsupportedFeature):
         await test_charger.update_firmware(firmware_url="http://url")
+
+
+async def test_update_firmware_error_response(test_charger, mock_aioclient):
+    """Test update_firmware doesn't set ota_update on error responses."""
+    test_charger._config["version"] = "4.1.7"
+    test_charger._status = {}
+    mock_aioclient.post(
+        "http://openevse.test.tld/update",
+        status=200,
+        body='{"msg":"error"}',
+    )
+    response = await test_charger.update_firmware(
+        firmware_url="http://github.com/release.bin"
+    )
+    assert response == {"msg": "error"}
+    assert test_charger.ota_update is False

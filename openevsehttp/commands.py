@@ -476,7 +476,12 @@ class CommandsMixin:
             response = await self.process_request(
                 url=url, method="post", rapi=form_data
             )
-            self._status["ota_update"] = 1
+            normalized = self._normalize_response(response)
+            if isinstance(normalized, dict) and (
+                normalized.get("msg") == "started"
+                or normalized.get("msg") in SUCCESS_ANSWERS
+            ):
+                self._status["ota_update"] = 1
             return response
 
         # 2. Resolve URL from GitHub if not specified
@@ -494,7 +499,12 @@ class CommandsMixin:
             "Requesting OpenEVSE to download and update from: %s", firmware_url
         )
         response = await self.process_request(url=url, method="post", data=data)
-        self._status["ota_update"] = 1
+        normalized = self._normalize_response(response)
+        if isinstance(normalized, dict) and (
+            normalized.get("msg") == "started"
+            or normalized.get("msg") in SUCCESS_ANSWERS
+        ):
+            self._status["ota_update"] = 1
         return response
 
     async def set_led_brightness(self, level: int) -> None:
