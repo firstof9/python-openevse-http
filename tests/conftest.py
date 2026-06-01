@@ -1,7 +1,6 @@
 """Provide common pytest fixtures."""
 
 import json
-import re
 from typing import Any, NamedTuple
 from unittest.mock import patch
 
@@ -253,7 +252,6 @@ class MockResponse:
             return self._body.decode(encoding or "utf-8", errors=errors)
         if isinstance(self._body, str):
             return self._body
-        import json
 
         return json.dumps(self._body)
 
@@ -262,13 +260,10 @@ class MockResponse:
             return self._body
         if isinstance(self._body, str):
             return self._body.encode("utf-8")
-        import json
 
         return json.dumps(self._body).encode("utf-8")
 
     async def json(self, *args, **kwargs) -> Any:
-        import json
-
         if isinstance(self._body, bytes):
             return json.loads(self._body.decode("utf-8"))
         if isinstance(self._body, str):
@@ -375,7 +370,7 @@ class AiohttpClientMocker:
                 if mock.url_pattern.match(url_str):
                     matched = True
             elif isinstance(mock.url_pattern, str):
-                if mock.url_pattern == url_str or re.search(mock.url_pattern, url_str):
+                if mock.url_pattern == url_str:
                     matched = True
 
             if matched:
