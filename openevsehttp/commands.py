@@ -46,6 +46,15 @@ class CommandsMixin:
         """Normalize response to a dict or list."""
         raise NotImplementedError
 
+    def _flag_ota_if_started(self, response: Any) -> None:
+        """Flag OTA as active if response indicates firmware update has started."""
+        normalized = self._normalize_response(response)
+        if isinstance(normalized, dict) and (
+            normalized.get("msg") == "started"
+            or normalized.get("msg") in SUCCESS_ANSWERS
+        ):
+            self._status["ota_update"] = 1
+
     async def get_schedule(self) -> Mapping[str, Any] | list[Any]:
         """Return the current schedule."""
         url = f"{self.url}schedule"
@@ -476,12 +485,7 @@ class CommandsMixin:
             response = await self.process_request(
                 url=url, method="post", rapi=form_data
             )
-            normalized = self._normalize_response(response)
-            if isinstance(normalized, dict) and (
-                normalized.get("msg") == "started"
-                or normalized.get("msg") in SUCCESS_ANSWERS
-            ):
-                self._status["ota_update"] = 1
+            self._flag_ota_if_started(response)
             return response
 
         # 2. Resolve URL from GitHub if not specified
@@ -499,12 +503,7 @@ class CommandsMixin:
             "Requesting OpenEVSE to download and update from: %s", firmware_url
         )
         response = await self.process_request(url=url, method="post", data=data)
-        normalized = self._normalize_response(response)
-        if isinstance(normalized, dict) and (
-            normalized.get("msg") == "started"
-            or normalized.get("msg") in SUCCESS_ANSWERS
-        ):
-            self._status["ota_update"] = 1
+        self._flag_ota_if_started(response)
         return response
 
     async def set_led_brightness(self, level: int) -> None:
