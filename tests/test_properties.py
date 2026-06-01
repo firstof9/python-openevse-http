@@ -1040,15 +1040,29 @@ async def test_get_has_limit(fixture, expected, request):
 
 
 @pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
+    "fixture, expected", [("test_charger", False), ("test_charger_v2", False)]
 )
 async def test_get_ota_update(fixture, expected, request):
     """Test ota_update property."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
     status = charger.ota_update
-    assert status == expected
+    assert status is expected
     await charger.ws_disconnect()
+
+
+async def test_ota_properties():
+    """Test ota_progress and ota_state properties."""
+    charger = OpenEVSE(SERVER_URL)
+    charger._status = {"ota_update": 1, "ota_progress": 45, "ota": "started"}
+    assert charger.ota_update is True
+    assert charger.ota_progress == 45
+    assert charger.ota_state == "started"
+
+    charger._status = {"ota_update": 0}
+    assert charger.ota_update is False
+    assert charger.ota_progress is None
+    assert charger.ota_state is None
 
 
 # ── MQTT ────────────────────────────────────────────────────────────

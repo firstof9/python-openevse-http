@@ -1047,6 +1047,7 @@ async def test_normalize_response(test_charger):
 
 async def test_update_firmware_bytes(test_charger, mock_aioclient, caplog):
     """Test update_firmware with bytes upload."""
+    test_charger._config["version"] = "4.1.7"
     mock_aioclient.post(
         "http://openevse.test.tld/update",
         status=200,
@@ -1063,6 +1064,7 @@ async def test_update_firmware_bytes(test_charger, mock_aioclient, caplog):
 
 async def test_update_firmware_url(test_charger, mock_aioclient, caplog):
     """Test update_firmware with a direct URL."""
+    test_charger._config["version"] = "4.1.7"
     mock_aioclient.post(
         "http://openevse.test.tld/update",
         status=200,
@@ -1081,8 +1083,8 @@ async def test_update_firmware_url(test_charger, mock_aioclient, caplog):
 
 async def test_update_firmware_auto(test_charger, mock_aioclient, caplog):
     """Test update_firmware with auto-resolved URL from GitHub."""
-    # Setup config with a buildenv
-    test_charger._config = {"version": "4.0.1", "buildenv": "openevse_esp32-gateway"}
+    # Setup config with a buildenv and version >= 4.1.7
+    test_charger._config = {"version": "4.1.7", "buildenv": "openevse_esp32-gateway"}
 
     # Mock GitHub Releases API to return assets matching buildenv
     github_response = {
@@ -1124,7 +1126,7 @@ async def test_update_firmware_auto(test_charger, mock_aioclient, caplog):
 
 async def test_update_firmware_auto_missing_buildenv(test_charger, mock_aioclient):
     """Test update_firmware raises RuntimeError when buildenv asset is missing."""
-    test_charger._config = {"version": "4.0.1", "buildenv": "openevse_esp32-gateway"}
+    test_charger._config = {"version": "4.1.7", "buildenv": "openevse_esp32-gateway"}
 
     # Mock GitHub releases but without the matching gateway asset
     github_response = {
@@ -1154,6 +1156,7 @@ async def test_update_firmware_auto_missing_buildenv(test_charger, mock_aioclien
 
 async def test_update_firmware_both_provided(test_charger):
     """Test update_firmware raises ValueError when both bytes and URL are provided."""
+    test_charger._config["version"] = "4.1.7"
     with pytest.raises(
         ValueError, match="Cannot specify both firmware_bytes and firmware_url"
     ):
@@ -1164,6 +1167,7 @@ async def test_update_firmware_both_provided(test_charger):
 
 async def test_update_firmware_url_invalid(test_charger):
     """Test update_firmware raises ValueError when firmware_url is empty or invalid type."""
+    test_charger._config["version"] = "4.1.7"
     with pytest.raises(ValueError, match="Invalid firmware_url"):
         await test_charger.update_firmware(firmware_url="")
 
@@ -1172,3 +1176,10 @@ async def test_update_firmware_url_invalid(test_charger):
 
     with pytest.raises(ValueError, match="Invalid firmware_url"):
         await test_charger.update_firmware(firmware_url=123)  # type: ignore
+
+
+async def test_update_firmware_unsupported(test_charger):
+    """Test update_firmware raises UnsupportedFeature on older firmware."""
+    test_charger._config["version"] = "4.1.2"
+    with pytest.raises(UnsupportedFeature):
+        await test_charger.update_firmware(firmware_url="http://url")
