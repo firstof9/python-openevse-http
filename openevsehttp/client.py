@@ -183,12 +183,12 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
             return (False, "")
         return (value["cmd"], value["ret"])
 
-    async def update(self) -> None:
+    async def update(self, force_status: bool = False) -> None:
         """Update the values."""
         # TODO: add addiontal endpoints to update
         urls = [f"{self.url}config"]
 
-        if not self._ws_listening:
+        if not self._ws_listening or force_status or self.ota_update:
             urls = [f"{self.url}status", f"{self.url}config"]
 
         for url in urls:
@@ -196,7 +196,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
             response = await self.process_request(url, method="get")
             if "/status" in url:
                 if isinstance(response, Mapping) and "error" not in response:
-                    self._status = dict(response)
+                    self._status.update(dict(response))
                     _LOGGER.debug("Status update: %s", self._status)
                 elif isinstance(response, Mapping):
                     _LOGGER.warning(

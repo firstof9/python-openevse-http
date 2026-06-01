@@ -39,12 +39,21 @@ class CommandsMixin:
     async def send_command(self, command: str) -> tuple:
         raise NotImplementedError
 
-    async def update(self) -> None:
+    async def update(self, force_status: bool = False) -> None:
         raise NotImplementedError
 
     def _normalize_response(self, response: Any) -> dict[str, Any] | list[Any]:
         """Normalize response to a dict or list."""
         raise NotImplementedError
+
+    def _flag_ota_if_started(self, response: Any) -> None:
+        """Flag OTA as active if response indicates firmware update has started."""
+        normalized = self._normalize_response(response)
+        if isinstance(normalized, dict) and (
+            normalized.get("msg") == "started"
+            or normalized.get("msg") in SUCCESS_ANSWERS
+        ):
+            self._status["ota_update"] = 1
 
     async def get_schedule(self) -> Mapping[str, Any] | list[Any]:
         """Return the current schedule."""
@@ -473,7 +482,11 @@ class CommandsMixin:
                 "Uploading firmware binary to %s (%d bytes)", url, len(firmware_bytes)
             )
             # Rapi is mapped to http request's data kwarg in process_request
-            return await self.process_request(url=url, method="post", rapi=form_data)
+            response = await self.process_request(
+                url=url, method="post", rapi=form_data
+            )
+            self._flag_ota_if_started(response)
+            return response
 
         # 2. Resolve URL from GitHub if not specified
         if firmware_url is None:
@@ -489,7 +502,9 @@ class CommandsMixin:
         _LOGGER.debug(
             "Requesting OpenEVSE to download and update from: %s", firmware_url
         )
-        return await self.process_request(url=url, method="post", data=data)
+        response = await self.process_request(url=url, method="post", data=data)
+        self._flag_ota_if_started(response)
+        return response
 
     async def set_led_brightness(self, level: int) -> None:
         """Set LED brightness level."""

@@ -1060,6 +1060,7 @@ async def test_update_firmware_bytes(test_charger, mock_aioclient, caplog):
             "Uploading firmware binary to http://openevse.test.tld/update (14 bytes)"
             in caplog.text
         )
+        assert test_charger.ota_update is True
 
 
 async def test_update_firmware_url(test_charger, mock_aioclient, caplog):
@@ -1079,6 +1080,7 @@ async def test_update_firmware_url(test_charger, mock_aioclient, caplog):
             "Requesting OpenEVSE to download and update from: http://github.com/release.bin"
             in caplog.text
         )
+        assert test_charger.ota_update is True
 
 
 async def test_update_firmware_auto(test_charger, mock_aioclient, caplog):
@@ -1122,6 +1124,7 @@ async def test_update_firmware_auto(test_charger, mock_aioclient, caplog):
             "Requesting OpenEVSE to download and update from: https://github.com/OpenEVSE/releases/download/v4.1.2/openevse_esp32-gateway.bin"
             in caplog.text
         )
+        assert test_charger.ota_update is True
 
 
 async def test_update_firmware_auto_missing_buildenv(test_charger, mock_aioclient):
@@ -1183,3 +1186,19 @@ async def test_update_firmware_unsupported(test_charger):
     test_charger._config["version"] = "4.1.2"
     with pytest.raises(UnsupportedFeature):
         await test_charger.update_firmware(firmware_url="http://url")
+
+
+async def test_update_firmware_error_response(test_charger, mock_aioclient):
+    """Test update_firmware doesn't set ota_update on error responses."""
+    test_charger._config["version"] = "4.1.7"
+    test_charger._status = {}
+    mock_aioclient.post(
+        "http://openevse.test.tld/update",
+        status=200,
+        body='{"msg":"error"}',
+    )
+    response = await test_charger.update_firmware(
+        firmware_url="http://github.com/release.bin"
+    )
+    assert response == {"msg": "error"}
+    assert test_charger.ota_update is False
