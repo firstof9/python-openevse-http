@@ -1060,6 +1060,7 @@ async def test_update_firmware_bytes(test_charger, mock_aioclient, caplog):
             "Uploading firmware binary to http://openevse.test.tld/update (14 bytes)"
             in caplog.text
         )
+        assert test_charger.ota_update is True
 
 
 async def test_update_firmware_url(test_charger, mock_aioclient, caplog):
@@ -1079,6 +1080,7 @@ async def test_update_firmware_url(test_charger, mock_aioclient, caplog):
             "Requesting OpenEVSE to download and update from: http://github.com/release.bin"
             in caplog.text
         )
+        assert test_charger.ota_update is True
 
 
 async def test_update_firmware_auto(test_charger, mock_aioclient, caplog):
@@ -1122,6 +1124,7 @@ async def test_update_firmware_auto(test_charger, mock_aioclient, caplog):
             "Requesting OpenEVSE to download and update from: https://github.com/OpenEVSE/releases/download/v4.1.2/openevse_esp32-gateway.bin"
             in caplog.text
         )
+        assert test_charger.ota_update is True
 
 
 async def test_update_firmware_auto_missing_buildenv(test_charger, mock_aioclient):

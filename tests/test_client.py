@@ -117,6 +117,55 @@ async def test_get_status_auth_err(test_charger_auth_err):
         await test_charger_auth_err.update()
 
 
+async def test_update_force_status(mock_aioclient):
+    """Test force_status parameter when ws is listening."""
+    unique_host = "force-status.test.tld"
+    charger = OpenEVSE(unique_host)
+    url_status = f"http://{unique_host}/status"
+    url_config = f"http://{unique_host}/config"
+
+    mock_aioclient.get(
+        url_status,
+        status=200,
+        body='{"state": 2, "wifi_serial": "123"}',
+    )
+    mock_aioclient.get(
+        url_config,
+        status=200,
+        body='{"wifi_serial": "123", "version": "4.0.1"}',
+    )
+    charger._ws_listening = True
+    charger._status = {"transient_key": "preserved"}
+    await charger.update(force_status=True)
+    assert charger._status["state"] == 2
+    assert charger._status["transient_key"] == "preserved"
+
+
+async def test_update_ota_active(mock_aioclient):
+    """Test automatic status polling when ota_update is active."""
+    unique_host = "ota-active.test.tld"
+    charger = OpenEVSE(unique_host)
+    url_status = f"http://{unique_host}/status"
+    url_config = f"http://{unique_host}/config"
+
+    mock_aioclient.get(
+        url_status,
+        status=200,
+        body='{"state": 2, "ota_update": 1}',
+    )
+    mock_aioclient.get(
+        url_config,
+        status=200,
+        body='{"wifi_serial": "123", "version": "4.0.1"}',
+    )
+    charger._ws_listening = True
+    charger._status = {"ota_update": 1, "ota_progress": 50}
+    await charger.update()
+    assert charger._status["state"] == 2
+    assert charger._status["ota_progress"] == 50
+    assert charger.ota_update is True
+
+
 # ── send_command ──────────────────────────────────────────────────────
 
 

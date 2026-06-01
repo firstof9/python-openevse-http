@@ -39,7 +39,7 @@ class CommandsMixin:
     async def send_command(self, command: str) -> tuple:
         raise NotImplementedError
 
-    async def update(self) -> None:
+    async def update(self, force_status: bool = False) -> None:
         raise NotImplementedError
 
     def _normalize_response(self, response: Any) -> dict[str, Any] | list[Any]:
@@ -473,7 +473,11 @@ class CommandsMixin:
                 "Uploading firmware binary to %s (%d bytes)", url, len(firmware_bytes)
             )
             # Rapi is mapped to http request's data kwarg in process_request
-            return await self.process_request(url=url, method="post", rapi=form_data)
+            response = await self.process_request(
+                url=url, method="post", rapi=form_data
+            )
+            self._status["ota_update"] = 1
+            return response
 
         # 2. Resolve URL from GitHub if not specified
         if firmware_url is None:
@@ -489,7 +493,9 @@ class CommandsMixin:
         _LOGGER.debug(
             "Requesting OpenEVSE to download and update from: %s", firmware_url
         )
-        return await self.process_request(url=url, method="post", data=data)
+        response = await self.process_request(url=url, method="post", data=data)
+        self._status["ota_update"] = 1
+        return response
 
     async def set_led_brightness(self, level: int) -> None:
         """Set LED brightness level."""
