@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Mapping
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, cast
 
 from .const import MAX_AMPS, MIN_AMPS, states
 from .exceptions import UnsupportedFeature
@@ -17,8 +17,8 @@ _LOGGER = logging.getLogger(__name__)
 class PropertiesMixin:
     """Mixin providing all @property accessors for OpenEVSE."""
 
-    _status: dict
-    _config: dict
+    _status: dict[str, Any]
+    _config: dict[str, Any]
 
     # These are used by properties but defined in client.py
     def _version_check(self, min_version: str, max_version: str = "") -> bool:
@@ -125,15 +125,15 @@ class PropertiesMixin:
     @property
     def max_current(self) -> int | None:
         """Return the max current."""
-        return self._status.get("max_current", None)
+        return cast(int | None, self._status.get("max_current", None))
 
     @property
     def wifi_firmware(self) -> str | None:
         """Return the ESP firmware version."""
         value = self._config.get("version")
-        if value is not None:
-            value = normalize_version(value)
-        return value
+        if value is None:
+            return None
+        return normalize_version(value)
 
     @property
     def ip_address(self) -> str | None:
@@ -303,27 +303,30 @@ class PropertiesMixin:
     @property
     def total_day(self) -> float | None:
         """Get the total day energy usage."""
-        return self._status.get("total_day", None)
+        return cast(float | None, self._status.get("total_day", None))
 
     @property
     def total_week(self) -> float | None:
         """Get the total week energy usage."""
-        return self._status.get("total_week", None)
+        return cast(float | None, self._status.get("total_week", None))
 
     @property
     def total_month(self) -> float | None:
         """Get the total month energy usage."""
-        return self._status.get("total_month", None)
+        return cast(float | None, self._status.get("total_month", None))
 
     @property
     def total_year(self) -> float | None:
         """Get the total year energy usage."""
-        return self._status.get("total_year", None)
+        return cast(float | None, self._status.get("total_year", None))
 
     @property
     def has_limit(self) -> bool | None:
         """Return if a limit has been set."""
-        return self._status.get("has_limit", self._status.get("limit", None))
+        return cast(
+            "bool | None",
+            self._status.get("has_limit", self._status.get("limit", None)),
+        )
 
     @property
     def protocol_version(self) -> str | None:
@@ -336,7 +339,7 @@ class PropertiesMixin:
     @property
     def vehicle(self) -> bool:
         """Return if a vehicle is connected to the EVSE."""
-        return self._status.get("vehicle", False)
+        return bool(self._status.get("vehicle", False))
 
     @property
     def ota_update(self) -> bool:
@@ -356,7 +359,7 @@ class PropertiesMixin:
     @property
     def manual_override(self) -> bool:
         """Return if Manual Override is set."""
-        return self._status.get("manual_override", False)
+        return bool(self._status.get("manual_override", False))
 
     @property
     def divertmode(self) -> str:
@@ -394,7 +397,7 @@ class PropertiesMixin:
     @property
     def wifi_serial(self) -> str | None:
         """Return wifi serial."""
-        return self._config.get("wifi_serial", None)
+        return cast(str | None, self._config.get("wifi_serial", None))
 
     @property
     def charging_power(self) -> float | None:
@@ -415,12 +418,12 @@ class PropertiesMixin:
     @property
     def shaper_active(self) -> bool | None:
         """Return if shaper is active."""
-        return self._status.get("shaper", None)
+        return cast(bool | None, self._status.get("shaper", None))
 
     @property
     def shaper_live_power(self) -> int | None:
         """Return shaper live power reading."""
-        return self._status.get("shaper_live_pwr", None)
+        return cast(int | None, self._status.get("shaper_live_pwr", None))
 
     @property
     def shaper_available_current(self) -> float | None:
@@ -433,7 +436,7 @@ class PropertiesMixin:
     @property
     def shaper_max_power(self) -> int | None:
         """Return shaper live power reading."""
-        return self._status.get("shaper_max_pwr", None)
+        return cast(int | None, self._status.get("shaper_max_pwr", None))
 
     @property
     def shaper_updated(self) -> bool:
@@ -444,13 +447,17 @@ class PropertiesMixin:
     @property
     def vehicle_soc(self) -> int | None:
         """Return battery level."""
-        return self._status.get("vehicle_soc", self._status.get("battery_level", None))
+        return cast(
+            "int | None",
+            self._status.get("vehicle_soc", self._status.get("battery_level", None)),
+        )
 
     @property
     def vehicle_range(self) -> int | None:
         """Return battery range."""
-        return self._status.get(
-            "vehicle_range", self._status.get("battery_range", None)
+        return cast(
+            "int | None",
+            self._status.get("vehicle_range", self._status.get("battery_range", None)),
         )
 
     @property
@@ -472,12 +479,12 @@ class PropertiesMixin:
     @property
     def min_amps(self) -> int:
         """Return the minimum amps."""
-        return self._config.get("min_current_hard", MIN_AMPS)
+        return int(self._config.get("min_current_hard", MIN_AMPS))
 
     @property
     def max_amps(self) -> int:
         """Return the maximum amps."""
-        return self._config.get("max_current_hard", MAX_AMPS)
+        return int(self._config.get("max_current_hard", MAX_AMPS))
 
     @property
     def mqtt_connected(self) -> bool:
@@ -487,29 +494,29 @@ class PropertiesMixin:
     @property
     def emoncms_connected(self) -> bool | None:
         """Return the status of the emoncms connection."""
-        return self._status.get("emoncms_connected", None)
+        return cast(bool | None, self._status.get("emoncms_connected", None))
 
     @property
     def ocpp_connected(self) -> bool | None:
         """Return the status of the ocpp connection."""
-        return self._status.get("ocpp_connected", None)
+        return cast(bool | None, self._status.get("ocpp_connected", None))
 
     @property
     def uptime(self) -> int | None:
         """Return the unit uptime."""
-        return self._status.get("uptime", None)
+        return cast(int | None, self._status.get("uptime", None))
 
     @property
     def freeram(self) -> int | None:
         """Return the unit freeram."""
-        return self._status.get("freeram", None)
+        return cast(int | None, self._status.get("freeram", None))
 
     # Safety counts
     @property
-    def checks_count(self) -> dict:
+    def checks_count(self) -> dict[str, Any]:
         """Return the safety checks counts."""
         attributes = ("gfcicount", "nogndcount", "stuckcount")
-        counts = {}
+        counts: dict[str, Any] = {}
         if self._status is not None and set(attributes).issubset(self._status.keys()):
             counts["gfcicount"] = self._status["gfcicount"]
             counts["nogndcount"] = self._status["nogndcount"]
@@ -534,4 +541,4 @@ class PropertiesMixin:
         if not self._version_check("4.2.2"):
             _LOGGER.debug("Feature not supported for older firmware.")
             raise UnsupportedFeature
-        return self._status.get("power", 0)
+        return int(self._status.get("power", 0))

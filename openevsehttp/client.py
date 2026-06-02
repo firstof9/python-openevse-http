@@ -7,10 +7,10 @@ import inspect
 import json
 import logging
 import threading
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, MutableMapping
 from typing import Any
 
-import aiohttp  # type: ignore
+import aiohttp
 from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
 from awesomeversion import AwesomeVersion
 from awesomeversion.exceptions import AwesomeVersionCompareException
@@ -56,15 +56,15 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
         self._user = user
         self._pwd = pwd
         self.url = f"http://{host}/"
-        self._status: dict = {}
-        self._config: dict = {}
-        self._override = None
+        self._status: dict[str, Any] = {}
+        self._config: dict[str, Any] = {}
+        self._override: Any = None
         self._ws_listening = False
         self.websocket: OpenEVSEWebsocket | None = None
-        self.callback: Callable | None = None
+        self.callback: Callable[[], Any] | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
-        self._ws_listen_task: asyncio.Task | None = None
-        self._ws_keepalive_task: asyncio.Task | None = None
+        self._ws_listen_task: asyncio.Task[Any] | None = None
+        self._ws_keepalive_task: asyncio.Task[Any] | None = None
         self._owns_loop = False
         self._loop_thread: threading.Thread | None = None
         self._session = session
@@ -76,7 +76,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
         method: str = "",
         data: Any = None,
         rapi: Any = None,
-    ) -> Mapping[str, Any] | list[Any] | str:
+    ) -> Mapping[str, Any] | list[Any] | str | bool:
         """Return result of processed HTTP request."""
         auth = None
         allowed_methods = ["get", "post", "put", "delete", "patch", "head", "options"]
@@ -112,7 +112,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
         data: Any,
         rapi: Any,
         auth: Any,
-    ) -> Mapping[str, Any] | list[Any] | str:
+    ) -> Mapping[str, Any] | list[Any] | str | bool:
         """Process a request with a given session."""
         if not hasattr(session, method):
             raise MissingMethod
@@ -130,38 +130,51 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
                 kwargs["json"] = data
             async with http_method(url, **kwargs) as resp:
                 try:
-                    message = await resp.text()
+                    raw = await resp.text()
                 except UnicodeDecodeError:
                     _LOGGER.debug("Decoding error")
-                    message = await resp.read()
-                    message = message.decode(errors="replace")
+                    raw = (await resp.read()).decode(errors="replace")
 
+                # JSON responses can sometimes be primitive values (like bools).
+                # If json.loads fails with ValueError (e.g. non-JSON text/html),
+                # we fall back to treating the raw response as a string.
+                response_content: Mapping[str, Any] | list[Any] | str | bool = raw
                 try:
-                    message = json.loads(message)
+                    response_content = json.loads(raw)
                 except ValueError:
-                    _LOGGER.debug("Non JSON response: %s", message)
+                    _LOGGER.debug("Non JSON response: %s", raw)
+                if not isinstance(response_content, dict | list | str | bool):
+                    _LOGGER.error(
+                        "Unexpected JSON primitive response from %s: %r",
+                        url,
+                        response_content,
+                    )
+                    raise ParseJSONError
 
                 if resp.status == 400:
-                    if isinstance(message, dict) and "msg" in message:
-                        _LOGGER.error("Error 400: %s", message["msg"])
-                    elif isinstance(message, dict) and "error" in message:
-                        _LOGGER.error("Error 400: %s", message["error"])
+                    if isinstance(response_content, dict) and "msg" in response_content:
+                        _LOGGER.error("Error 400: %s", response_content["msg"])
+                    elif (
+                        isinstance(response_content, dict)
+                        and "error" in response_content
+                    ):
+                        _LOGGER.error("Error 400: %s", response_content["error"])
                     else:
-                        _LOGGER.error("Error 400: %s", message)
+                        _LOGGER.error("Error 400: %s", response_content)
                     raise ParseJSONError
                 if resp.status == 401:
-                    _LOGGER.error("Authentication error: %s", message)
+                    _LOGGER.error("Authentication error: %s", response_content)
                     raise AuthenticationError
                 if resp.status in [404, 405, 500]:
-                    _LOGGER.warning("%s", message)
+                    _LOGGER.warning("%s", response_content)
 
                 if (
                     method.lower() != "get"
-                    and isinstance(message, dict)
-                    and any(key in message for key in UPDATE_TRIGGERS)
+                    and isinstance(response_content, dict)
+                    and any(key in response_content for key in UPDATE_TRIGGERS)
                 ):
                     await self.update()
-                return message
+                return response_content
 
         except (TimeoutError, ServerTimeoutError):
             _LOGGER.error("%s: %s", ERROR_TIMEOUT, url)
@@ -170,7 +183,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
             _LOGGER.error("Content error: %s", err.message)
             raise
 
-    async def send_command(self, command: str) -> tuple:
+    async def send_command(self, command: str) -> tuple[Any, Any]:
         """Send a RAPI command to the charger and parses the response."""
         url = f"{self.url}r"
         data = {"json": 1, "rapi": command}
@@ -220,13 +233,13 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
                         "Received non-JSON response from /config: %s", response
                     )
 
-    async def test_and_get(self) -> dict:
+    async def test_and_get(self) -> dict[str, Any]:
         """Test connection.
 
         Return model serial number as dict
         """
         url = f"{self.url}config"
-        data = {}
+        data: dict[str, Any] = {}
 
         response = await self.process_request(url, method="get")
         if not isinstance(response, Mapping):
@@ -276,7 +289,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
 
         self._start_listening()
 
-    def _start_listening(self):
+    def _start_listening(self) -> None:
         """Start the websocket listener."""
         if not self._loop:
             try:
@@ -300,7 +313,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
                 )
                 self._loop_thread.start()
 
-    async def _update_status(self, msgtype, data, error):
+    async def _update_status(self, msgtype: str, data: Any, error: Any) -> None:
         """Update data from websocket listener."""
         if msgtype == SIGNAL_CONNECTION_STATE:
             uri = self.websocket.uri if self.websocket else "Unknown"
@@ -316,18 +329,18 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
                 self._ws_listening = False
 
             # Stopped websockets without errors are expected during shutdown
-            # and ignored
-            elif data == STATE_STOPPED and error:
-                _LOGGER.debug(
-                    "Websocket to %s failed, aborting [Error: %s]",
-                    uri,
-                    error,
-                )
+            elif data == STATE_STOPPED:
+                if error:
+                    _LOGGER.debug(
+                        "Websocket to %s failed, aborting [Error: %s]",
+                        uri,
+                        error,
+                    )
                 self._ws_listening = False
 
         elif msgtype == "data":
             _LOGGER.debug("Websocket data: %s", data)
-            if not isinstance(data, Mapping):
+            if not isinstance(data, MutableMapping):
                 _LOGGER.warning("Received non-Mapping websocket data: %s", data)
                 return
 
@@ -354,7 +367,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
                 if inspect.isawaitable(result):
                     await result
 
-    async def _shutdown(self):
+    async def _shutdown(self) -> None:
         """Shutdown the websocket and tasks on the listener loop."""
         tasks = []
         if self._ws_keepalive_task:
@@ -417,7 +430,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
             # Standard async disconnect for caller loop
             await self._shutdown()
 
-    def is_coroutine_function(self, callback):
+    def is_coroutine_function(self, callback: Any) -> bool:
         """Check if a callback is a coroutine function."""
         return inspect.iscoroutinefunction(callback)
 
@@ -428,7 +441,13 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
             return STATE_STOPPED
         return self.websocket.state
 
-    async def repeat(self, interval, func, *args, **kwargs):
+    async def repeat(
+        self,
+        interval: float,
+        func: Callable[..., Any],
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
         """Run func every interval seconds.
 
         If func has not finished before *interval*, will run again
@@ -436,10 +455,12 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
 
         *args and **kwargs are passed as the arguments to func.
         """
-        while self.ws_state != STATE_STOPPED and self._ws_listening:
+        while self.ws_state != STATE_STOPPED:
             await asyncio.sleep(interval)
-            if self.ws_state == STATE_STOPPED or not self._ws_listening:
+            if self.ws_state == STATE_STOPPED:
                 break
+            if not self._ws_listening:
+                continue
             result = func(*args, **kwargs)
             if inspect.isawaitable(result):
                 await result

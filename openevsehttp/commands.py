@@ -7,7 +7,7 @@ import logging
 from collections.abc import Mapping
 from typing import Any
 
-import aiohttp  # type: ignore
+import aiohttp
 from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
 from awesomeversion import AwesomeVersion
 from awesomeversion.exceptions import AwesomeVersionCompareException
@@ -23,8 +23,8 @@ class CommandsMixin:
     """Mixin providing command methods for OpenEVSE."""
 
     url: str
-    _status: dict
-    _config: dict
+    _status: dict[str, Any]
+    _config: dict[str, Any]
     _session: Any
 
     # These are defined in client.py
@@ -33,10 +33,10 @@ class CommandsMixin:
 
     async def process_request(
         self, url: str, method: str = "", data: Any = None, rapi: Any = None
-    ) -> Mapping[str, Any] | list[Any] | str:
+    ) -> Mapping[str, Any] | list[Any] | str | bool:
         raise NotImplementedError
 
-    async def send_command(self, command: str) -> tuple:
+    async def send_command(self, command: str) -> tuple[Any, Any]:
         raise NotImplementedError
 
     async def update(self, force_status: bool = False) -> None:
@@ -382,7 +382,7 @@ class CommandsMixin:
         _LOGGER.debug("EVSE Restart response: %s", response)
 
     # Firmware version
-    async def firmware_check(self) -> dict | None:
+    async def firmware_check(self) -> dict[str, Any] | None:
         """Return the latest firmware version."""
         if "version" not in self._config:
             # Throw warning if we can't find the version
@@ -426,7 +426,7 @@ class CommandsMixin:
 
     async def _firmware_check_with_session(
         self, session: aiohttp.ClientSession, url: str, method: str
-    ) -> dict | None:
+    ) -> dict[str, Any] | None:
         """Process a firmware check request with a given session."""
         http_method = getattr(session, method)
         _LOGGER.debug(
@@ -504,7 +504,7 @@ class CommandsMixin:
         firmware_url: str | None = None,
         firmware_bytes: bytes | None = None,
         filename: str = "firmware.bin",
-    ) -> Mapping[str, Any] | list[Any] | str:
+    ) -> Mapping[str, Any] | list[Any] | str | bool:
         """Instruct the device to update its firmware.
 
         You can either:
