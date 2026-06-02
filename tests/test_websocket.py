@@ -289,37 +289,8 @@ async def test_keepalive_send_exceptions(ws_client_auth):
 
 
 @pytest.mark.asyncio
-async def test_state_setter_threadsafe_fallback(ws_client):
-    """Test state setter falls back to call_soon_threadsafe on RuntimeError."""
-    mock_loop = MagicMock()
-    ws_client._error_reason = "Previous Error"
-
-    with (
-        patch("asyncio.ensure_future", side_effect=RuntimeError("No running loop")),
-        patch("asyncio.get_event_loop", return_value=mock_loop),
-    ):
-        ws_client.state = STATE_CONNECTED
-        assert ws_client.state == STATE_CONNECTED
-
-        mock_loop.call_soon_threadsafe.assert_called_once()
-
-        args, _ = mock_loop.call_soon_threadsafe.call_args
-        assert args[0] == ws_client._schedule_task
-        # Cover _schedule_task by manual invocation
-        with patch("asyncio.ensure_future") as mock_ct:
-            task = mock_ct.return_value
-            args[0](args[1])
-            mock_ct.assert_called_once_with(args[1])
-            assert task in ws_client._tasks
-            # Trigger cleanup
-            mock_ct.call_args[0][0].close()  # close mock coro to avoid warning
-            # Manually trigger the done callback to cover discard
-            task.add_done_callback.call_args[0][0](task)
-            assert task not in ws_client._tasks
-
-        assert ws_client._error_reason is None
-
-    # Test state setter without callback coverage
+async def test_state_setter_no_callback(ws_client):
+    """Test state setter without callback coverage."""
     ws_client.callback = None
     ws_client.state = STATE_STOPPED
     assert ws_client.state == STATE_STOPPED
@@ -339,14 +310,13 @@ async def test_websocket_sync_callback(ws_client):
 
 @pytest.mark.asyncio
 async def test_websocket_schedule_failure_sync(ws_client, mock_callback):
-    """Test state setter handles RuntimeError during call_soon_threadsafe."""
+    """Test state setter handles RuntimeError during scheduling."""
     # Use AsyncMock to ensure it's awaitable and triggers the try...except block
     async_mock = AsyncMock()
 
-    # Trigger RuntimeError in both create_task and get_event_loop/call_soon_threadsafe
+    # Trigger RuntimeError in create_task
     with (
         patch("asyncio.ensure_future", side_effect=RuntimeError("No loop")),
-        patch("asyncio.get_event_loop", side_effect=RuntimeError("Loop closed")),
         patch("openevsehttp.websocket._LOGGER") as mock_logger,
     ):
         ws_client.callback = async_mock

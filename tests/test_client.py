@@ -742,15 +742,30 @@ async def test_repeat():
     """Test repeat helper."""
     charger = OpenEVSE(SERVER_URL)
     charger.websocket = MagicMock()
-    charger._ws_listening = True
-    # Mock ws_state to stop after one iteration
+    charger._ws_listening = False
+    # Mock ws_state to stop after second iteration (one continue, one run)
     with patch(
         "openevsehttp.__main__.OpenEVSE.ws_state", new_callable=PropertyMock
     ) as mock_state:
-        mock_state.side_effect = ["connected", "connected", "stopped", "stopped"]
+        mock_state.side_effect = [
+            "connected",
+            "connected",
+            "connected",
+            "connected",
+            "stopped",
+            "stopped",
+        ]
 
         mock_func = AsyncMock()
-        with patch("asyncio.sleep", AsyncMock()):
+        sleep_count = 0
+
+        async def mock_sleep(interval):
+            nonlocal sleep_count
+            sleep_count += 1
+            if sleep_count > 1:
+                charger._ws_listening = True
+
+        with patch("asyncio.sleep", side_effect=mock_sleep):
             await charger.repeat(1, mock_func, "test")
             mock_func.assert_called_once_with("test")
 
@@ -1725,13 +1740,14 @@ async def test_update_status_ota():
     assert charger.ota_state == "completed"
 
 
-async def test_process_request_invalid_json_primitive(mock_aioclient):
+@pytest.mark.parametrize("body", ["123", "false", "null"])
+async def test_process_request_invalid_json_primitive(mock_aioclient, body):
     """Test process_request with an unexpected JSON primitive (e.g., bool or int)."""
     charger = OpenEVSE(SERVER_URL)
     mock_aioclient.get(
         TEST_URL_STATUS,
         status=200,
-        body="123",
+        body=body,
     )
     with pytest.raises(ParseJSONError):
         await charger.process_request(TEST_URL_STATUS, method="get")

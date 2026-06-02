@@ -80,14 +80,9 @@ class OpenEVSEWebsocket:
             if self._listener_loop:
                 self._listener_loop.call_soon_threadsafe(self._schedule_task, coro)
             else:
-                try:
-                    task = asyncio.ensure_future(coro)
-                    self._tasks.add(task)
-                    task.add_done_callback(self._tasks.discard)
-                except RuntimeError:
-                    # Fallback to get_event_loop if ensure_future fails and no _listener_loop
-                    loop = asyncio.get_event_loop()
-                    loop.call_soon_threadsafe(self._schedule_task, coro)
+                task = asyncio.ensure_future(coro)
+                self._tasks.add(task)
+                task.add_done_callback(self._tasks.discard)
         except RuntimeError:
             _LOGGER.error("Failed to schedule callback from sync context: %s", coro)
             if hasattr(coro, "close"):

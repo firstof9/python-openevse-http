@@ -125,7 +125,7 @@ class PropertiesMixin:
     @property
     def max_current(self) -> int | None:
         """Return the max current."""
-        return cast("int | None", self._status.get("max_current", None))
+        return cast(int | None, self._status.get("max_current", None))
 
     @property
     def wifi_firmware(self) -> str | None:
@@ -303,22 +303,22 @@ class PropertiesMixin:
     @property
     def total_day(self) -> float | None:
         """Get the total day energy usage."""
-        return cast("float | None", self._status.get("total_day", None))
+        return cast(float | None, self._status.get("total_day", None))
 
     @property
     def total_week(self) -> float | None:
         """Get the total week energy usage."""
-        return cast("float | None", self._status.get("total_week", None))
+        return cast(float | None, self._status.get("total_week", None))
 
     @property
     def total_month(self) -> float | None:
         """Get the total month energy usage."""
-        return cast("float | None", self._status.get("total_month", None))
+        return cast(float | None, self._status.get("total_month", None))
 
     @property
     def total_year(self) -> float | None:
         """Get the total year energy usage."""
-        return cast("float | None", self._status.get("total_year", None))
+        return cast(float | None, self._status.get("total_year", None))
 
     @property
     def has_limit(self) -> bool | None:
@@ -397,7 +397,7 @@ class PropertiesMixin:
     @property
     def wifi_serial(self) -> str | None:
         """Return wifi serial."""
-        return cast("str | None", self._config.get("wifi_serial", None))
+        return cast(str | None, self._config.get("wifi_serial", None))
 
     @property
     def charging_power(self) -> float | None:
@@ -418,12 +418,12 @@ class PropertiesMixin:
     @property
     def shaper_active(self) -> bool | None:
         """Return if shaper is active."""
-        return cast("bool | None", self._status.get("shaper", None))
+        return cast(bool | None, self._status.get("shaper", None))
 
     @property
     def shaper_live_power(self) -> int | None:
         """Return shaper live power reading."""
-        return cast("int | None", self._status.get("shaper_live_pwr", None))
+        return cast(int | None, self._status.get("shaper_live_pwr", None))
 
     @property
     def shaper_available_current(self) -> float | None:
@@ -436,7 +436,7 @@ class PropertiesMixin:
     @property
     def shaper_max_power(self) -> int | None:
         """Return shaper live power reading."""
-        return cast("int | None", self._status.get("shaper_max_pwr", None))
+        return cast(int | None, self._status.get("shaper_max_pwr", None))
 
     @property
     def shaper_updated(self) -> bool:
@@ -494,22 +494,22 @@ class PropertiesMixin:
     @property
     def emoncms_connected(self) -> bool | None:
         """Return the status of the emoncms connection."""
-        return cast("bool | None", self._status.get("emoncms_connected", None))
+        return cast(bool | None, self._status.get("emoncms_connected", None))
 
     @property
     def ocpp_connected(self) -> bool | None:
         """Return the status of the ocpp connection."""
-        return cast("bool | None", self._status.get("ocpp_connected", None))
+        return cast(bool | None, self._status.get("ocpp_connected", None))
 
     @property
     def uptime(self) -> int | None:
         """Return the unit uptime."""
-        return cast("int | None", self._status.get("uptime", None))
+        return cast(int | None, self._status.get("uptime", None))
 
     @property
     def freeram(self) -> int | None:
         """Return the unit freeram."""
-        return cast("int | None", self._status.get("freeram", None))
+        return cast(int | None, self._status.get("freeram", None))
 
     # Safety counts
     @property
