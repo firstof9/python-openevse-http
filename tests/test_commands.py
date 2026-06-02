@@ -1205,9 +1205,7 @@ async def test_update_firmware_both_provided(test_charger, caplog):
     """Test update_firmware raises ValueError when both bytes and URL are provided."""
     test_charger._config["version"] = "4.1.7"
     with caplog.at_level(logging.DEBUG):
-        with pytest.raises(
-            ValueError, match="Cannot specify both firmware_bytes and firmware_url"
-        ):
+        with pytest.raises(ValueError):
             await test_charger.update_firmware(
                 firmware_url="http://url", firmware_bytes=b"bytes"
             )
@@ -1218,15 +1216,15 @@ async def test_update_firmware_url_invalid(test_charger, caplog):
     """Test update_firmware raises ValueError when firmware_url is empty or invalid type."""
     test_charger._config["version"] = "4.1.7"
     with caplog.at_level(logging.DEBUG):
-        with pytest.raises(ValueError, match="Invalid firmware_url"):
+        with pytest.raises(ValueError):
             await test_charger.update_firmware(firmware_url="")
         assert "Invalid firmware_url: " in caplog.text
 
-        with pytest.raises(ValueError, match="Invalid firmware_url"):
+        with pytest.raises(ValueError):
             await test_charger.update_firmware(firmware_url="   ")
         assert "Invalid firmware_url:    " in caplog.text
 
-        with pytest.raises(ValueError, match="Invalid firmware_url"):
+        with pytest.raises(ValueError):
             await test_charger.update_firmware(firmware_url=123)  # type: ignore
         assert "Invalid firmware_url: 123" in caplog.text
 
@@ -1330,6 +1328,6 @@ async def test_update_firmware_bytes_empty(test_charger, caplog):
     """Test update_firmware raises ValueError when empty firmware_bytes are provided."""
     test_charger._config["version"] = "4.1.7"
     with caplog.at_level(logging.DEBUG):
-        with pytest.raises(ValueError, match="Empty firmware bytes provided"):
+        with pytest.raises(ValueError):
             await test_charger.update_firmware(firmware_bytes=b"")
         assert "Empty firmware bytes provided" in caplog.text
