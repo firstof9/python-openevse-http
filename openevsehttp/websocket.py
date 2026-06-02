@@ -1,9 +1,13 @@
 """Websocket class for OpenEVSE HTTP."""
 
+from __future__ import annotations
+
 import asyncio
 import datetime
 import inspect
 import logging
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 import aiohttp
 
@@ -28,12 +32,12 @@ class OpenEVSEWebsocket:
 
     def __init__(
         self,
-        server,
-        callback,
-        user=None,
-        password=None,
+        server: str,
+        callback: Callable[[str, Any, Any], Any] | None,
+        user: str | None = None,
+        password: str | None = None,
         session: aiohttp.ClientSession | None = None,
-    ):
+    ) -> None:
         """Initialize a OpenEVSEWebsocket instance."""
         self.session = session
         self._session_external = session is not None
@@ -43,20 +47,20 @@ class OpenEVSEWebsocket:
         self.callback = callback
         self._state = STATE_DISCONNECTED
         self.failed_attempts = 0
-        self._error_reason = None
-        self._client = None
-        self._ping = None
-        self._pong = None
-        self._tasks: set[asyncio.Task] = set()
+        self._error_reason: Any = None
+        self._client: aiohttp.ClientWebSocketResponse | None = None
+        self._ping: datetime.datetime | None = None
+        self._pong: datetime.datetime | None = None
+        self._tasks: set[asyncio.Task[Any]] = set()
         self._listener_loop: asyncio.AbstractEventLoop | None = None
 
     @property
-    def state(self):
+    def state(self) -> str:
         """Return the current state."""
         return self._state
 
     @state.setter
-    def state(self, value):
+    def state(self, value: str) -> None:
         """Setter that schedules the callback."""
         self._state = value
         _LOGGER.debug("Websocket %s", value)
@@ -90,7 +94,7 @@ class OpenEVSEWebsocket:
                 coro.close()
         self._error_reason = None
 
-    def _schedule_task(self, coro):
+    def _schedule_task(self, coro: Awaitable[Any]) -> None:
         """Schedule a task from a thread-safe context."""
         try:
             task = asyncio.ensure_future(coro)
@@ -103,7 +107,7 @@ class OpenEVSEWebsocket:
             if hasattr(coro, "close"):
                 coro.close()
 
-    async def _set_state(self, value):
+    async def _set_state(self, value: str) -> None:
         """Async helper to set the state and await the callback."""
         self._state = value
         _LOGGER.debug("Websocket %s", value)
@@ -114,11 +118,11 @@ class OpenEVSEWebsocket:
         self._error_reason = None
 
     @staticmethod
-    def _get_uri(server):
+    def _get_uri(server: str) -> str:
         """Generate the websocket URI."""
         return server[: server.rfind("/")].replace("http", "ws") + "/ws"
 
-    async def running(self):
+    async def running(self) -> None:
         """Open a persistent websocket connection and act on events."""
         await self._ensure_session()
         await self._set_state(STATE_STARTING)
@@ -128,6 +132,7 @@ class OpenEVSEWebsocket:
             auth = aiohttp.BasicAuth(self._user, self._password)
 
         try:
+            assert self.session is not None
             async with self.session.ws_connect(
                 self.uri,
                 heartbeat=15,
@@ -156,7 +161,9 @@ class OpenEVSEWebsocket:
                 await self._client.close()
                 self._client = None
 
-    async def _handle_messages(self, ws_client):
+    async def _handle_messages(
+        self, ws_client: aiohttp.ClientWebSocketResponse
+    ) -> None:
         """Handle incoming websocket messages."""
         async for message in ws_client:
             if self.state == STATE_STOPPED:
@@ -183,7 +190,7 @@ class OpenEVSEWebsocket:
                     _LOGGER.error("Websocket error")
                 break
 
-    async def _handle_response_error(self, error):
+    async def _handle_response_error(self, error: aiohttp.ClientResponseError) -> None:
         """Handle ClientResponseError."""
         if error.status == 401:
             _LOGGER.error("Credentials rejected: %s", error)
@@ -193,7 +200,7 @@ class OpenEVSEWebsocket:
             self._error_reason = error
         await self._set_state(STATE_STOPPED)
 
-    async def _handle_connection_error(self, error):
+    async def _handle_connection_error(self, error: BaseException) -> None:
         """Handle connection errors."""
         self.failed_attempts += 1
         if self.failed_attempts > MAX_FAILED_ATTEMPTS:
@@ -209,7 +216,7 @@ class OpenEVSEWebsocket:
             await self._set_state(STATE_DISCONNECTED)
             await asyncio.sleep(retry_delay)
 
-    async def listen(self):
+    async def listen(self) -> None:
         """Start the listening websocket."""
         await self._ensure_session()
         self.failed_attempts = 0
@@ -220,13 +227,13 @@ class OpenEVSEWebsocket:
         finally:
             self._listener_loop = None
 
-    async def _ensure_session(self):
+    async def _ensure_session(self) -> None:
         """Ensure aiohttp.ClientSession exists."""
         if self.session is None:
             self.session = aiohttp.ClientSession()
             self._session_external = False
 
-    async def close(self):
+    async def close(self) -> None:
         """Close the listening websocket."""
         await self._set_state(STATE_STOPPED)
 
@@ -244,7 +251,7 @@ class OpenEVSEWebsocket:
             await self.session.close()
             self.session = None
 
-    async def keepalive(self):
+    async def keepalive(self) -> None:
         """Send ping requests to websocket."""
         if self._ping and self._pong:
             time_delta = self._pong - self._ping

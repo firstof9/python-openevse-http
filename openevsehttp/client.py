@@ -7,10 +7,10 @@ import inspect
 import json
 import logging
 import threading
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, MutableMapping
 from typing import Any
 
-import aiohttp  # type: ignore
+import aiohttp
 from aiohttp.client_exceptions import ContentTypeError, ServerTimeoutError
 from awesomeversion import AwesomeVersion
 from awesomeversion.exceptions import AwesomeVersionCompareException
@@ -56,15 +56,15 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
         self._user = user
         self._pwd = pwd
         self.url = f"http://{host}/"
-        self._status: dict = {}
-        self._config: dict = {}
-        self._override = None
+        self._status: dict[str, Any] = {}
+        self._config: dict[str, Any] = {}
+        self._override: Any = None
         self._ws_listening = False
         self.websocket: OpenEVSEWebsocket | None = None
-        self.callback: Callable | None = None
+        self.callback: Callable[[], Any] | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
-        self._ws_listen_task: asyncio.Task | None = None
-        self._ws_keepalive_task: asyncio.Task | None = None
+        self._ws_listen_task: asyncio.Task[Any] | None = None
+        self._ws_keepalive_task: asyncio.Task[Any] | None = None
         self._owns_loop = False
         self._loop_thread: threading.Thread | None = None
         self._session = session
@@ -130,16 +130,21 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
                 kwargs["json"] = data
             async with http_method(url, **kwargs) as resp:
                 try:
-                    message = await resp.text()
+                    raw = await resp.text()
                 except UnicodeDecodeError:
                     _LOGGER.debug("Decoding error")
-                    message = await resp.read()
-                    message = message.decode(errors="replace")
+                    raw = (await resp.read()).decode(errors="replace")
 
+                message: Mapping[str, Any] | list[Any] | str = raw
                 try:
-                    message = json.loads(message)
+                    message = json.loads(raw)
                 except ValueError:
-                    _LOGGER.debug("Non JSON response: %s", message)
+                    _LOGGER.debug("Non JSON response: %s", raw)
+                if not isinstance(message, dict | list | str):
+                    _LOGGER.error(
+                        "Unexpected JSON primitive response from %s: %r", url, message
+                    )
+                    raise ParseJSONError
 
                 if resp.status == 400:
                     if isinstance(message, dict) and "msg" in message:
@@ -170,7 +175,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
             _LOGGER.error("Content error: %s", err.message)
             raise
 
-    async def send_command(self, command: str) -> tuple:
+    async def send_command(self, command: str) -> tuple[Any, Any]:
         """Send a RAPI command to the charger and parses the response."""
         url = f"{self.url}r"
         data = {"json": 1, "rapi": command}
@@ -220,13 +225,13 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
                         "Received non-JSON response from /config: %s", response
                     )
 
-    async def test_and_get(self) -> dict:
+    async def test_and_get(self) -> dict[str, Any]:
         """Test connection.
 
         Return model serial number as dict
         """
         url = f"{self.url}config"
-        data = {}
+        data: dict[str, Any] = {}
 
         response = await self.process_request(url, method="get")
         if not isinstance(response, Mapping):
@@ -276,7 +281,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
 
         self._start_listening()
 
-    def _start_listening(self):
+    def _start_listening(self) -> None:
         """Start the websocket listener."""
         if not self._loop:
             try:
@@ -300,7 +305,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
                 )
                 self._loop_thread.start()
 
-    async def _update_status(self, msgtype, data, error):
+    async def _update_status(self, msgtype: str, data: Any, error: Any) -> None:
         """Update data from websocket listener."""
         if msgtype == SIGNAL_CONNECTION_STATE:
             uri = self.websocket.uri if self.websocket else "Unknown"
@@ -327,7 +332,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
 
         elif msgtype == "data":
             _LOGGER.debug("Websocket data: %s", data)
-            if not isinstance(data, Mapping):
+            if not isinstance(data, MutableMapping):
                 _LOGGER.warning("Received non-Mapping websocket data: %s", data)
                 return
 
@@ -354,7 +359,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
                 if inspect.isawaitable(result):
                     await result
 
-    async def _shutdown(self):
+    async def _shutdown(self) -> None:
         """Shutdown the websocket and tasks on the listener loop."""
         tasks = []
         if self._ws_keepalive_task:
@@ -417,7 +422,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
             # Standard async disconnect for caller loop
             await self._shutdown()
 
-    def is_coroutine_function(self, callback):
+    def is_coroutine_function(self, callback: Any) -> bool:
         """Check if a callback is a coroutine function."""
         return inspect.iscoroutinefunction(callback)
 
@@ -428,7 +433,13 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
             return STATE_STOPPED
         return self.websocket.state
 
-    async def repeat(self, interval, func, *args, **kwargs):
+    async def repeat(
+        self,
+        interval: float,
+        func: Callable[..., Any],
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
         """Run func every interval seconds.
 
         If func has not finished before *interval*, will run again

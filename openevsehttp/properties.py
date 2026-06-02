@@ -17,8 +17,8 @@ _LOGGER = logging.getLogger(__name__)
 class PropertiesMixin:
     """Mixin providing all @property accessors for OpenEVSE."""
 
-    _status: dict
-    _config: dict
+    _status: dict[str, Any]
+    _config: dict[str, Any]
 
     # These are used by properties but defined in client.py
     def _version_check(self, min_version: str, max_version: str = "") -> bool:
@@ -336,7 +336,7 @@ class PropertiesMixin:
     @property
     def vehicle(self) -> bool:
         """Return if a vehicle is connected to the EVSE."""
-        return self._status.get("vehicle", False)
+        return bool(self._status.get("vehicle", False))
 
     @property
     def ota_update(self) -> bool:
@@ -356,7 +356,7 @@ class PropertiesMixin:
     @property
     def manual_override(self) -> bool:
         """Return if Manual Override is set."""
-        return self._status.get("manual_override", False)
+        return bool(self._status.get("manual_override", False))
 
     @property
     def divertmode(self) -> str:
@@ -472,12 +472,12 @@ class PropertiesMixin:
     @property
     def min_amps(self) -> int:
         """Return the minimum amps."""
-        return self._config.get("min_current_hard", MIN_AMPS)
+        return int(self._config.get("min_current_hard", MIN_AMPS))
 
     @property
     def max_amps(self) -> int:
         """Return the maximum amps."""
-        return self._config.get("max_current_hard", MAX_AMPS)
+        return int(self._config.get("max_current_hard", MAX_AMPS))
 
     @property
     def mqtt_connected(self) -> bool:
@@ -506,10 +506,10 @@ class PropertiesMixin:
 
     # Safety counts
     @property
-    def checks_count(self) -> dict:
+    def checks_count(self) -> dict[str, Any]:
         """Return the safety checks counts."""
         attributes = ("gfcicount", "nogndcount", "stuckcount")
-        counts = {}
+        counts: dict[str, Any] = {}
         if self._status is not None and set(attributes).issubset(self._status.keys()):
             counts["gfcicount"] = self._status["gfcicount"]
             counts["nogndcount"] = self._status["nogndcount"]
@@ -534,4 +534,4 @@ class PropertiesMixin:
         if not self._version_check("4.2.2"):
             _LOGGER.debug("Feature not supported for older firmware.")
             raise UnsupportedFeature
-        return self._status.get("power", 0)
+        return int(self._status.get("power", 0))
