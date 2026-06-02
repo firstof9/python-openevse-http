@@ -136,7 +136,12 @@ class CommandsMixin:
         time_limit: int | None = None,
         auto_release: bool | None = None,
     ) -> Any:
-        """Set the manual override status."""
+        """Set the manual override status.
+
+        Fetches the current override payload first and merges existing values
+        into the request payload. This prevents the firmware from clearing/resetting
+        previously configured properties that are not passed in the function call.
+        """
         if not self._version_check("4.0.1"):
             _LOGGER.debug("Feature not supported for older firmware.")
             raise UnsupportedFeature
@@ -514,6 +519,10 @@ class CommandsMixin:
         if firmware_bytes is not None and firmware_url is not None:
             _LOGGER.error("Cannot specify both firmware_bytes and firmware_url")
             raise ValueError("Cannot specify both firmware_bytes and firmware_url")
+
+        if firmware_bytes is not None and len(firmware_bytes) == 0:
+            _LOGGER.error("Empty firmware bytes provided")
+            raise ValueError("Empty firmware bytes provided")
 
         if firmware_url is not None:
             if not isinstance(firmware_url, str) or not firmware_url.strip():

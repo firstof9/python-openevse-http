@@ -1189,7 +1189,7 @@ async def test_update_firmware_auto_missing_buildenv(
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(
             RuntimeError,
-            match="Could not resolve latest firmware download URL from GitHub.",
+            match=r"Could not resolve latest firmware download URL from GitHub\.",
         ):
             await test_charger.update_firmware()
         assert (
@@ -1282,7 +1282,7 @@ async def test_update_firmware_assets_invalid_type(
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(
             RuntimeError,
-            match="Could not resolve latest firmware download URL from GitHub.",
+            match=r"Could not resolve latest firmware download URL from GitHub\.",
         ):
             await test_charger.update_firmware()
         assert "Invalid GitHub assets payload: {'name': 'not_a_list'}" in caplog.text
@@ -1324,3 +1324,12 @@ async def test_update_firmware_assets_invalid_item(
         response = await test_charger.update_firmware()
         assert response == {"msg": "started"}
         assert "Found matching firmware asset: http://url" in caplog.text
+
+
+async def test_update_firmware_bytes_empty(test_charger, caplog):
+    """Test update_firmware raises ValueError when empty firmware_bytes are provided."""
+    test_charger._config["version"] = "4.1.7"
+    with caplog.at_level(logging.DEBUG):
+        with pytest.raises(ValueError, match="Empty firmware bytes provided"):
+            await test_charger.update_firmware(firmware_bytes=b"")
+        assert "Empty firmware bytes provided" in caplog.text
