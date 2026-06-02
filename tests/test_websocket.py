@@ -297,6 +297,27 @@ async def test_state_setter_no_callback(ws_client):
 
 
 @pytest.mark.asyncio
+async def test_websocket_schedule_success_sync(ws_client):
+    """Test state setter schedules the callback successfully when outside listener loop."""
+    # Ensure no listener loop is set, so ensure_future path is taken
+    ws_client._listener_loop = None
+
+    # Trigger state change, which schedules callback
+    ws_client.state = STATE_CONNECTED
+
+    # We should have scheduled 1 task
+    assert len(ws_client._tasks) == 1
+
+    # Let the loop run to execute the callback
+    await asyncio.gather(*ws_client._tasks)
+
+    ws_client.callback.assert_called_with(
+        SIGNAL_CONNECTION_STATE, STATE_CONNECTED, None
+    )
+    assert len(ws_client._tasks) == 0
+
+
+@pytest.mark.asyncio
 async def test_websocket_sync_callback(ws_client):
     """Test state setter with a synchronous callback."""
     # MagicMock is not awaitable, so it triggers the return at line 73.

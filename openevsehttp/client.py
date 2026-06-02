@@ -321,13 +321,13 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
                 self._ws_listening = False
 
             # Stopped websockets without errors are expected during shutdown
-            # and ignored
-            elif data == STATE_STOPPED and error:
-                _LOGGER.debug(
-                    "Websocket to %s failed, aborting [Error: %s]",
-                    uri,
-                    error,
-                )
+            elif data == STATE_STOPPED:
+                if error:
+                    _LOGGER.debug(
+                        "Websocket to %s failed, aborting [Error: %s]",
+                        uri,
+                        error,
+                    )
                 self._ws_listening = False
 
         elif msgtype == "data":
