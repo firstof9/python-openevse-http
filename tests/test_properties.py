@@ -1227,3 +1227,10 @@ async def test_config_boolean_coercion():
     assert charger.vent_required_enabled is True
     assert charger.ground_check_enabled is True
     assert charger.stuck_relay_check_enabled is True
+
+
+async def test_wifi_firmware_none():
+    """Test wifi_firmware returns None when version is missing."""
+    charger = OpenEVSE(SERVER_URL)
+    charger._config = {}
+    assert charger.wifi_firmware is None

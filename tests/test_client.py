@@ -1723,3 +1723,15 @@ async def test_update_status_ota():
     assert charger.ota_update is False
     assert charger.ota_progress is None
     assert charger.ota_state == "completed"
+
+
+async def test_process_request_invalid_json_primitive(mock_aioclient):
+    """Test process_request with an unexpected JSON primitive (e.g., bool or int)."""
+    charger = OpenEVSE(SERVER_URL)
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=200,
+        body="123",
+    )
+    with pytest.raises(ParseJSONError):
+        await charger.process_request(TEST_URL_STATUS, method="get")
