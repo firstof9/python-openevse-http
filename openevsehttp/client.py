@@ -76,7 +76,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
         method: str = "",
         data: Any = None,
         rapi: Any = None,
-    ) -> Mapping[str, Any] | list[Any] | str:
+    ) -> Mapping[str, Any] | list[Any] | str | bool:
         """Return result of processed HTTP request."""
         auth = None
         allowed_methods = ["get", "post", "put", "delete", "patch", "head", "options"]
@@ -112,7 +112,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
         data: Any,
         rapi: Any,
         auth: Any,
-    ) -> Mapping[str, Any] | list[Any] | str:
+    ) -> Mapping[str, Any] | list[Any] | str | bool:
         """Process a request with a given session."""
         if not hasattr(session, method):
             raise MissingMethod
@@ -135,38 +135,46 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
                     _LOGGER.debug("Decoding error")
                     raw = (await resp.read()).decode(errors="replace")
 
-                message: Mapping[str, Any] | list[Any] | str = raw
+                # JSON responses can sometimes be primitive values (like bools).
+                # If json.loads fails with ValueError (e.g. non-JSON text/html),
+                # we fall back to treating the raw response as a string.
+                response_content: Mapping[str, Any] | list[Any] | str | bool = raw
                 try:
-                    message = json.loads(raw)
+                    response_content = json.loads(raw)
                 except ValueError:
                     _LOGGER.debug("Non JSON response: %s", raw)
-                if not isinstance(message, dict | list | str):
+                if not isinstance(response_content, dict | list | str | bool):
                     _LOGGER.error(
-                        "Unexpected JSON primitive response from %s: %r", url, message
+                        "Unexpected JSON primitive response from %s: %r",
+                        url,
+                        response_content,
                     )
                     raise ParseJSONError
 
                 if resp.status == 400:
-                    if isinstance(message, dict) and "msg" in message:
-                        _LOGGER.error("Error 400: %s", message["msg"])
-                    elif isinstance(message, dict) and "error" in message:
-                        _LOGGER.error("Error 400: %s", message["error"])
+                    if isinstance(response_content, dict) and "msg" in response_content:
+                        _LOGGER.error("Error 400: %s", response_content["msg"])
+                    elif (
+                        isinstance(response_content, dict)
+                        and "error" in response_content
+                    ):
+                        _LOGGER.error("Error 400: %s", response_content["error"])
                     else:
-                        _LOGGER.error("Error 400: %s", message)
+                        _LOGGER.error("Error 400: %s", response_content)
                     raise ParseJSONError
                 if resp.status == 401:
-                    _LOGGER.error("Authentication error: %s", message)
+                    _LOGGER.error("Authentication error: %s", response_content)
                     raise AuthenticationError
                 if resp.status in [404, 405, 500]:
-                    _LOGGER.warning("%s", message)
+                    _LOGGER.warning("%s", response_content)
 
                 if (
                     method.lower() != "get"
-                    and isinstance(message, dict)
-                    and any(key in message for key in UPDATE_TRIGGERS)
+                    and isinstance(response_content, dict)
+                    and any(key in response_content for key in UPDATE_TRIGGERS)
                 ):
                     await self.update()
-                return message
+                return response_content
 
         except (TimeoutError, ServerTimeoutError):
             _LOGGER.error("%s: %s", ERROR_TIMEOUT, url)

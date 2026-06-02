@@ -524,3 +524,15 @@ async def test_websocket_state_task_management(ws_client):
     # Wait for task to complete
     await asyncio.gather(*ws_client._tasks)
     assert len(ws_client._tasks) == 0
+
+
+@pytest.mark.asyncio
+async def test_websocket_close_cancels_pending_tasks(ws_client):
+    """Test close() cancels pending callback tasks."""
+    # Trigger a task creation
+    ws_client.state = STATE_CONNECTED
+    assert len(ws_client._tasks) == 1
+
+    # Close should cancel and drain tasks
+    await ws_client.close()
+    assert len(ws_client._tasks) == 0

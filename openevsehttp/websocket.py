@@ -127,6 +127,7 @@ class OpenEVSEWebsocket:
             auth = aiohttp.BasicAuth(self._user, self._password)
 
         try:
+            # Narrow type for mypy since _ensure_session sets self.session
             assert self.session is not None
             async with self.session.ws_connect(
                 self.uri,

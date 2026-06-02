@@ -23,7 +23,7 @@ class SensorsMixin:
 
     async def process_request(
         self, url: str, method: str = "", data: Any = None, rapi: Any = None
-    ) -> Mapping[str, Any] | list[Any] | str:
+    ) -> Mapping[str, Any] | list[Any] | str | bool:
         raise NotImplementedError
 
     def _normalize_response(self, response: Any) -> dict[str, Any] | list[Any]:

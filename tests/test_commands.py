@@ -754,7 +754,7 @@ async def test_restart_evse_http_failure(test_charger, mock_aioclient):
     test_charger._config["version"] = "5.0.0"
 
     # 1. Test False reply
-    mock_aioclient.post(TEST_URL_RESTART, status=200, body='{"msg": false}')
+    mock_aioclient.post(TEST_URL_RESTART, status=200, body="false")
     with pytest.raises(
         RuntimeError, match=r"Failed to restart EVSE module via HTTP: \{'msg': False\}"
     ):

@@ -33,7 +33,7 @@ class CommandsMixin:
 
     async def process_request(
         self, url: str, method: str = "", data: Any = None, rapi: Any = None
-    ) -> Mapping[str, Any] | list[Any] | str:
+    ) -> Mapping[str, Any] | list[Any] | str | bool:
         raise NotImplementedError
 
     async def send_command(self, command: str) -> tuple[Any, Any]:
@@ -448,7 +448,7 @@ class CommandsMixin:
         firmware_url: str | None = None,
         firmware_bytes: bytes | None = None,
         filename: str = "firmware.bin",
-    ) -> Mapping[str, Any] | list[Any] | str:
+    ) -> Mapping[str, Any] | list[Any] | str | bool:
         """Instruct the device to update its firmware.
 
         You can either:

@@ -1740,9 +1740,9 @@ async def test_update_status_ota():
     assert charger.ota_state == "completed"
 
 
-@pytest.mark.parametrize("body", ["123", "false", "null"])
+@pytest.mark.parametrize("body", ["123", "null"])
 async def test_process_request_invalid_json_primitive(mock_aioclient, body):
-    """Test process_request with an unexpected JSON primitive (e.g., bool or int)."""
+    """Test process_request with an unexpected JSON primitive (e.g., int or null)."""
     charger = OpenEVSE(SERVER_URL)
     mock_aioclient.get(
         TEST_URL_STATUS,
@@ -1751,3 +1751,15 @@ async def test_process_request_invalid_json_primitive(mock_aioclient, body):
     )
     with pytest.raises(ParseJSONError):
         await charger.process_request(TEST_URL_STATUS, method="get")
+
+
+async def test_process_request_boolean_primitive(mock_aioclient):
+    """Test process_request allows boolean JSON primitives (e.g., false)."""
+    charger = OpenEVSE(SERVER_URL)
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=200,
+        body="false",
+    )
+    result = await charger.process_request(TEST_URL_STATUS, method="get")
+    assert result is False
