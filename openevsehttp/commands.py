@@ -53,7 +53,12 @@ class CommandsMixin:
             normalized.get("msg") == "started"
             or normalized.get("msg") in SUCCESS_ANSWERS
         ):
+            _LOGGER.debug("Firmware update started, setting ota_update flag.")
             self._status["ota_update"] = 1
+        else:
+            _LOGGER.debug(
+                "Firmware update response did not indicate start: %s", normalized
+            )
 
     async def get_schedule(self) -> Mapping[str, Any] | list[Any]:
         """Return the current schedule."""
@@ -149,6 +154,18 @@ class CommandsMixin:
             raise ValueError
 
         data: dict[str, Any] = {}
+        if isinstance(response, Mapping):
+            for key in (
+                "state",
+                "charge_current",
+                "max_current",
+                "energy_limit",
+                "time_limit",
+                "auto_release",
+            ):
+                if key in response:
+                    data[key] = response[key]
+
         if auto_release is not None:
             data["auto_release"] = auto_release
 
@@ -381,6 +398,7 @@ class CommandsMixin:
                 url = f"{base_url}ESP32_WiFi_V4.x/releases/latest"
             else:
                 url = f"{base_url}ESP8266_WiFi_v2.x/releases/latest"
+            _LOGGER.debug("Firmware check URL: %s", url)
         except AwesomeVersionCompareException:
             _LOGGER.debug("Non-semver firmware version detected.")
             return None
@@ -412,6 +430,7 @@ class CommandsMixin:
             method,
         )
         async with http_method(url) as resp:
+            _LOGGER.debug("Firmware check response status: %d", resp.status)
             if resp.status != 200:
                 return None
             message = await resp.text()
@@ -422,19 +441,35 @@ class CommandsMixin:
                 return None
 
             if not isinstance(message, dict):
+                _LOGGER.debug(
+                    "Invalid JSON response type from GitHub: %s", type(message)
+                )
                 return None
+
+            _LOGGER.debug(
+                "GitHub release metadata successfully fetched for version: %s",
+                message.get("tag_name"),
+            )
 
             # Match browser_download_url based on buildenv
             download_url = None
             buildenv = self._config.get("buildenv")
             assets = message.get("assets", [])
 
+            _LOGGER.debug("Matching buildenv '%s' against assets", buildenv)
             if buildenv and assets:
                 target_filename = f"{buildenv}.bin"
                 for asset in assets:
                     if asset.get("name") == target_filename:
                         download_url = asset.get("browser_download_url")
+                        _LOGGER.debug("Found matching firmware asset: %s", download_url)
                         break
+            if not download_url:
+                _LOGGER.debug(
+                    "Could not find asset matching target filename '%s.bin' in assets: %s",
+                    buildenv,
+                    [asset.get("name") for asset in assets] if assets else "None",
+                )
 
             return {
                 "latest_version": message.get("tag_name"),
@@ -461,10 +496,12 @@ class CommandsMixin:
             raise UnsupportedFeature
 
         if firmware_bytes is not None and firmware_url is not None:
+            _LOGGER.error("Cannot specify both firmware_bytes and firmware_url")
             raise ValueError("Cannot specify both firmware_bytes and firmware_url")
 
         if firmware_url is not None:
             if not isinstance(firmware_url, str) or not firmware_url.strip():
+                _LOGGER.error("Invalid firmware_url: %s", firmware_url)
                 raise ValueError("Invalid firmware_url")
 
         url = f"{self.url}update"
@@ -485,13 +522,20 @@ class CommandsMixin:
             response = await self.process_request(
                 url=url, method="post", rapi=form_data
             )
+            _LOGGER.debug("Firmware upload request completed. Response: %s", response)
             self._flag_ota_if_started(response)
             return response
 
         # 2. Resolve URL from GitHub if not specified
         if firmware_url is None:
+            _LOGGER.debug(
+                "No firmware URL provided. Resolving latest matching firmware from GitHub."
+            )
             check_result = await self.firmware_check()
             if not check_result or not check_result.get("browser_download_url"):
+                _LOGGER.error(
+                    "Could not resolve latest firmware download URL from GitHub."
+                )
                 raise RuntimeError(
                     "Could not resolve latest firmware download URL from GitHub."
                 )
@@ -503,6 +547,7 @@ class CommandsMixin:
             "Requesting OpenEVSE to download and update from: %s", firmware_url
         )
         response = await self.process_request(url=url, method="post", data=data)
+        _LOGGER.debug("Firmware update request completed. Response: %s", response)
         self._flag_ota_if_started(response)
         return response
 
