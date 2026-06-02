@@ -64,7 +64,7 @@ if __name__ == "__main__":
 | `/config` | GET, POST | ✅ | System and WiFi configuration |
 | `/override` | GET, POST, PATCH, DELETE | ✅ | Manual charging overrides & current limits |
 | `/claims` | GET, POST, DELETE | ✅ | Client-based charging claims |
-| `/schedule` | GET, POST | ✅ | Charging schedule management |
+| `/schedule` | GET, POST | ⚠️ | Charging schedule management (Retrieval only) |
 | `/limit` | GET, POST, DELETE | ✅ | Charge limits (Time, Energy, SoC) |
 | `/shaper` | POST | ✅ | Grid shaper control (v4.0.0+) |
 | `/restart` | POST | ✅ | Reboot WiFi gateway or EVSE module |
@@ -78,7 +78,7 @@ if __name__ == "__main__":
 | `/tesla` | GET | ❌ | Tesla vehicle integration |
 | `/certificates`| GET, POST, DELETE | ❌ | SSL/TLS certificate management |
 | `/schedule/plan`| GET | ❌ | Schedule planning and optimization |
-| `/update` | POST | ❌ | Firmware update interface |
+| `/update` | POST | ✅ | Firmware update interface |
 | `/rfid/add` | POST | ❌ | RFID tag management |
 
 ✅ = Fully Supported \| ⚠️ = Partial Support \| ❌ = Not yet implemented
