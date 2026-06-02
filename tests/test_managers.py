@@ -52,6 +52,7 @@ async def test_set_override(
             "Override data: {'state': 'active', 'charge_current': 0, 'max_current': 0, 'energy_limit': 0, 'time_limit': 0, 'auto_release': True}"
             in caplog.text
         )
+        caplog.clear()
 
         mock_aioclient.post(
             TEST_URL_OVERRIDE,
@@ -63,6 +64,8 @@ async def test_set_override(
             "Override data: {'state': 'active', 'charge_current': 30, 'max_current': 0, 'energy_limit': 0, 'time_limit': 0, 'auto_release': True}"
             in caplog.text
         )
+        caplog.clear()
+
         mock_aioclient.post(
             TEST_URL_OVERRIDE,
             status=200,
@@ -73,6 +76,8 @@ async def test_set_override(
             "Override data: {'state': 'active', 'charge_current': 30, 'max_current': 0, 'energy_limit': 0, 'time_limit': 0, 'auto_release': True}"
             in caplog.text
         )
+        caplog.clear()
+
         mock_aioclient.post(
             TEST_URL_OVERRIDE,
             status=200,
@@ -83,6 +88,8 @@ async def test_set_override(
             "Override data: {'state': 'active', 'charge_current': 30, 'max_current': 32, 'energy_limit': 0, 'time_limit': 0, 'auto_release': True}"
             in caplog.text
         )
+        caplog.clear()
+
         mock_aioclient.post(
             TEST_URL_OVERRIDE,
             status=200,
@@ -93,6 +100,8 @@ async def test_set_override(
             "Override data: {'state': 'active', 'charge_current': 30, 'max_current': 32, 'energy_limit': 2000, 'time_limit': 0, 'auto_release': True}"
             in caplog.text
         )
+        caplog.clear()
+
         mock_aioclient.post(
             TEST_URL_OVERRIDE,
             status=200,
@@ -103,6 +112,7 @@ async def test_set_override(
             "Override data: {'state': 'active', 'charge_current': 30, 'max_current': 32, 'energy_limit': 2000, 'time_limit': 5000, 'auto_release': True}"
             in caplog.text
         )
+        caplog.clear()
 
     with pytest.raises(ValueError):
         with caplog.at_level(logging.DEBUG):

@@ -456,19 +456,35 @@ class CommandsMixin:
             buildenv = self._config.get("buildenv")
             assets = message.get("assets", [])
 
-            _LOGGER.debug("Matching buildenv '%s' against assets", buildenv)
-            if buildenv and assets:
+            if not buildenv:
+                _LOGGER.debug(
+                    "Cannot resolve firmware asset: missing buildenv in config."
+                )
+                assets = []
+            elif not isinstance(assets, list):
+                _LOGGER.debug("Invalid GitHub assets payload: %r", assets)
+                assets = []
+            else:
+                _LOGGER.debug("Matching buildenv '%s' against assets", buildenv)
                 target_filename = f"{buildenv}.bin"
                 for asset in assets:
+                    if not isinstance(asset, Mapping):
+                        continue
                     if asset.get("name") == target_filename:
                         download_url = asset.get("browser_download_url")
                         _LOGGER.debug("Found matching firmware asset: %s", download_url)
                         break
-            if not download_url:
+            if buildenv and not download_url:
                 _LOGGER.debug(
                     "Could not find asset matching target filename '%s.bin' in assets: %s",
                     buildenv,
-                    [asset.get("name") for asset in assets] if assets else "None",
+                    [
+                        asset.get("name")
+                        for asset in assets
+                        if isinstance(asset, Mapping)
+                    ]
+                    if assets
+                    else "None",
                 )
 
             return {
