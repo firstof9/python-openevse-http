@@ -291,6 +291,7 @@ class RegisteredMock(NamedTuple):
 class AiohttpClientMocker:
     def __init__(self):
         self.mocks = []
+        self.requests = []
         self._patcher = None
 
     def __enter__(self):
@@ -358,6 +359,7 @@ class AiohttpClientMocker:
     async def _request_mock(self, method: str, str_or_url: Any, **kwargs: Any):
         url_str = str(str_or_url)
         method_upper = method.upper()
+        self.requests.append((method_upper, url_str, kwargs))
 
         matching_mock = None
         matching_index = -1

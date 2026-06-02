@@ -1060,6 +1060,8 @@ async def test_update_firmware_bytes(test_charger, mock_aioclient, caplog):
             "Uploading firmware binary to http://openevse.test.tld/update (14 bytes)"
             in caplog.text
         )
+        assert "Firmware upload request completed. Response: OK" in caplog.text
+        assert "Firmware update started, setting ota_update flag." in caplog.text
         assert test_charger.ota_update is True
 
 
@@ -1080,6 +1082,11 @@ async def test_update_firmware_url(test_charger, mock_aioclient, caplog):
             "Requesting OpenEVSE to download and update from: http://github.com/release.bin"
             in caplog.text
         )
+        assert (
+            "Firmware update request completed. Response: {'msg': 'started'}"
+            in caplog.text
+        )
+        assert "Firmware update started, setting ota_update flag." in caplog.text
         assert test_charger.ota_update is True
 
 
@@ -1121,13 +1128,42 @@ async def test_update_firmware_auto(test_charger, mock_aioclient, caplog):
         response = await test_charger.update_firmware()
         assert response == {"msg": "started"}
         assert (
+            "No firmware URL provided. Resolving latest matching firmware from GitHub."
+            in caplog.text
+        )
+        assert "Detected firmware: 4.1.7" in caplog.text
+        assert "Using version: 4.1.7" in caplog.text
+        assert (
+            "Firmware check URL: https://api.github.com/repos/OpenEVSE/ESP32_WiFi_V4.x/releases/latest"
+            in caplog.text
+        )
+        assert "Firmware check response status: 200" in caplog.text
+        assert (
+            "GitHub release metadata successfully fetched for version: v4.1.2"
+            in caplog.text
+        )
+        assert (
+            "Matching buildenv 'openevse_esp32-gateway' against assets" in caplog.text
+        )
+        assert (
+            "Found matching firmware asset: https://github.com/OpenEVSE/releases/download/v4.1.2/openevse_esp32-gateway.bin"
+            in caplog.text
+        )
+        assert (
             "Requesting OpenEVSE to download and update from: https://github.com/OpenEVSE/releases/download/v4.1.2/openevse_esp32-gateway.bin"
             in caplog.text
         )
+        assert (
+            "Firmware update request completed. Response: {'msg': 'started'}"
+            in caplog.text
+        )
+        assert "Firmware update started, setting ota_update flag." in caplog.text
         assert test_charger.ota_update is True
 
 
-async def test_update_firmware_auto_missing_buildenv(test_charger, mock_aioclient):
+async def test_update_firmware_auto_missing_buildenv(
+    test_charger, mock_aioclient, caplog
+):
     """Test update_firmware raises RuntimeError when buildenv asset is missing."""
     test_charger._config = {"version": "4.1.7", "buildenv": "openevse_esp32-gateway"}
 
@@ -1150,35 +1186,47 @@ async def test_update_firmware_auto_missing_buildenv(test_charger, mock_aioclien
         body=json.dumps(github_response),
     )
 
-    with pytest.raises(
-        RuntimeError,
-        match="Could not resolve latest firmware download URL from GitHub.",
-    ):
-        await test_charger.update_firmware()
-
-
-async def test_update_firmware_both_provided(test_charger):
-    """Test update_firmware raises ValueError when both bytes and URL are provided."""
-    test_charger._config["version"] = "4.1.7"
-    with pytest.raises(
-        ValueError, match="Cannot specify both firmware_bytes and firmware_url"
-    ):
-        await test_charger.update_firmware(
-            firmware_url="http://url", firmware_bytes=b"bytes"
+    with caplog.at_level(logging.DEBUG):
+        with pytest.raises(
+            RuntimeError,
+            match=r"Could not resolve latest firmware download URL from GitHub\.",
+        ):
+            await test_charger.update_firmware()
+        assert (
+            "Could not find asset matching target filename 'openevse_esp32-gateway.bin' in assets: ['other_env.bin']"
+            in caplog.text
+        )
+        assert (
+            "Could not resolve latest firmware download URL from GitHub." in caplog.text
         )
 
 
-async def test_update_firmware_url_invalid(test_charger):
+async def test_update_firmware_both_provided(test_charger, caplog):
+    """Test update_firmware raises ValueError when both bytes and URL are provided."""
+    test_charger._config["version"] = "4.1.7"
+    with caplog.at_level(logging.DEBUG):
+        with pytest.raises(ValueError):
+            await test_charger.update_firmware(
+                firmware_url="http://url", firmware_bytes=b"bytes"
+            )
+        assert "Cannot specify both firmware_bytes and firmware_url" in caplog.text
+
+
+async def test_update_firmware_url_invalid(test_charger, caplog):
     """Test update_firmware raises ValueError when firmware_url is empty or invalid type."""
     test_charger._config["version"] = "4.1.7"
-    with pytest.raises(ValueError, match="Invalid firmware_url"):
-        await test_charger.update_firmware(firmware_url="")
+    with caplog.at_level(logging.DEBUG):
+        with pytest.raises(ValueError):
+            await test_charger.update_firmware(firmware_url="")
+        assert "Invalid firmware_url: " in caplog.text
 
-    with pytest.raises(ValueError, match="Invalid firmware_url"):
-        await test_charger.update_firmware(firmware_url="   ")
+        with pytest.raises(ValueError):
+            await test_charger.update_firmware(firmware_url="   ")
+        assert "Invalid firmware_url:    " in caplog.text
 
-    with pytest.raises(ValueError, match="Invalid firmware_url"):
-        await test_charger.update_firmware(firmware_url=123)  # type: ignore
+        with pytest.raises(ValueError):
+            await test_charger.update_firmware(firmware_url=123)  # type: ignore
+        assert "Invalid firmware_url: 123" in caplog.text
 
 
 async def test_update_firmware_unsupported(test_charger):
@@ -1188,7 +1236,7 @@ async def test_update_firmware_unsupported(test_charger):
         await test_charger.update_firmware(firmware_url="http://url")
 
 
-async def test_update_firmware_error_response(test_charger, mock_aioclient):
+async def test_update_firmware_error_response(test_charger, mock_aioclient, caplog):
     """Test update_firmware doesn't set ota_update on error responses."""
     test_charger._config["version"] = "4.1.7"
     test_charger._status = {}
@@ -1197,8 +1245,89 @@ async def test_update_firmware_error_response(test_charger, mock_aioclient):
         status=200,
         body='{"msg":"error"}',
     )
-    response = await test_charger.update_firmware(
-        firmware_url="http://github.com/release.bin"
+    with caplog.at_level(logging.DEBUG):
+        response = await test_charger.update_firmware(
+            firmware_url="http://github.com/release.bin"
+        )
+        assert response == {"msg": "error"}
+        assert (
+            "Firmware update response did not indicate start: {'msg': 'error'}"
+            in caplog.text
+        )
+        assert test_charger.ota_update is False
+
+
+async def test_update_firmware_assets_invalid_type(
+    test_charger, mock_aioclient, caplog
+):
+    """Test update_firmware handles non-list assets gracefully."""
+    test_charger._config = {"version": "4.1.7", "buildenv": "openevse_esp32-gateway"}
+
+    # Mock GitHub releases but with assets as a dict (invalid type)
+    github_response = {
+        "tag_name": "v4.1.2",
+        "body": "release notes",
+        "html_url": "https://github.com/OpenEVSE/releases/v4.1.2",
+        "assets": {"name": "not_a_list"},
+    }
+
+    mock_aioclient.get(
+        "https://api.github.com/repos/OpenEVSE/ESP32_WiFi_V4.x/releases/latest",
+        status=200,
+        body=json.dumps(github_response),
     )
-    assert response == {"msg": "error"}
-    assert test_charger.ota_update is False
+
+    with caplog.at_level(logging.DEBUG):
+        with pytest.raises(
+            RuntimeError,
+            match=r"Could not resolve latest firmware download URL from GitHub\.",
+        ):
+            await test_charger.update_firmware()
+        assert "Invalid GitHub assets payload: {'name': 'not_a_list'}" in caplog.text
+
+
+async def test_update_firmware_assets_invalid_item(
+    test_charger, mock_aioclient, caplog
+):
+    """Test update_firmware handles non-mapping assets gracefully."""
+    test_charger._config = {"version": "4.1.7", "buildenv": "openevse_esp32-gateway"}
+
+    # Mock GitHub releases with assets list containing non-mapping elements (e.g., a string)
+    github_response = {
+        "tag_name": "v4.1.2",
+        "body": "release notes",
+        "html_url": "https://github.com/OpenEVSE/releases/v4.1.2",
+        "assets": [
+            "invalid_asset_string",
+            {
+                "name": "openevse_esp32-gateway.bin",
+                "browser_download_url": "http://url",
+            },
+        ],
+    }
+
+    mock_aioclient.get(
+        "https://api.github.com/repos/OpenEVSE/ESP32_WiFi_V4.x/releases/latest",
+        status=200,
+        body=json.dumps(github_response),
+    )
+
+    mock_aioclient.post(
+        "http://openevse.test.tld/update",
+        status=200,
+        body='{"msg":"started"}',
+    )
+
+    with caplog.at_level(logging.DEBUG):
+        response = await test_charger.update_firmware()
+        assert response == {"msg": "started"}
+        assert "Found matching firmware asset: http://url" in caplog.text
+
+
+async def test_update_firmware_bytes_empty(test_charger, caplog):
+    """Test update_firmware raises ValueError when empty firmware_bytes are provided."""
+    test_charger._config["version"] = "4.1.7"
+    with caplog.at_level(logging.DEBUG):
+        with pytest.raises(ValueError):
+            await test_charger.update_firmware(firmware_bytes=b"")
+        assert "Empty firmware bytes provided" in caplog.text
