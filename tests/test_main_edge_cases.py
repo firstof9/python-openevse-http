@@ -3,7 +3,9 @@
 import logging
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import aiohttp
 import pytest
+import pytest_asyncio
 
 from openevsehttp.__main__ import OpenEVSE
 
@@ -12,9 +14,10 @@ pytestmark = pytest.mark.asyncio
 SERVER_URL = "openevse.test.tld"
 
 
-@pytest.fixture
-def charger():
-    return OpenEVSE(SERVER_URL)
+@pytest_asyncio.fixture
+async def charger():
+    async with aiohttp.ClientSession() as session:
+        yield OpenEVSE(SERVER_URL, session=session)
 
 
 async def test_process_request_decode_error(charger, caplog):

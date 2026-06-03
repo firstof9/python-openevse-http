@@ -25,7 +25,7 @@ class CommandsMixin:
     url: str
     _status: dict[str, Any]
     _config: dict[str, Any]
-    _session: Any
+    _session: aiohttp.ClientSession | None
 
     # These are defined in client.py
     def _version_check(self, min_version: str, max_version: str = "") -> bool:
@@ -44,6 +44,10 @@ class CommandsMixin:
 
     def _normalize_response(self, response: Any) -> dict[str, Any] | list[Any]:
         """Normalize response to a dict or list."""
+        raise NotImplementedError
+
+    def _get_session(self) -> aiohttp.ClientSession:
+        """Return the configured HTTP session."""
         raise NotImplementedError
 
     def _flag_ota_if_started(self, response: Any) -> None:
@@ -409,12 +413,8 @@ class CommandsMixin:
             return None
 
         try:
-            if (session := self._session) is None:
-                async with aiohttp.ClientSession() as session:
-                    return await self._firmware_check_with_session(session, url, method)
-            else:
-                return await self._firmware_check_with_session(session, url, method)
-
+            session = self._get_session()
+            return await self._firmware_check_with_session(session, url, method)
         except (TimeoutError, ServerTimeoutError):
             _LOGGER.error("%s: %s", "Timeout while updating", url)
         except ContentTypeError as err:

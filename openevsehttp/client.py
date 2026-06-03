@@ -41,6 +41,13 @@ from .websocket import (
 
 _LOGGER = logging.getLogger(__name__)
 
+ERROR_SESSION_REQUIRED = (
+    "An aiohttp.ClientSession must be provided via the session argument."
+)
+ERROR_SESSION_LOOP_MISMATCH = (
+    "The aiohttp.ClientSession is bound to a different event loop."
+)
+
 
 class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
     """Represent an OpenEVSE charger."""
@@ -70,6 +77,12 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
         self._session = session
         self._session_external = session is not None
 
+    def _get_session(self) -> aiohttp.ClientSession:
+        """Return the configured HTTP session or fail fast."""
+        if self._session is None:
+            raise RuntimeError(ERROR_SESSION_REQUIRED)
+        return self._session
+
     async def process_request(
         self,
         url: str,
@@ -86,16 +99,10 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
         if self._user and self._pwd:
             auth = aiohttp.BasicAuth(self._user, self._pwd)
 
-        # Use provided session or create a temporary one
-        if (session := self._session) is None:
-            async with aiohttp.ClientSession() as session:
-                return await self._process_request_with_session(
-                    session, url, method, data, rapi, auth
-                )
-        else:
-            return await self._process_request_with_session(
-                session, url, method, data, rapi, auth
-            )
+        session = self._get_session()
+        return await self._process_request_with_session(
+            session, url, method, data, rapi, auth
+        )
 
     def _normalize_response(self, response: Any) -> dict[str, Any] | list[Any]:
         """Normalize response to a dict or list."""
@@ -259,35 +266,38 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
         data = {"serial": serial, "model": model}
         return data
 
-    def ws_start(self) -> None:
+    async def ws_start(self) -> None:
         """Start the websocket listener."""
         if self.websocket and self.websocket.state != STATE_STOPPED:
             raise AlreadyListening
 
-        # Detect loop mismatch
-        use_session = self._session
-        try:
-            asyncio.get_running_loop()
-        except RuntimeError:
-            # We are about to create a private loop in _start_listening
-            # If we have a session, it's likely bound to another loop
-            if self._session:
-                _LOGGER.warning(
-                    "Caller-provided session may not work on private event loop. "
-                    "Creating a loop-local session."
-                )
-                use_session = None
-                # Clear self._session so subsequent await self.update() uses
-                # a loop-local session as well.
-                self._session = None
-                self._session_external = False
+        self._get_session()
+        loop = asyncio.get_running_loop()
+        self._validate_session_loop(loop)
 
         if not self.websocket or self.websocket.state == STATE_STOPPED:
-            self.websocket = OpenEVSEWebsocket(
-                self.url, self._update_status, self._user, self._pwd, use_session
-            )
+            self._create_websocket()
 
         self._start_listening()
+
+    def _create_websocket(self) -> None:
+        """Create a websocket using the configured session."""
+        self.websocket = OpenEVSEWebsocket(
+            self.url,
+            self._update_status,
+            self._user,
+            self._pwd,
+            self._session,
+        )
+
+    def _validate_session_loop(self, loop: asyncio.AbstractEventLoop) -> None:
+        """Ensure the configured session belongs to the active event loop."""
+        session_loop = getattr(self._session, "_loop", None)
+        if (
+            isinstance(session_loop, asyncio.AbstractEventLoop)
+            and session_loop is not loop
+        ):
+            raise RuntimeError(ERROR_SESSION_LOOP_MISMATCH)
 
     def _start_listening(self) -> None:
         """Start the websocket listener."""

@@ -18,6 +18,57 @@ TEST_URL_WS = "ws://openevse.test.tld/ws"
 TEST_TLD = "openevse.test.tld"
 
 
+class MockClientSession:
+    """Minimal aiohttp.ClientSession-compatible adapter for tests."""
+
+    def __init__(self, mocker: "AiohttpClientMocker") -> None:
+        self._mocker = mocker
+        self.closed = False
+
+    def request(self, method: str, url: Any, **kwargs: Any):
+        return self._request(method, url, **kwargs)
+
+    def get(self, url: Any, **kwargs: Any):
+        return self._request("GET", url, **kwargs)
+
+    def post(self, url: Any, **kwargs: Any):
+        return self._request("POST", url, **kwargs)
+
+    def put(self, url: Any, **kwargs: Any):
+        return self._request("PUT", url, **kwargs)
+
+    def delete(self, url: Any, **kwargs: Any):
+        return self._request("DELETE", url, **kwargs)
+
+    def patch(self, url: Any, **kwargs: Any):
+        return self._request("PATCH", url, **kwargs)
+
+    def head(self, url: Any, **kwargs: Any):
+        return self._request("HEAD", url, **kwargs)
+
+    def options(self, url: Any, **kwargs: Any):
+        return self._request("OPTIONS", url, **kwargs)
+
+    def _request(self, method: str, url: Any, **kwargs: Any):
+        return MockRequestContext(self._mocker._request_mock(method, url, **kwargs))
+
+    async def close(self) -> None:
+        self.closed = True
+
+
+class MockRequestContext:
+    def __init__(self, request):
+        self._request = request
+        self._response = None
+
+    async def __aenter__(self):
+        self._response = await self._request
+        return await self._response.__aenter__()
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        return await self._response.__aexit__(exc_type, exc_val, exc_tb)
+
+
 def _setup_charger(
     mock_aioclient,
     status_fixture="v4_json/status.json",
@@ -65,7 +116,12 @@ def _setup_charger(
             repeat=True,
         )
 
-    return main.OpenEVSE(TEST_TLD, user=user, pwd=pwd)
+    return main.OpenEVSE(
+        TEST_TLD,
+        user=user,
+        pwd=pwd,
+        session=MockClientSession(mock_aioclient),
+    )
 
 
 @pytest.fixture(name="test_charger_auth")

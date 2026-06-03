@@ -8,6 +8,7 @@ from freezegun import freeze_time
 
 from openevsehttp import OpenEVSE
 from openevsehttp.exceptions import UnsupportedFeature
+from tests.conftest import MockClientSession
 
 pytestmark = pytest.mark.asyncio
 
@@ -212,7 +213,7 @@ async def test_simple_properties(fixture, prop, expected, request):
 
 async def test_get_status_unknown():
     """Test status property with unknown/invalid codes."""
-    charger = OpenEVSE(SERVER_URL)
+    charger = OpenEVSE(SERVER_URL, session=object())
     # Unknown code
     charger._status = {"state": 99}
     assert charger.status == "unknown"
@@ -224,7 +225,7 @@ async def test_get_status_unknown():
 
 async def test_get_state_unknown():
     """Test state property with unknown/invalid codes."""
-    charger = OpenEVSE(SERVER_URL)
+    charger = OpenEVSE(SERVER_URL, session=object())
     # Unknown code
     charger._status = {"state": 99}
     assert charger.state == "unknown"
@@ -435,7 +436,7 @@ async def test_property_getters_with_missing_data(mock_aioclient):
         body="{}",  # Empty config
     )
 
-    charger = OpenEVSE(SERVER_URL)
+    charger = OpenEVSE(SERVER_URL, session=MockClientSession(mock_aioclient))
     await charger.update()
 
     # Test various properties that should handle missing data

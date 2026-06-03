@@ -29,28 +29,24 @@ pip install python_openevse_http
 
 ```python
 import asyncio
+import aiohttp
 from openevsehttp import OpenEVSE
 
 async def main():
-    # Initialize the charger
-    charger = OpenEVSE("192.168.1.30")
+    async with aiohttp.ClientSession() as session:
+        charger = OpenEVSE("192.168.1.30", session=session)
+        await charger.update()
 
-    # Update state
-    await charger.update()
+        print(f"Charger State: {charger.status}")
+        print(f"Current Charge: {charger.charge_current}A")
 
-    print(f"Charger State: {charger.status}")
-    print(f"Current Charge: {charger.charge_current}A")
+        if charger.shaper_active:
+            print("Shaper is active, disabling...")
+        else:
+            print("Shaper is inactive, enabling...")
 
-    # Toggle the Shaper feature
-    if charger.shaper_active:
-        print("Shaper is active, disabling...")
-    else:
-        print("Shaper is inactive, enabling...")
-
-    await charger.toggle_shaper()
-
-    # Clean up
-    await charger.close()
+        await charger.toggle_shaper()
+        await charger.ws_disconnect()
 
 if __name__ == "__main__":
     asyncio.run(main())

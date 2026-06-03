@@ -14,6 +14,9 @@ import aiohttp
 _LOGGER = logging.getLogger(__name__)
 
 MAX_FAILED_ATTEMPTS = 5
+ERROR_SESSION_REQUIRED = (
+    "An aiohttp.ClientSession must be provided via the session argument."
+)
 
 ERROR_AUTH_FAILURE = "Authorization failure"
 ERROR_TOO_MANY_RETRIES = "Too many retries"
@@ -224,10 +227,9 @@ class OpenEVSEWebsocket:
             self._listener_loop = None
 
     async def _ensure_session(self) -> None:
-        """Ensure aiohttp.ClientSession exists."""
+        """Ensure an external aiohttp.ClientSession exists."""
         if self.session is None:
-            self.session = aiohttp.ClientSession()
-            self._session_external = False
+            raise RuntimeError(ERROR_SESSION_REQUIRED)
 
     async def close(self) -> None:
         """Close the listening websocket."""
