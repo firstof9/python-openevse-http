@@ -75,7 +75,6 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
         self._owns_loop = False
         self._loop_thread: threading.Thread | None = None
         self._session = session
-        self._session_external = session is not None
 
     def _get_session(self) -> aiohttp.ClientSession:
         """Return the configured HTTP session or fail fast."""

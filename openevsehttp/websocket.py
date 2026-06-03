@@ -43,7 +43,6 @@ class OpenEVSEWebsocket:
     ) -> None:
         """Initialize a OpenEVSEWebsocket instance."""
         self.session = session
-        self._session_external = session is not None
         self.uri = self._get_uri(server)
         self._user = user
         self._password = password
@@ -244,10 +243,6 @@ class OpenEVSEWebsocket:
         if self._client is not None:
             await self._client.close()
             self._client = None
-        # Only close the session if we created it
-        if not self._session_external and self.session is not None:
-            await self.session.close()
-            self.session = None
 
     async def keepalive(self) -> None:
         """Send ping requests to websocket."""

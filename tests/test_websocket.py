@@ -492,7 +492,6 @@ async def test_websocket_close_external_session(mock_callback):
     """Test close() when an external session is provided."""
     async with aiohttp.ClientSession() as session:
         client = OpenEVSEWebsocket(SERVER_URL, mock_callback, session=session)
-        assert client._session_external is True
 
         mock_ws = AsyncMock()
         client._client = mock_ws

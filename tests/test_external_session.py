@@ -37,9 +37,7 @@ async def test_external_session_provided():
     # Create OpenEVSE instance with external session
     charger = OpenEVSE(TEST_TLD, session=mock_session)
 
-    # Verify the session is stored
     assert charger._session is mock_session
-    assert charger._session_external is True
 
     # Make a request
     await charger.process_request(TEST_URL_STATUS, method="get")
@@ -53,7 +51,6 @@ async def test_no_external_session():
     charger = OpenEVSE(TEST_TLD)
 
     assert charger._session is None
-    assert charger._session_external is False
 
     with pytest.raises(
         RuntimeError,
@@ -82,7 +79,6 @@ async def test_external_session_with_update(mock_aioclient):
 
         # Verify the session is stored
         assert charger._session is session
-        assert charger._session_external is True
 
         # Update should use the external session
         await charger.update()
