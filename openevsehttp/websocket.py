@@ -11,12 +11,14 @@ from typing import Any
 
 import aiohttp
 
+from .const import (
+    ERROR_SESSION_LOOP_MISMATCH,
+    ERROR_SESSION_REQUIRED,
+)
+
 _LOGGER = logging.getLogger(__name__)
 
 MAX_FAILED_ATTEMPTS = 5
-ERROR_SESSION_REQUIRED = (
-    "An aiohttp.ClientSession must be provided via the session argument."
-)
 
 ERROR_AUTH_FAILURE = "Authorization failure"
 ERROR_TOO_MANY_RETRIES = "Too many retries"
@@ -229,6 +231,14 @@ class OpenEVSEWebsocket:
         """Ensure an external aiohttp.ClientSession exists."""
         if self.session is None:
             raise RuntimeError(ERROR_SESSION_REQUIRED)
+
+        loop = asyncio.get_running_loop()
+        session_loop = getattr(self.session, "_loop", None)
+        if (
+            isinstance(session_loop, asyncio.AbstractEventLoop)
+            and session_loop is not loop
+        ):
+            raise RuntimeError(ERROR_SESSION_LOOP_MISMATCH)
 
     async def close(self) -> None:
         """Close the listening websocket."""

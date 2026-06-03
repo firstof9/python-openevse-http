@@ -17,6 +17,8 @@ from awesomeversion.exceptions import AwesomeVersionCompareException
 
 from .commands import CommandsMixin
 from .const import (
+    ERROR_SESSION_LOOP_MISMATCH,
+    ERROR_SESSION_REQUIRED,
     ERROR_TIMEOUT,
     UPDATE_TRIGGERS,
 )
@@ -40,13 +42,6 @@ from .websocket import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-
-ERROR_SESSION_REQUIRED = (
-    "An aiohttp.ClientSession must be provided via the session argument."
-)
-ERROR_SESSION_LOOP_MISMATCH = (
-    "The aiohttp.ClientSession is bound to a different event loop."
-)
 
 
 class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
@@ -80,6 +75,11 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
         """Return the configured HTTP session or fail fast."""
         if self._session is None:
             raise RuntimeError(ERROR_SESSION_REQUIRED)
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return self._session
+        self._validate_session_loop(loop)
         return self._session
 
     async def process_request(
@@ -271,8 +271,6 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
             raise AlreadyListening
 
         self._get_session()
-        loop = asyncio.get_running_loop()
-        self._validate_session_loop(loop)
 
         if not self.websocket or self.websocket.state == STATE_STOPPED:
             self._create_websocket()

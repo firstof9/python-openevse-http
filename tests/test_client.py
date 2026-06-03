@@ -1810,3 +1810,10 @@ async def test_process_request_boolean_primitive(mock_aioclient):
     )
     result = await charger.process_request(TEST_URL_STATUS, method="get")
     assert result is False
+
+
+async def test_get_session_no_running_loop_mocked(charger_factory):
+    """Test _get_session when no event loop is running (mocked)."""
+    charger = charger_factory()
+    with patch("asyncio.get_running_loop", side_effect=RuntimeError):
+        assert charger._get_session() is charger._session

@@ -83,6 +83,8 @@ await charger.update()
 After:
 
 ```python
+import aiohttp
+
 async with aiohttp.ClientSession() as session:
     charger = OpenEVSE("openevse.local", session=session)
     await charger.update()
