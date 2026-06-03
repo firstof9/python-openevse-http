@@ -62,3 +62,10 @@ RAPI_ERRORS = [
 ]
 
 SUCCESS_ANSWERS = ["OK", "done", "no change", "Created", "Updated", "Deleted"]
+
+ERROR_SESSION_REQUIRED = (
+    "An aiohttp.ClientSession must be provided via the session argument."
+)
+ERROR_SESSION_LOOP_MISMATCH = (
+    "The aiohttp.ClientSession is bound to a different event loop."
+)

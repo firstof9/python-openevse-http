@@ -30,11 +30,10 @@ def mock_callback():
 @pytest_asyncio.fixture
 async def ws_client(mock_callback):
     """Websocket client fixture."""
-    # Making this fixture async ensures an event loop is running when
-    # OpenEVSEWebsocket initializes aiohttp.ClientSession
-    client = OpenEVSEWebsocket(SERVER_URL, mock_callback)
-    yield client
-    await client.close()
+    async with aiohttp.ClientSession() as session:
+        client = OpenEVSEWebsocket(SERVER_URL, mock_callback, session=session)
+        yield client
+        await client.close()
 
 
 def test_get_uri():
@@ -155,9 +154,16 @@ async def test_keepalive_timeout(ws_client, mock_callback):
 async def ws_client_auth():
     """Fixture for authenticated websocket client."""
     callback = AsyncMock()
-    client = OpenEVSEWebsocket(SERVER_URL, callback, user="test", password="pw")
-    yield client
-    await client.close()
+    async with aiohttp.ClientSession() as session:
+        client = OpenEVSEWebsocket(
+            SERVER_URL,
+            callback,
+            user="test",
+            password="pw",
+            session=session,
+        )
+        yield client
+        await client.close()
 
 
 @pytest.mark.asyncio
@@ -471,24 +477,31 @@ async def test_websocket_listen(ws_client_auth):
 
 
 @pytest.mark.asyncio
-async def test_websocket_close_owned_session(mock_callback):
-    """Test close() when the session is owned by the client."""
+async def test_websocket_requires_external_session(mock_callback):
+    """Test websocket startup fails without an external session."""
     client = OpenEVSEWebsocket(SERVER_URL, mock_callback)
-    # Ensure session is created
-    await client._ensure_session()
-    session = client.session
-    assert session is not None
-    assert not session.closed
+    with pytest.raises(
+        RuntimeError,
+        match="An aiohttp.ClientSession must be provided via the session argument.",
+    ):
+        await client._ensure_session()
 
-    mock_ws = AsyncMock()
-    client._client = mock_ws
 
-    await client.close()
-    assert client.state == STATE_STOPPED
-    assert client._client is None
-    mock_ws.close.assert_called_once()
-    assert session.closed
-    assert client.session is None
+@pytest.mark.asyncio
+async def test_websocket_rejects_session_from_different_loop(mock_callback):
+    """Test websocket startup fails if session is bound to a different event loop."""
+    async with aiohttp.ClientSession() as session:
+        client = OpenEVSEWebsocket(SERVER_URL, mock_callback, session=session)
+        other_loop = asyncio.new_event_loop()
+        try:
+            with patch.object(session, "_loop", other_loop):
+                with pytest.raises(
+                    RuntimeError,
+                    match="The aiohttp.ClientSession is bound to a different event loop.",
+                ):
+                    await client._ensure_session()
+        finally:
+            other_loop.close()
 
 
 @pytest.mark.asyncio
@@ -496,7 +509,6 @@ async def test_websocket_close_external_session(mock_callback):
     """Test close() when an external session is provided."""
     async with aiohttp.ClientSession() as session:
         client = OpenEVSEWebsocket(SERVER_URL, mock_callback, session=session)
-        assert client._session_external is True
 
         mock_ws = AsyncMock()
         client._client = mock_ws

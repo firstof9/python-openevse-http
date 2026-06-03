@@ -31,19 +31,6 @@ async def example_with_external_session():
         await charger.ws_disconnect()
 
 
-async def example_without_external_session():
-    """Demonstrate without external session (backward compatible)."""
-    # The library will create and manage its own sessions
-    charger = OpenEVSE("openevse.local")
-
-    # Use the charger normally
-    await charger.update()
-    print(f"Status: {charger.status}")
-    print(f"Current: {charger.charging_current}A")
-
-    await charger.ws_disconnect()
-
-
 async def example_shared_session():
     """Demonstrate sharing a session between multiple clients."""
     async with aiohttp.ClientSession() as session:

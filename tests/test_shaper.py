@@ -5,6 +5,7 @@ import logging
 import pytest
 
 from openevsehttp.exceptions import UnknownError, UnsupportedFeature
+from tests.conftest import MockClientSession
 
 pytestmark = pytest.mark.asyncio
 
@@ -133,7 +134,7 @@ async def test_toggle_shaper_failed_update(mock_aioclient, caplog):
     """Test toggle_shaper when state is still missing after update()."""
     from openevsehttp import OpenEVSE
 
-    charger = OpenEVSE("openevse.test.tld")
+    charger = OpenEVSE("openevse.test.tld", session=MockClientSession(mock_aioclient))
 
     # Mock the /status call but return status without shaper
     mock_aioclient.get(

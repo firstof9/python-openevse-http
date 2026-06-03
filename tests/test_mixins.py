@@ -23,6 +23,8 @@ async def test_commands_mixin_not_implemented():
         await mixin.update()
     with pytest.raises(NotImplementedError):
         mixin._normalize_response({})
+    with pytest.raises(NotImplementedError):
+        mixin._get_session()
 
 
 async def test_managers_mixin_not_implemented():

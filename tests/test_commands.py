@@ -13,6 +13,7 @@ from openevsehttp.exceptions import (
     UnsupportedFeature,
 )
 from tests.common import load_fixture
+from tests.conftest import MockClientSession
 
 pytestmark = pytest.mark.asyncio
 
@@ -228,7 +229,9 @@ async def test_custom_override_success_responses(test_charger, mock_aioclient, c
 async def test_toggle_override_refresh_fail(mock_aioclient, caplog):
     """Test toggle_override when state is missing and refresh fails."""
     # Use a fresh charger to avoid fixture mock interference
-    charger = main.OpenEVSE("openevse.test.tld")
+    charger = main.OpenEVSE(
+        "openevse.test.tld", session=MockClientSession(mock_aioclient)
+    )
     # Mock status for a v3 firmware (older than 4.0.1)
     mock_aioclient.get(
         "http://openevse.test.tld/status",

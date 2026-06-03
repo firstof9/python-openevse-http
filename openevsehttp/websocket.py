@@ -11,6 +11,11 @@ from typing import Any
 
 import aiohttp
 
+from .const import (
+    ERROR_SESSION_LOOP_MISMATCH,
+    ERROR_SESSION_REQUIRED,
+)
+
 _LOGGER = logging.getLogger(__name__)
 
 MAX_FAILED_ATTEMPTS = 5
@@ -40,7 +45,6 @@ class OpenEVSEWebsocket:
     ) -> None:
         """Initialize a OpenEVSEWebsocket instance."""
         self.session = session
-        self._session_external = session is not None
         self.uri = self._get_uri(server)
         self._user = user
         self._password = password
@@ -224,10 +228,17 @@ class OpenEVSEWebsocket:
             self._listener_loop = None
 
     async def _ensure_session(self) -> None:
-        """Ensure aiohttp.ClientSession exists."""
+        """Ensure an external aiohttp.ClientSession exists."""
         if self.session is None:
-            self.session = aiohttp.ClientSession()
-            self._session_external = False
+            raise RuntimeError(ERROR_SESSION_REQUIRED)
+
+        loop = asyncio.get_running_loop()
+        session_loop = getattr(self.session, "_loop", None)
+        if (
+            isinstance(session_loop, asyncio.AbstractEventLoop)
+            and session_loop is not loop
+        ):
+            raise RuntimeError(ERROR_SESSION_LOOP_MISMATCH)
 
     async def close(self) -> None:
         """Close the listening websocket."""
@@ -242,10 +253,6 @@ class OpenEVSEWebsocket:
         if self._client is not None:
             await self._client.close()
             self._client = None
-        # Only close the session if we created it
-        if not self._session_external and self.session is not None:
-            await self.session.close()
-            self.session = None
 
     async def keepalive(self) -> None:
         """Send ping requests to websocket."""

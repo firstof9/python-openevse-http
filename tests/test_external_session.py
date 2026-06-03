@@ -37,9 +37,7 @@ async def test_external_session_provided():
     # Create OpenEVSE instance with external session
     charger = OpenEVSE(TEST_TLD, session=mock_session)
 
-    # Verify the session is stored
     assert charger._session is mock_session
-    assert charger._session_external is True
 
     # Make a request
     await charger.process_request(TEST_URL_STATUS, method="get")
@@ -48,23 +46,17 @@ async def test_external_session_provided():
     mock_session.get.assert_called_once()
 
 
-async def test_no_external_session(mock_aioclient):
-    """Test that a temporary session is created when none is provided."""
-    mock_aioclient.get(
-        TEST_URL_STATUS,
-        status=200,
-        body=load_fixture("v4_json/status.json"),
-    )
-
-    # Create OpenEVSE instance without external session
+async def test_no_external_session():
+    """Test that requests fail when no external session is provided."""
     charger = OpenEVSE(TEST_TLD)
 
-    # Verify no session is stored
     assert charger._session is None
-    assert charger._session_external is False
 
-    # Make a request - should create a temporary session
-    await charger.process_request(TEST_URL_STATUS, method="get")
+    with pytest.raises(
+        RuntimeError,
+        match="An aiohttp.ClientSession must be provided via the session argument.",
+    ):
+        await charger.process_request(TEST_URL_STATUS, method="get")
 
 
 async def test_external_session_with_update(mock_aioclient):
@@ -87,7 +79,6 @@ async def test_external_session_with_update(mock_aioclient):
 
         # Verify the session is stored
         assert charger._session is session
-        assert charger._session_external is True
 
         # Update should use the external session
         await charger.update()
@@ -119,7 +110,7 @@ async def test_websocket_uses_external_session(mock_aioclient):
         await charger.update()
 
         with patch("openevsehttp.websocket.OpenEVSEWebsocket.listen"):
-            charger.ws_start()
+            await charger.ws_start()
 
         # Verify websocket was created with the session
         assert charger.websocket is not None
@@ -154,16 +145,11 @@ async def test_firmware_check_with_external_session(mock_aioclient):
         body=json.dumps(github_response),
     )
 
-    # Create OpenEVSE instance without external session (use mocked responses)
-    charger = OpenEVSE(TEST_TLD)
+    async with aiohttp.ClientSession() as session:
+        charger = OpenEVSE(TEST_TLD, session=session)
+        await charger.update()
+        result = await charger.firmware_check()
 
-    # Load config first
-    await charger.update()
-
-    # Check firmware - should use mocked session
-    result = await charger.firmware_check()
-
-    # Verify result
     assert result is not None
     assert result["latest_version"] == "v4.2.0"
 
