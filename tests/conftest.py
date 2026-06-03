@@ -18,215 +18,156 @@ TEST_URL_WS = "ws://openevse.test.tld/ws"
 TEST_TLD = "openevse.test.tld"
 
 
+def _setup_charger(
+    mock_aioclient,
+    status_fixture="v4_json/status.json",
+    config_fixture="v4_json/config.json",
+    ws_fixture="v4_json/status.json",
+    user=None,
+    pwd=None,
+    status_code=200,
+    config_code=200,
+    is_ws=True,
+    version_override=None,
+    status_exception=None,
+):
+    """Set up mocked endpoints and return an OpenEVSE client."""
+    if status_exception:
+        mock_aioclient.get(
+            TEST_URL_STATUS,
+            exception=status_exception,
+        )
+    elif status_fixture:
+        mock_aioclient.get(
+            TEST_URL_STATUS,
+            status=status_code,
+            body=load_fixture(status_fixture) if status_code == 200 else "",
+        )
+
+    if config_fixture:
+        if version_override:
+            config = json.loads(load_fixture(config_fixture))
+            config["version"] = version_override
+            body = json.dumps(config)
+        else:
+            body = load_fixture(config_fixture) if config_code == 200 else ""
+        mock_aioclient.get(
+            TEST_URL_CONFIG,
+            status=config_code,
+            body=body,
+        )
+
+    if is_ws and ws_fixture:
+        mock_aioclient.get(
+            TEST_URL_WS,
+            status=200,
+            body=load_fixture(ws_fixture),
+            repeat=True,
+        )
+
+    return main.OpenEVSE(TEST_TLD, user=user, pwd=pwd)
+
+
 @pytest.fixture(name="test_charger_auth")
 def test_charger_auth(mock_aioclient):
     """Load the charger data."""
-    mock_aioclient.get(
-        TEST_URL_STATUS,
-        status=200,
-        body=load_fixture("v4_json/status.json"),
-    )
-    mock_aioclient.get(
-        TEST_URL_CONFIG,
-        status=200,
-        body=load_fixture("v4_json/config.json"),
-    )
-    mock_aioclient.get(
-        TEST_URL_WS,
-        status=200,
-        body=load_fixture("v4_json/status.json"),
-        repeat=True,
-    )
-    return main.OpenEVSE(TEST_TLD, user="testuser", pwd="fakepassword")
+    return _setup_charger(mock_aioclient, user="testuser", pwd="fakepassword")
 
 
 @pytest.fixture(name="test_charger_auth_err")
 def test_charger_auth_err(mock_aioclient):
     """Load the charger data."""
-    mock_aioclient.get(
-        TEST_URL_STATUS,
-        status=401,
+    return _setup_charger(
+        mock_aioclient,
+        status_code=401,
+        config_code=401,
+        is_ws=False,
+        user="testuser",
+        pwd="fakepassword",
     )
-    mock_aioclient.get(
-        TEST_URL_CONFIG,
-        status=401,
-    )
-    return main.OpenEVSE(TEST_TLD, user="testuser", pwd="fakepassword")
 
 
 @pytest.fixture(name="test_charger")
 def test_charger(mock_aioclient):
     """Load the charger data."""
-    mock_aioclient.get(
-        TEST_URL_STATUS,
-        status=200,
-        body=load_fixture("v4_json/status.json"),
-    )
-    mock_aioclient.get(
-        TEST_URL_CONFIG,
-        status=200,
-        body=load_fixture("v4_json/config.json"),
-    )
-    mock_aioclient.get(
-        TEST_URL_WS,
-        status=200,
-        body=load_fixture("v4_json/status.json"),
-        repeat=True,
-    )
-    return main.OpenEVSE(TEST_TLD)
+    return _setup_charger(mock_aioclient)
 
 
 @pytest.fixture(name="test_charger_timeout")
 def test_charger_timeout(mock_aioclient):
     """Load the charger data."""
-    mock_aioclient.get(
-        TEST_URL_STATUS,
-        exception=TimeoutError,
+    return _setup_charger(
+        mock_aioclient, status_exception=TimeoutError, config_fixture=None, is_ws=False
     )
-    return main.OpenEVSE(TEST_TLD)
 
 
 @pytest.fixture(name="test_charger_dev")
 def test_charger_dev(mock_aioclient):
     """Load the charger data."""
-    mock_aioclient.get(
-        TEST_URL_STATUS,
-        status=200,
-        body=load_fixture("v4_json/status.json"),
-    )
-    mock_aioclient.get(
-        TEST_URL_CONFIG,
-        status=200,
-        body=load_fixture("v4_json/config-dev.json"),
-    )
-    mock_aioclient.get(
-        TEST_URL_WS,
-        status=200,
-        body=load_fixture("v4_json/status.json"),
-        repeat=True,
-    )
-    return main.OpenEVSE(TEST_TLD)
+    return _setup_charger(mock_aioclient, config_fixture="v4_json/config-dev.json")
 
 
 @pytest.fixture(name="test_charger_new")
 def test_charger_new(mock_aioclient):
     """Load the charger data."""
-    mock_aioclient.get(
-        TEST_URL_STATUS,
-        status=200,
-        body=load_fixture("v4_json/status-new.json"),
+    return _setup_charger(
+        mock_aioclient,
+        status_fixture="v4_json/status-new.json",
+        config_fixture="v4_json/config-new.json",
+        ws_fixture="v4_json/status-new.json",
     )
-    mock_aioclient.get(
-        TEST_URL_CONFIG,
-        status=200,
-        body=load_fixture("v4_json/config-new.json"),
-    )
-    mock_aioclient.get(
-        TEST_URL_WS,
-        status=200,
-        body=load_fixture("v4_json/status-new.json"),
-        repeat=True,
-    )
-    return main.OpenEVSE(TEST_TLD)
 
 
 @pytest.fixture(name="test_charger_broken")
 def test_charger_broken(mock_aioclient):
     """Load the charger data."""
-    mock_aioclient.get(
-        TEST_URL_STATUS,
-        status=200,
-        body=load_fixture("v4_json/status-broken.json"),
+    return _setup_charger(
+        mock_aioclient,
+        status_fixture="v4_json/status-broken.json",
+        config_fixture="v4_json/config-broken.json",
+        is_ws=False,
     )
-    mock_aioclient.get(
-        TEST_URL_CONFIG,
-        status=200,
-        body=load_fixture("v4_json/config-broken.json"),
-    )
-    return main.OpenEVSE(TEST_TLD)
 
 
 @pytest.fixture(name="test_charger_broken_semver")
 def test_charger_broken_semver(mock_aioclient):
     """Load the charger data."""
-    mock_aioclient.get(
-        TEST_URL_STATUS,
-        status=200,
-        body=load_fixture("v4_json/status.json"),
+    return _setup_charger(
+        mock_aioclient, config_fixture="v4_json/config-broken-semver.json", is_ws=False
     )
-    mock_aioclient.get(
-        TEST_URL_CONFIG,
-        status=200,
-        body=load_fixture("v4_json/config-broken-semver.json"),
-    )
-    return main.OpenEVSE(TEST_TLD)
 
 
 @pytest.fixture(name="test_charger_unknown_semver")
 def test_charger_unknown_semver(mock_aioclient):
     """Load the charger data."""
-    mock_aioclient.get(
-        TEST_URL_STATUS,
-        status=200,
-        body=load_fixture("v4_json/status.json"),
+    return _setup_charger(
+        mock_aioclient, config_fixture="v4_json/config-unknown-semver.json", is_ws=False
     )
-    mock_aioclient.get(
-        TEST_URL_CONFIG,
-        status=200,
-        body=load_fixture("v4_json/config-unknown-semver.json"),
-    )
-    return main.OpenEVSE(TEST_TLD)
 
 
 @pytest.fixture(name="test_charger_modified_ver")
 def test_charger_modified_ver(mock_aioclient):
     """Load the charger data."""
-    mock_aioclient.get(
-        TEST_URL_STATUS,
-        status=200,
-        body=load_fixture("v4_json/status.json"),
+    return _setup_charger(
+        mock_aioclient, config_fixture="v4_json/config-extra-version.json", is_ws=False
     )
-    mock_aioclient.get(
-        TEST_URL_CONFIG,
-        status=200,
-        body=load_fixture("v4_json/config-extra-version.json"),
-    )
-    return main.OpenEVSE(TEST_TLD)
 
 
 @pytest.fixture(name="test_charger_v2")
 def test_charger_v2(mock_aioclient):
     """Load the charger data."""
-    mock_aioclient.get(
-        TEST_URL_STATUS,
-        status=200,
-        body=load_fixture("v2_json/status.json"),
+    return _setup_charger(
+        mock_aioclient,
+        status_fixture="v2_json/status.json",
+        config_fixture="v2_json/config.json",
+        is_ws=False,
     )
-    mock_aioclient.get(
-        TEST_URL_CONFIG,
-        status=200,
-        body=load_fixture("v2_json/config.json"),
-    )
-    return main.OpenEVSE(TEST_TLD)
 
 
 @pytest.fixture(name="test_charger_v4_0")
 def test_charger_v4_0(mock_aioclient):
     """Load the charger data."""
-    mock_aioclient.get(
-        TEST_URL_STATUS,
-        status=200,
-        body=load_fixture("v4_json/status.json"),
-    )
-    # Load and modify config for v4.0.0
-    config = json.loads(load_fixture("v4_json/config.json"))
-    config["version"] = "4.0.0"
-    mock_aioclient.get(
-        TEST_URL_CONFIG,
-        status=200,
-        body=json.dumps(config),
-    )
-    return main.OpenEVSE(TEST_TLD)
+    return _setup_charger(mock_aioclient, version_override="4.0.0", is_ws=False)
 
 
 class MockResponse:

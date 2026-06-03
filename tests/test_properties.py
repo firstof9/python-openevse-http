@@ -16,45 +16,197 @@ TEST_URL_CONFIG = "http://openevse.test.tld/config"
 SERVER_URL = "openevse.test.tld"
 
 
-# ── status / state ──────────────────────────────────────────────────
-
-
 @pytest.mark.parametrize(
-    "fixture, expected",
-    [("test_charger", "sleeping"), ("test_charger_v2", "not connected")],
+    "fixture, prop, expected",
+    [
+        # status / state
+        ("test_charger", "status", "sleeping"),
+        ("test_charger_v2", "status", "not connected"),
+        ("test_charger", "state", "sleeping"),
+        ("test_charger_v2", "state", "not connected"),
+        ("test_charger", "state_raw", 254),
+        ("test_charger_v2", "state_raw", 1),
+        # wifi / network
+        ("test_charger", "wifi_ssid", "Datanode-IoT"),
+        ("test_charger_v2", "wifi_ssid", "nsavanup_IoT"),
+        ("test_charger", "hostname", "openevse-7b2c"),
+        ("test_charger_v2", "hostname", "openevse"),
+        ("test_charger", "ip_address", "192.168.21.10"),
+        ("test_charger_v2", "ip_address", "192.168.1.67"),
+        ("test_charger", "wifi_signal", -61),
+        ("test_charger_v2", "wifi_signal", -56),
+        ("test_charger", "wifi_serial", "1234567890AB"),
+        ("test_charger_v2", "wifi_serial", None),
+        ("test_charger", "mode", "STA"),
+        ("test_charger_v2", "mode", "STA"),
+        ("test_charger", "using_ethernet", False),
+        ("test_charger_v2", "using_ethernet", False),
+        # firmware
+        ("test_charger", "openevse_firmware", "7.1.3"),
+        ("test_charger_v2", "openevse_firmware", "5.0.1"),
+        ("test_charger", "wifi_firmware", "4.1.2"),
+        ("test_charger_v2", "wifi_firmware", "2.9.1"),
+        ("test_charger_dev", "wifi_firmware", "4.1.5"),
+        ("test_charger_broken_semver", "wifi_firmware", "master_abcd123"),
+        ("test_charger", "protocol_version", None),
+        ("test_charger_v2", "protocol_version", "4.0.1"),
+        # hardware config
+        ("test_charger", "ammeter_offset", 0),
+        ("test_charger_v2", "ammeter_offset", 0),
+        ("test_charger", "ammeter_scale_factor", 220),
+        ("test_charger_v2", "ammeter_scale_factor", 220),
+        ("test_charger", "service_level", 2),
+        ("test_charger_v2", "service_level", 2),
+        # safety checks
+        ("test_charger", "temp_check_enabled", False),
+        ("test_charger_v2", "temp_check_enabled", False),
+        ("test_charger", "diode_check_enabled", False),
+        ("test_charger_v2", "diode_check_enabled", True),
+        ("test_charger", "vent_required_enabled", False),
+        ("test_charger_v2", "vent_required_enabled", False),
+        ("test_charger", "ground_check_enabled", False),
+        ("test_charger_v2", "ground_check_enabled", False),
+        ("test_charger", "stuck_relay_check_enabled", False),
+        ("test_charger_v2", "stuck_relay_check_enabled", False),
+        # trip counts
+        ("test_charger", "stuck_relay_trip_count", 0),
+        ("test_charger_v2", "stuck_relay_trip_count", 0),
+        ("test_charger", "no_gnd_trip_count", 0),
+        ("test_charger_v2", "no_gnd_trip_count", 0),
+        ("test_charger", "gfi_trip_count", 1),
+        ("test_charger_v2", "gfi_trip_count", 0),
+        (
+            "test_charger_new",
+            "checks_count",
+            {"gfcicount": 1, "nogndcount": 0, "stuckcount": 0},
+        ),
+        (
+            "test_charger_v2",
+            "checks_count",
+            {"gfcicount": 0, "nogndcount": 0, "stuckcount": 0},
+        ),
+        # charging data
+        ("test_charger", "charge_time_elapsed", 246),
+        ("test_charger_v2", "charge_time_elapsed", 8751),
+        ("test_charger", "charging_current", 32.2),
+        ("test_charger_v2", "charging_current", 0),
+        ("test_charger", "current_capacity", 48),
+        ("test_charger_v2", "current_capacity", 25),
+        ("test_charger", "charging_voltage", 240),
+        ("test_charger_v2", "charging_voltage", 240),
+        ("test_charger", "charging_power", 7728),
+        ("test_charger_v2", "charging_power", 0),
+        ("test_charger_broken", "charging_power", None),
+        ("test_charger", "charge_rate", 0),
+        ("test_charger_v2", "charge_rate", 0),
+        ("test_charger", "available_current", None),
+        ("test_charger_v2", "available_current", None),
+        ("test_charger", "smoothed_available_current", None),
+        ("test_charger_v2", "smoothed_available_current", None),
+        ("test_charger", "min_amps", 6),
+        ("test_charger_v2", "min_amps", 6),
+        ("test_charger", "max_amps", 48),
+        ("test_charger_v2", "max_amps", 48),
+        ("test_charger", "max_current_soft", 48),
+        ("test_charger_v2", "max_current_soft", 25),
+        ("test_charger_new", "max_current", 48),
+        ("test_charger_v2", "max_current", None),
+        # usage
+        ("test_charger", "usage_total", 64582),
+        ("test_charger_v2", "usage_total", 1585443),
+        ("test_charger_new", "usage_total", 20127.22817),
+        ("test_charger", "usage_session", 275.71),
+        ("test_charger_v2", "usage_session", 7003.41),
+        ("test_charger_new", "usage_session", 0),
+        ("test_charger", "total_day", None),
+        ("test_charger_v2", "total_day", None),
+        ("test_charger_new", "total_day", 0),
+        ("test_charger", "total_week", None),
+        ("test_charger_v2", "total_week", None),
+        ("test_charger_new", "total_week", 1.567628635),
+        ("test_charger", "total_month", None),
+        ("test_charger_v2", "total_month", None),
+        ("test_charger_new", "total_month", 37.21857071),
+        ("test_charger", "total_year", None),
+        ("test_charger_v2", "total_year", None),
+        ("test_charger_new", "total_year", 2155.219982),
+        # temperatures
+        ("test_charger", "ambient_temperature", 50.3),
+        ("test_charger_v2", "ambient_temperature", 34.0),
+        ("test_charger", "rtc_temperature", 50.3),
+        ("test_charger_v2", "rtc_temperature", None),
+        ("test_charger", "ir_temperature", None),
+        ("test_charger_v2", "ir_temperature", None),
+        ("test_charger", "esp_temperature", 56.0),
+        ("test_charger_v2", "esp_temperature", None),
+        # divert
+        ("test_charger", "divert_active", True),
+        ("test_charger_v2", "divert_active", False),
+        ("test_charger_new", "divert_active", False),
+        ("test_charger", "divertmode", "eco"),
+        ("test_charger_v2", "divertmode", "fast"),
+        ("test_charger_broken", "divertmode", "eco"),
+        ("test_charger_new", "divertmode", "fast"),
+        ("test_charger", "charge_mode", "fast"),
+        ("test_charger_v2", "charge_mode", "fast"),
+        # override / manual override
+        ("test_charger", "manual_override", False),
+        ("test_charger_v2", "manual_override", False),
+        # vehicle
+        ("test_charger", "vehicle", 1),
+        ("test_charger", "vehicle_soc", 75),
+        ("test_charger_v2", "vehicle_soc", None),
+        ("test_charger", "vehicle_range", 468),
+        ("test_charger_v2", "vehicle_range", None),
+        # shaper
+        ("test_charger", "shaper_active", True),
+        ("test_charger_v2", "shaper_active", None),
+        ("test_charger", "shaper_live_power", 2299),
+        ("test_charger_v2", "shaper_live_power", None),
+        ("test_charger", "shaper_available_current", 21),
+        ("test_charger_v2", "shaper_available_current", None),
+        ("test_charger_broken", "shaper_available_current", 48),
+        ("test_charger", "shaper_max_power", 4000),
+        ("test_charger_v2", "shaper_max_power", None),
+        ("test_charger", "shaper_updated", False),
+        ("test_charger_v2", "shaper_updated", False),
+        ("test_charger_broken", "shaper_updated", False),
+        ("test_charger_new", "shaper_updated", True),
+        # limit / OTA
+        ("test_charger", "has_limit", None),
+        ("test_charger_v2", "has_limit", None),
+        ("test_charger_new", "has_limit", False),
+        ("test_charger", "ota_update", False),
+        ("test_charger_v2", "ota_update", False),
+        # MQTT
+        ("test_charger", "mqtt_connected", True),
+        ("test_charger_v2", "mqtt_connected", False),
+        ("test_charger_broken", "mqtt_connected", False),
+        # emoncms / ocpp / uptime / freeram
+        ("test_charger_new", "emoncms_connected", 0),
+        ("test_charger_v2", "emoncms_connected", 0),
+        ("test_charger_new", "ocpp_connected", 0),
+        ("test_charger_v2", "ocpp_connected", None),
+        ("test_charger_new", "uptime", 1208725),
+        ("test_charger_v2", "uptime", None),
+        ("test_charger_new", "freeram", 167436),
+        ("test_charger_v2", "freeram", None),
+        # power (current_power)
+        ("test_charger", "current_power", UnsupportedFeature),
+        ("test_charger_v2", "current_power", UnsupportedFeature),
+        ("test_charger_broken", "current_power", UnsupportedFeature),
+        ("test_charger_new", "current_power", 4500),
+    ],
 )
-async def test_get_status(fixture, expected, request):
-    """Test status property."""
+async def test_simple_properties(fixture, prop, expected, request):
+    """Test simple property accessors."""
     charger = request.getfixturevalue(fixture)
     await charger.update()
-    status = charger.status
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected",
-    [("test_charger", "sleeping"), ("test_charger_v2", "not connected")],
-)
-async def test_get_state(fixture, expected, request):
-    """Test state property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.state
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected",
-    [("test_charger", 254), ("test_charger_v2", 1)],
-)
-async def test_get_state_raw(fixture, expected, request):
-    """Test state_raw property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.state_raw
-    assert status == expected
+    if isinstance(expected, type) and issubclass(expected, Exception):
+        with pytest.raises(expected):
+            _ = getattr(charger, prop)
+    else:
+        assert getattr(charger, prop) == expected
     await charger.ws_disconnect()
 
 
@@ -82,367 +234,6 @@ async def test_get_state_unknown():
     assert charger.state == "unknown"  # code 0 fallback
 
 
-# ── wifi / network ──────────────────────────────────────────────────
-
-
-@pytest.mark.parametrize(
-    "fixture, expected",
-    [("test_charger", "Datanode-IoT"), ("test_charger_v2", "nsavanup_IoT")],
-)
-async def test_get_ssid(fixture, expected, request):
-    """Test wifi_ssid property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.wifi_ssid
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected",
-    [("test_charger", "openevse-7b2c"), ("test_charger_v2", "openevse")],
-)
-async def test_get_hostname(fixture, expected, request):
-    """Test hostname property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.hostname
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected",
-    [("test_charger", "192.168.21.10"), ("test_charger_v2", "192.168.1.67")],
-)
-async def test_get_ip_address(fixture, expected, request):
-    """Test ip_address property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.ip_address
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", -61), ("test_charger_v2", -56)]
-)
-async def test_get_wifi_signal(fixture, expected, request):
-    """Test wifi_signal property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.wifi_signal
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", "1234567890AB"), ("test_charger_v2", None)]
-)
-async def test_wifi_serial(fixture, expected, request):
-    """Test wifi_serial reply."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.wifi_serial
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected",
-    [("test_charger", "STA"), ("test_charger_v2", "STA")],
-)
-async def test_get_mode(fixture, expected, request):
-    """Test mode property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.mode
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", False), ("test_charger_v2", False)]
-)
-async def test_get_using_ethernet(fixture, expected, request):
-    """Test using_ethernet property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.using_ethernet
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-# ── firmware ────────────────────────────────────────────────────────
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", "7.1.3"), ("test_charger_v2", "5.0.1")]
-)
-async def test_get_firmware(fixture, expected, request):
-    """Test openevse_firmware property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.openevse_firmware
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected",
-    [
-        ("test_charger", "4.1.2"),
-        ("test_charger_v2", "2.9.1"),
-        ("test_charger_dev", "4.1.5"),
-        ("test_charger_broken_semver", "master_abcd123"),
-    ],
-)
-async def test_get_wifi_firmware(fixture, expected, request):
-    """Test wifi_firmware property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.wifi_firmware
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", None), ("test_charger_v2", "4.0.1")]
-)
-async def test_get_protocol_version(fixture, expected, request):
-    """Test protocol_version property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.protocol_version
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-# ── hardware config ─────────────────────────────────────────────────
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
-)
-async def test_get_ammeter_offset(fixture, expected, request):
-    """Test ammeter_offset property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    await charger.ws_disconnect()
-    status = charger.ammeter_offset
-    assert status == expected
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 220), ("test_charger_v2", 220)]
-)
-async def test_get_ammeter_scale_factor(fixture, expected, request):
-    """Test ammeter_scale_factor property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.ammeter_scale_factor
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 2), ("test_charger_v2", 2)]
-)
-async def test_get_service_level(fixture, expected, request):
-    """Test service_level property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.service_level
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-# ── safety checks ───────────────────────────────────────────────────
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", False), ("test_charger_v2", False)]
-)
-async def test_get_tempt(fixture, expected, request):
-    """Test temp_check_enabled property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.temp_check_enabled
-    assert status is expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", False), ("test_charger_v2", True)]
-)
-async def test_get_diodet(fixture, expected, request):
-    """Test diode_check_enabled property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.diode_check_enabled
-    assert status is expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", False), ("test_charger_v2", False)]
-)
-async def test_get_ventt(fixture, expected, request):
-    """Test vent_required_enabled property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.vent_required_enabled
-    assert status is expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", False), ("test_charger_v2", False)]
-)
-async def test_get_groundt(fixture, expected, request):
-    """Test ground_check_enabled property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.ground_check_enabled
-    assert status is expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", False), ("test_charger_v2", False)]
-)
-async def test_get_relayt(fixture, expected, request):
-    """Test stuck_relay_check_enabled property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.stuck_relay_check_enabled
-    assert status is expected
-    await charger.ws_disconnect()
-
-
-# ── trip counts ─────────────────────────────────────────────────────
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
-)
-async def test_get_stuck_relay_trip_count(fixture, expected, request):
-    """Test stuck_relay_trip_count property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.stuck_relay_trip_count
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
-)
-async def test_get_no_gnd_trip_count(fixture, expected, request):
-    """Test no_gnd_trip_count property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.no_gnd_trip_count
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 1), ("test_charger_v2", 0)]
-)
-async def test_get_gfi_trip_count(fixture, expected, request):
-    """Test gfi_trip_count property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.gfi_trip_count
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected",
-    [
-        ("test_charger_new", {"gfcicount": 1, "nogndcount": 0, "stuckcount": 0}),
-        ("test_charger_v2", {"gfcicount": 0, "nogndcount": 0, "stuckcount": 0}),
-    ],
-)
-async def test_checks_count(fixture, expected, request):
-    """Test checks_count reply."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.checks_count
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-# ── charging data ───────────────────────────────────────────────────
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 246), ("test_charger_v2", 8751)]
-)
-async def test_get_charge_time_elapsed(fixture, expected, request):
-    """Test charge_time_elapsed property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.charge_time_elapsed
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 32.2), ("test_charger_v2", 0)]
-)
-async def test_get_charging_current(fixture, expected, request):
-    """Test charging_current property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.charging_current
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 48), ("test_charger_v2", 25)]
-)
-async def test_get_current_capacity(fixture, expected, request):
-    """Test current_capacity property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.current_capacity
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 240), ("test_charger_v2", 240)]
-)
-async def test_get_charging_voltage(fixture, expected, request):
-    """Test charging_voltage property."""
-    charger = request.getfixturevalue(fixture)
-    try:
-        await charger.update()
-        status = charger.charging_voltage
-        assert status == expected
-    finally:
-        await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected",
-    [("test_charger", 7728), ("test_charger_v2", 0), ("test_charger_broken", None)],
-)
-async def test_get_charging_power(fixture, expected, request):
-    """Test charging_power property."""
-    charger = request.getfixturevalue(fixture)
-    try:
-        await charger.update()
-        status = charger.charging_power
-        assert status == expected
-    finally:
-        await charger.ws_disconnect()
-
-
 async def test_charging_power_non_numeric():
     """Test charging_power with non-numeric values."""
     charger = OpenEVSE("openevse.test.tld")
@@ -452,211 +243,11 @@ async def test_charging_power_non_numeric():
     assert charger.charging_power is None
 
 
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 0), ("test_charger_v2", 0)]
-)
-async def test_get_charge_rate(fixture, expected, request):
-    """Test charge_rate property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.charge_rate
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", None), ("test_charger_v2", None)]
-)
-async def test_get_available_current(fixture, expected, request):
-    """Test available_current property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.available_current
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", None), ("test_charger_v2", None)]
-)
-async def test_get_smoothed_available_current(fixture, expected, request):
-    """Test smoothed_available_current property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.smoothed_available_current
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 6), ("test_charger_v2", 6)]
-)
-async def test_get_min_amps(fixture, expected, request):
-    """Test min_amps property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.min_amps
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 48), ("test_charger_v2", 48)]
-)
-async def test_get_max_amps(fixture, expected, request):
-    """Test max_amps property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.max_amps
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 48), ("test_charger_v2", 25)]
-)
-async def test_max_current_soft(fixture, expected, request):
-    """Test max_current_soft reply."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.max_current_soft
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger_new", 48), ("test_charger_v2", None)]
-)
-async def test_max_current(fixture, expected, request):
-    """Test max_current reply."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.max_current
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-# ── usage ───────────────────────────────────────────────────────────
-
-
-@pytest.mark.parametrize(
-    "fixture, expected",
-    [
-        ("test_charger", 64582),
-        ("test_charger_v2", 1585443),
-        ("test_charger_new", 20127.22817),
-    ],
-)
-async def test_get_usage_total(fixture, expected, request):
-    """Test usage_total property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.usage_total
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected",
-    [
-        ("test_charger", 275.71),
-        ("test_charger_v2", 7003.41),
-        ("test_charger_new", 0),
-    ],
-)
-async def test_get_usage_session(fixture, expected, request):
-    """Test usage_session property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.usage_session
-    assert status == expected
-    await charger.ws_disconnect()
-
-
 async def test_usage_session_none():
     """Test usage_session returns None when no data is present."""
     charger = OpenEVSE(SERVER_URL)
     charger._status = {}
     assert charger.usage_session is None
-
-
-@pytest.mark.parametrize(
-    "fixture, expected",
-    [("test_charger", None), ("test_charger_v2", None), ("test_charger_new", 0)],
-)
-async def test_get_total_day(fixture, expected, request):
-    """Test total_day reply."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.total_day
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected",
-    [
-        ("test_charger", None),
-        ("test_charger_v2", None),
-        ("test_charger_new", 1.567628635),
-    ],
-)
-async def test_get_total_week(fixture, expected, request):
-    """Test total_week property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.total_week
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected",
-    [
-        ("test_charger", None),
-        ("test_charger_v2", None),
-        ("test_charger_new", 37.21857071),
-    ],
-)
-async def test_get_total_month(fixture, expected, request):
-    """Test total_month property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.total_month
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected",
-    [
-        ("test_charger", None),
-        ("test_charger_v2", None),
-        ("test_charger_new", 2155.219982),
-    ],
-)
-async def test_get_total_year(fixture, expected, request):
-    """Test total_year property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.total_year
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-# ── temperatures ────────────────────────────────────────────────────
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 50.3), ("test_charger_v2", 34.0)]
-)
-async def test_get_ambient_temperature(fixture, expected, request):
-    """Test ambient_temperature property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.ambient_temperature
-    assert status == expected
-    await charger.ws_disconnect()
 
 
 async def test_get_ambient_temperature_zero():
@@ -683,50 +274,11 @@ async def test_get_ambient_temperature_none():
     assert charger.ambient_temperature is None
 
 
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 50.3), ("test_charger_v2", None)]
-)
-async def test_get_rtc_temperature(fixture, expected, request):
-    """Test rtc_temperature property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.rtc_temperature
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", None), ("test_charger_v2", None)]
-)
-async def test_get_ir_temperature(fixture, expected, request):
-    """Test ir_temperature property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.ir_temperature
-    assert status == expected
-    await charger.ws_disconnect()
-
-
 async def test_ir_temperature():
     """Test ir_temperature property."""
     charger = OpenEVSE(SERVER_URL)
     charger._status = {"temp3": 250}
     assert charger.ir_temperature == 25.0
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 56.0), ("test_charger_v2", None)]
-)
-async def test_get_esp_temperature(fixture, expected, request):
-    """Test esp_temperature property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.esp_temperature
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-# ── time ────────────────────────────────────────────────────────────
 
 
 @pytest.mark.parametrize(
@@ -801,9 +353,6 @@ async def test_async_charge_current_exception(test_charger):
     await test_charger.ws_disconnect()
 
 
-# ── divert ──────────────────────────────────────────────────────────
-
-
 async def test_async_charge_current_numeric_error(test_charger):
     """Test get_charge_current with malformed numeric data."""
     # Test TypeError in int conversion
@@ -836,102 +385,8 @@ async def test_get_override_state_null_handling(test_charger_new):
 
 
 @pytest.mark.parametrize(
-    "fixture, expected",
-    [("test_charger", True), ("test_charger_v2", False), ("test_charger_new", False)],
-)
-async def test_get_divert_active(fixture, expected, request):
-    """Test divert_active property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.divert_active
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected",
-    [
-        ("test_charger", "eco"),
-        ("test_charger_v2", "fast"),
-        ("test_charger_broken", "eco"),
-        ("test_charger_new", "fast"),
-    ],
-)
-async def test_divertmode(fixture, expected, request):
-    """Test divertmode property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.divertmode
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", "fast"), ("test_charger_v2", "fast")]
-)
-async def test_charge_mode(fixture, expected, request):
-    """Test vehicle_range reply."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.charge_mode
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-# ── override / manual override ──────────────────────────────────────
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", False), ("test_charger_v2", False)]
-)
-async def test_get_manual_override(fixture, expected, request):
-    """Test manual_override property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.manual_override
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-# ── vehicle ─────────────────────────────────────────────────────────
-
-
-@pytest.mark.parametrize("fixture, expected", [("test_charger", 1)])
-async def test_get_vehicle(fixture, expected, request):
-    """Test vehicle property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.vehicle
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 75), ("test_charger_v2", None)]
-)
-async def test_vehicle_soc(fixture, expected, request):
-    """Test vehicle_soc reply."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.vehicle_soc
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 468), ("test_charger_v2", None)]
-)
-async def test_vehicle_range(fixture, expected, request):
-    """Test vehicle_range reply."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.vehicle_range
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected_seconds", [("test_charger", 18000), ("test_charger_v2", None)]
+    "fixture, expected_seconds",
+    [("test_charger", 18000), ("test_charger_v2", None)],
 )
 @freeze_time("2026-01-09 12:00:00+00:00")
 async def test_vehicle_eta(fixture, expected_seconds, request):
@@ -953,104 +408,6 @@ async def test_vehicle_eta(fixture, expected_seconds, request):
     await charger.ws_disconnect()
 
 
-# ── shaper ──────────────────────────────────────────────────────────
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", True), ("test_charger_v2", None)]
-)
-async def test_shaper_active(fixture, expected, request):
-    """Test shaper_active reply."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.shaper_active
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 2299), ("test_charger_v2", None)]
-)
-async def test_shaper_live_power(fixture, expected, request):
-    """Test shaper_live_power reply."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.shaper_live_power
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected",
-    [("test_charger", 21), ("test_charger_v2", None), ("test_charger_broken", 48)],
-)
-async def test_shaper_current_power(fixture, expected, request):
-    """Test shaper_available_current reply."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.shaper_available_current
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", 4000), ("test_charger_v2", None)]
-)
-async def test_shaper_max_power(fixture, expected, request):
-    """Test shaper_max_power reply."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.shaper_max_power
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected",
-    [
-        ("test_charger", False),
-        ("test_charger_v2", False),
-        ("test_charger_broken", False),
-        ("test_charger_new", True),
-    ],
-)
-async def test_get_shaper_updated(fixture, expected, request):
-    """Test shaper_updated property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.shaper_updated
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-# ── limit / OTA ─────────────────────────────────────────────────────
-
-
-@pytest.mark.parametrize(
-    "fixture, expected",
-    [("test_charger", None), ("test_charger_v2", None), ("test_charger_new", False)],
-)
-async def test_get_has_limit(fixture, expected, request):
-    """Test has_limit reply."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.has_limit
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger", False), ("test_charger_v2", False)]
-)
-async def test_get_ota_update(fixture, expected, request):
-    """Test ota_update property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.ota_update
-    assert status is expected
-    await charger.ws_disconnect()
-
-
 async def test_ota_properties():
     """Test ota_progress and ota_state properties."""
     charger = OpenEVSE(SERVER_URL)
@@ -1063,108 +420,6 @@ async def test_ota_properties():
     assert charger.ota_update is False
     assert charger.ota_progress is None
     assert charger.ota_state is None
-
-
-# ── MQTT ────────────────────────────────────────────────────────────
-
-
-@pytest.mark.parametrize(
-    "fixture, expected",
-    [
-        ("test_charger", True),
-        ("test_charger_v2", False),
-        ("test_charger_broken", False),
-    ],
-)
-async def test_get_mqtt_connected(fixture, expected, request):
-    """Test mqtt_connected property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.mqtt_connected
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-# ── emoncms / ocpp / uptime / freeram ───────────────────────────────
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger_new", 0), ("test_charger_v2", 0)]
-)
-async def test_emoncms_connected(fixture, expected, request):
-    """Test emoncms_connected reply."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.emoncms_connected
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger_new", 0), ("test_charger_v2", None)]
-)
-async def test_ocpp_connected(fixture, expected, request):
-    """Test ocpp_connected reply."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.ocpp_connected
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger_new", 1208725), ("test_charger_v2", None)]
-)
-async def test_uptime(fixture, expected, request):
-    """Test uptime reply."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.uptime
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-@pytest.mark.parametrize(
-    "fixture, expected", [("test_charger_new", 167436), ("test_charger_v2", None)]
-)
-async def test_freeram(fixture, expected, request):
-    """Test freeram reply."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-    status = charger.freeram
-    assert status == expected
-    await charger.ws_disconnect()
-
-
-# ── power (current_power) ──────────────────────────────────────────
-
-
-@pytest.mark.parametrize(
-    "fixture, expected",
-    [
-        ("test_charger", UnsupportedFeature),
-        ("test_charger_v2", UnsupportedFeature),
-        ("test_charger_broken", UnsupportedFeature),
-        ("test_charger_new", 4500),
-    ],
-)
-async def test_power(fixture, expected, request):
-    """Test current_power property."""
-    charger = request.getfixturevalue(fixture)
-    await charger.update()
-
-    # If we expect an exception (UnsupportedFeature), we must use pytest.raises
-    if expected is UnsupportedFeature:
-        with pytest.raises(UnsupportedFeature):
-            _ = charger.current_power
-    else:
-        # Otherwise, we check the returned value
-        assert charger.current_power == expected
-
-    await charger.ws_disconnect()
-
-
-# ── missing data ────────────────────────────────────────────────────
 
 
 async def test_property_getters_with_missing_data(mock_aioclient):
