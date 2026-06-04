@@ -56,8 +56,8 @@ SERVER_URL = "openevse.test.tld"
         ("test_charger_v2", "ammeter_offset", 0),
         ("test_charger", "ammeter_scale_factor", 220),
         ("test_charger_v2", "ammeter_scale_factor", 220),
-        ("test_charger", "service_level", 2),
-        ("test_charger_v2", "service_level", 2),
+        ("test_charger", "service_level", "2"),
+        ("test_charger_v2", "service_level", "2"),
         # safety checks
         ("test_charger", "temp_check_enabled", False),
         ("test_charger_v2", "temp_check_enabled", False),

@@ -86,7 +86,10 @@ class PropertiesMixin:
     @property
     def service_level(self) -> str | None:
         """Return the service level ('1', '2', or 'A')."""
-        return self._config.get("service")
+        value = self._config.get("service")
+        if value is None:
+            return value
+        return str(value)
 
     @property
     def openevse_firmware(self) -> str | None:
