@@ -84,8 +84,8 @@ class PropertiesMixin:
         return bool(self._config.get("relayt", False))
 
     @property
-    def service_level(self) -> int | str | None:
-        """Return the service level (1, 2, or 'A')."""
+    def service_level(self) -> str | None:
+        """Return the service level ('1', '2', or 'A')."""
         return self._config.get("service")
 
     @property

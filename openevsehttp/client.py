@@ -50,13 +50,13 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
     def __init__(
         self,
         host: str,
-        user: str = "",
-        pwd: str = "",
+        user: str | None = None,
+        pwd: str | None = None,
         session: aiohttp.ClientSession | None = None,
     ) -> None:
         """Connect to an OpenEVSE charger equipped with wifi or ethernet."""
-        self._user = user
-        self._pwd = pwd
+        self._user = user or ""
+        self._pwd = pwd or ""
         self.url = f"http://{host}/"
         self._status: dict[str, Any] = {}
         self._config: dict[str, Any] = {}
