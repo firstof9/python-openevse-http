@@ -424,7 +424,7 @@ async def test_firmware_check(
     assert firmware["latest_version"] == "4.1.4"
 
     await test_charger_unknown_semver.update()
-    assert test_charger_unknown_semver.wifi_firmware == "random_a4f11e"
+    assert test_charger_unknown_semver.wifi_firmware == "random_g4f11e"
     mock_aioclient.get(
         TEST_URL_GITHUB_v4,
         status=200,
@@ -432,7 +432,7 @@ async def test_firmware_check(
     )
     with caplog.at_level(logging.DEBUG):
         firmware = await test_charger_unknown_semver.firmware_check()
-        assert "Using version: random_a4f11e" in caplog.text
+        assert "Using version: random_g4f11e" in caplog.text
         assert "Non-semver firmware version detected" in caplog.text
         assert firmware is None
 
@@ -635,19 +635,33 @@ async def test_version_check_limit():
 
 
 async def test_version_check_dev_branches():
-    """Test _version_check with dev branches like 'main' and custom branches with hashes."""
+    """Test _version_check with dev branches, custom branches with hashes, and pre-releases.
+
+    Dev branches (containing 'main', 'master', or ending in a hex commit hash)
+    should bypass version checks and return True. Non-dev pre-releases (like rc
+    or alpha) should be parsed normally and fail when compared against a newer
+    target version.
+    """
     charger = OpenEVSE(SERVER_URL, session=MagicMock())
 
-    # 'main' branch
+    # 'main' branch - treated as dev, returns True
     charger._config = {"version": "main_abc1234"}
     assert charger._version_check("2.0.0") is True
 
-    # Custom branch with 7-char hash
+    # Custom branch with 7-char hash - treated as dev, returns True
     charger._config = {"version": "feature-ui_2b4ad2c"}
     assert charger._version_check("2.0.0") is True
 
-    # Non-dev with underscores (should fail)
+    # Custom branch with 6-char hash - treated as dev, returns True
+    charger._config = {"version": "feature-ui_2b4ad2"}
+    assert charger._version_check("2.0.0") is True
+
+    # Pre-release (rc) version — should fail when checking against a newer target
     charger._config = {"version": "4.1.2_rc1"}
+    assert charger._version_check("5.0.0") is False
+
+    # Pre-release (alpha) version — should also fail when checking against a newer target
+    charger._config = {"version": "4.1.0_alpha"}
     assert charger._version_check("5.0.0") is False
 
 
