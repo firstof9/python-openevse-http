@@ -644,8 +644,19 @@ async def test_version_check_dev_branches():
     """
     charger = OpenEVSE(SERVER_URL, session=MagicMock())
 
-    # 'main' branch - treated as dev, returns True
+    # Standalone dev branches - treated as dev, returns True
+    charger._config = {"version": "main"}
+    assert charger._version_check("2.0.0") is True
+
+    charger._config = {"version": "master"}
+    assert charger._version_check("2.0.0") is True
+
+    # 'main' branch with hash - treated as dev, returns True
     charger._config = {"version": "main_abc1234"}
+    assert charger._version_check("2.0.0") is True
+
+    # 'master' branch with hash - treated as dev, returns True
+    charger._config = {"version": "master_abc1234"}
     assert charger._version_check("2.0.0") is True
 
     # Custom branch with 7-char hash - treated as dev, returns True
@@ -655,6 +666,18 @@ async def test_version_check_dev_branches():
     # Custom branch with 6-char hash - treated as dev, returns True
     charger._config = {"version": "feature-ui_2b4ad2"}
     assert charger._version_check("2.0.0") is True
+
+    # Case-insensitive hex hash matching (uppercase) - treated as dev, returns True
+    charger._config = {"version": "feature_1A2B3C"}
+    assert charger._version_check("2.0.0") is True
+
+    # False positives containing 'main' or 'master' but not at word boundaries,
+    # or ending in 6-char hashes without dev keywords — should fail version check
+    charger._config = {"version": "domain_abc123"}
+    assert charger._version_check("2.0.0") is False
+
+    charger._config = {"version": "webmaster_def456"}
+    assert charger._version_check("2.0.0") is False
 
     # Pre-release (rc) version — should fail when checking against a newer target
     charger._config = {"version": "4.1.2_rc1"}

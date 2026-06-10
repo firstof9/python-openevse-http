@@ -20,11 +20,23 @@ def normalize_version(version: str) -> str:
 def get_awesome_version(version: str) -> AwesomeVersion:
     """Parse and normalize the version string, returning an AwesomeVersion."""
     # Match non-numeric git branch names (e.g. 'main', 'master', 'develop', or 'feature-x_abc123456')
-    if (
-        "master" in version
-        or "main" in version
-        or re.search(r"_[a-f0-9]{6,40}$", version)
+    # We use custom word boundary checks to avoid false positives like 'domain' matching 'main'
+    # or 'webmaster' matching 'master'.
+    is_dev = False
+    if re.search(
+        r"(?:^|[^a-zA-Z0-9])(master|main)(?:[^a-zA-Z0-9]|$)", version, re.IGNORECASE
     ):
+        is_dev = True
+    elif re.search(r"_[a-fA-F0-9]{7,40}$", version):
+        is_dev = True
+    elif re.search(
+        r"(?:^|[^a-zA-Z0-9])(dev|feature|fix|main|master)(?:[^a-zA-Z0-9].*?)?_[a-fA-F0-9]{6}$",
+        version,
+        re.IGNORECASE,
+    ):
+        is_dev = True
+
+    if is_dev:
         version = "dev"
     value = normalize_version(version)
     if "dev" not in version:
