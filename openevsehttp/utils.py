@@ -19,7 +19,11 @@ def normalize_version(version: str) -> str:
 
 def get_awesome_version(version: str) -> AwesomeVersion:
     """Parse and normalize the version string, returning an AwesomeVersion."""
-    if "master" in version:
+    if (
+        "master" in version
+        or "main" in version
+        or (len(version) > 7 and re.search(r"_[a-f0-9]{7,40}$", version))
+    ):
         version = "dev"
     value = normalize_version(version)
     if "dev" not in version:

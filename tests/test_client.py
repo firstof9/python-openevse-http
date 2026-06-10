@@ -634,6 +634,23 @@ async def test_version_check_limit():
     assert charger.version_check("2.0.0") is True
 
 
+async def test_version_check_dev_branches():
+    """Test _version_check with dev branches like 'main' and custom branches with hashes."""
+    charger = OpenEVSE(SERVER_URL, session=MagicMock())
+
+    # 'main' branch
+    charger._config = {"version": "main_abc1234"}
+    assert charger._version_check("2.0.0") is True
+
+    # Custom branch with 7-char hash
+    charger._config = {"version": "feature-ui_2b4ad2c"}
+    assert charger._version_check("2.0.0") is True
+
+    # Non-dev with underscores (should fail)
+    charger._config = {"version": "4.1.2_rc1"}
+    assert charger._version_check("5.0.0") is False
+
+
 # ── websocket lifecycle ──────────────────────────────────────────────
 
 
