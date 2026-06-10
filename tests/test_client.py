@@ -424,6 +424,7 @@ async def test_firmware_check(
     assert firmware["latest_version"] == "4.1.4"
 
     await test_charger_unknown_semver.update()
+    # Changed from 'random_a4f11e' to 'random_g4f11e' to avoid false positive matches on the 6-character hex hash regex
     assert test_charger_unknown_semver.wifi_firmware == "random_g4f11e"
     mock_aioclient.get(
         TEST_URL_GITHUB_v4,
@@ -635,12 +636,11 @@ async def test_version_check_limit():
 
 
 async def test_version_check_dev_branches():
-    """Test _version_check with dev branches, custom branches with hashes, and pre-releases.
+    """Test _version_check with dev branches.
 
-    Dev branches (containing 'main', 'master', or ending in a hex commit hash)
-    should bypass version checks and return True. Non-dev pre-releases (like rc
-    or alpha) should be parsed normally and fail when compared against a newer
-    target version.
+    Test that dev branch version strings bypass version checks and are correctly
+    treated as development builds. Also tests false-positive avoidance and
+    pre-release handling.
     """
     charger = OpenEVSE(SERVER_URL, session=MagicMock())
 

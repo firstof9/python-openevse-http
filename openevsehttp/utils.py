@@ -18,7 +18,12 @@ def normalize_version(version: str) -> str:
 
 
 def get_awesome_version(version: str) -> AwesomeVersion:
-    """Parse and normalize the version string, returning an AwesomeVersion."""
+    """Parse and normalize the version string, returning an AwesomeVersion.
+
+    Development and custom firmware versions (e.g. branch builds ending in a commit hash,
+    or standalone 'main'/'master' builds) are normalized to 'dev' to bypass feature flags
+    and version-checks. Normal release and pre-release versions are parsed as standard semver.
+    """
     # Match non-numeric git branch names (e.g. 'main', 'master', 'develop', or 'feature-x_abc123456')
     # We use custom word boundary checks to avoid false positives like 'domain' matching 'main'
     # or 'webmaster' matching 'master'.
