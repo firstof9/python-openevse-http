@@ -671,12 +671,25 @@ async def test_version_check_dev_branches():
     charger._config = {"version": "feature_1A2B3C"}
     assert charger._version_check("2.0.0") is True
 
+    # Local dev build templates (category/branch_hash_modified) - treated as dev, returns True
+    charger._config = {
+        "version": "local_feature/gui-nightshift-default_2bcdf1d0_modified"
+    }
+    assert charger._version_check("2.0.0") is True
+
+    charger._config = {"version": "custom_branch/my-feature_abc123_modified"}
+    assert charger._version_check("2.0.0") is True
+
     # False positives containing 'main' or 'master' but not at word boundaries,
-    # or ending in 6-char hashes without dev keywords — should fail version check
+    # ending in 6-char hashes without dev keywords, or other non-matching modified strings
+    # — should fail version check
     charger._config = {"version": "domain_abc123"}
     assert charger._version_check("2.0.0") is False
 
     charger._config = {"version": "webmaster_def456"}
+    assert charger._version_check("2.0.0") is False
+
+    charger._config = {"version": "unmodified"}
     assert charger._version_check("2.0.0") is False
 
     # Pre-release (rc) version — should fail when checking against a newer target
