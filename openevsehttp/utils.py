@@ -32,7 +32,7 @@ def get_awesome_version(version: str) -> AwesomeVersion:
     # We use custom word boundary checks to avoid false positives like 'domain' matching 'main'
     # or 'webmaster' matching 'master'.
     is_dev = False
-    if re.search(r"[^/]+/[^_]+_[a-fA-F0-9]{6,40}_modified$", version, re.IGNORECASE):
+    if re.search(r"_modified$", version, re.IGNORECASE):
         is_dev = True
     elif re.search(
         r"(?:^|[^a-zA-Z0-9])(master|main)(?:[^a-zA-Z0-9]|$)", version, re.IGNORECASE

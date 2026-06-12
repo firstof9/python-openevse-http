@@ -671,13 +671,16 @@ async def test_version_check_dev_branches():
     charger._config = {"version": "feature_1A2B3C"}
     assert charger._version_check("2.0.0") is True
 
-    # Local dev build templates (category/branch_hash_modified) - treated as dev, returns True
+    # Suffix matching for _modified - treated as dev, returns True
     charger._config = {
         "version": "local_feature/gui-nightshift-default_2bcdf1d0_modified"
     }
     assert charger._version_check("2.0.0") is True
 
     charger._config = {"version": "custom_branch/my-feature_abc123_modified"}
+    assert charger._version_check("2.0.0") is True
+
+    charger._config = {"version": "main_modified"}
     assert charger._version_check("2.0.0") is True
 
     # False positives containing 'main' or 'master' but not at word boundaries,
