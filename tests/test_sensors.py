@@ -88,6 +88,44 @@ async def test_soc(test_charger, test_charger_v2, mock_aioclient, caplog):
     await test_charger_v2.ws_disconnect()
 
 
+# ── home_battery ─────────────────────────────────────────────────────
+
+
+async def test_home_battery(test_charger, test_charger_v2, mock_aioclient, caplog):
+    """Test home_battery function."""
+    await test_charger.update()
+    mock_aioclient.post(
+        TEST_URL_STATUS,
+        status=200,
+        body='{"home_battery_soc": 82, "home_battery_power": -1500}',
+        repeat=True,
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.home_battery(82, -1500)
+        assert (
+            "Posting home battery data: {'home_battery_soc': 82, 'home_battery_power': -1500}"
+            in caplog.text
+        )
+        assert (
+            "Home battery response: {'home_battery_soc': 82, 'home_battery_power': -1500}"
+            in caplog.text
+        )
+
+        await test_charger.home_battery(soc=50)
+        assert "Posting home battery data: {'home_battery_soc': 50}" in caplog.text
+
+        await test_charger.home_battery()
+        assert "No home battery data to send to device." in caplog.text
+        await test_charger.ws_disconnect()
+
+    await test_charger_v2.update()
+    with pytest.raises(UnsupportedFeature):
+        with caplog.at_level(logging.DEBUG):
+            await test_charger_v2.home_battery(50, -100)
+    assert "Feature not supported for older firmware." in caplog.text
+    await test_charger_v2.ws_disconnect()
+
+
 # ── voltage ──────────────────────────────────────────────────────────
 
 
