@@ -6,7 +6,16 @@ import logging
 from collections.abc import Mapping
 from typing import Any
 
-from .const import BAT_LVL, BAT_RANGE, GRID, SOLAR, TTF, VOLTAGE
+from .const import (
+    BAT_LVL,
+    BAT_RANGE,
+    GRID,
+    HOME_BATTERY_POWER,
+    HOME_BATTERY_SOC,
+    SOLAR,
+    TTF,
+    VOLTAGE,
+)
 from .exceptions import UnsupportedFeature
 
 _LOGGER = logging.getLogger(__name__)
@@ -121,6 +130,34 @@ class SensorsMixin:
             _LOGGER.debug("Posting SOC data: %s", data)
             response = await self.process_request(url=url, method="post", data=data)
             _LOGGER.debug("SOC response: %s", self._normalize_response(response))
+
+    # Home/powerwall battery HTTP Posting
+    async def home_battery(
+        self,
+        soc: int | None = None,
+        power: int | None = None,
+    ) -> None:
+        """Send pushed home/powerwall battery data to the charger."""
+        if not self._version_check("4.1.0"):
+            _LOGGER.debug("Feature not supported for older firmware.")
+            raise UnsupportedFeature
+
+        url = f"{self.url}status"
+        data = {}
+
+        if soc is not None:
+            data[HOME_BATTERY_SOC] = soc
+        if power is not None:
+            data[HOME_BATTERY_POWER] = power
+
+        if not data:
+            _LOGGER.info("No home battery data to send to device.")
+        else:
+            _LOGGER.debug("Posting home battery data: %s", data)
+            response = await self.process_request(url=url, method="post", data=data)
+            _LOGGER.debug(
+                "Home battery response: %s", self._normalize_response(response)
+            )
 
     # Shaper HTTP Posting
     async def set_shaper_live_pwr(self, power: int) -> None:
