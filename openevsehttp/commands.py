@@ -436,10 +436,7 @@ class CommandsMixin:
             url,
             method,
         )
-        kwargs: dict[str, Any] = {}
-        if url.startswith("https://") and not self.ssl_verify:
-            kwargs["ssl"] = False
-        async with http_method(url, **kwargs) as resp:
+        async with http_method(url) as resp:
             _LOGGER.debug("Firmware check response status: %d", resp.status)
             if resp.status != 200:
                 return None
