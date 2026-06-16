@@ -548,3 +548,55 @@ async def test_websocket_close_cancels_pending_tasks(ws_client):
     # Close should cancel and drain tasks
     await ws_client.close()
     assert len(ws_client._tasks) == 0
+
+
+@pytest.mark.asyncio
+async def test_websocket_ssl_options(mock_callback):
+    """Test OpenEVSEWebsocket SSL options and ws_connect parameter passing."""
+    async with aiohttp.ClientSession() as session:
+        # Default ssl_verify=True
+        ws_default = OpenEVSEWebsocket(
+            "https://openevse.test.tld/",
+            mock_callback,
+            session=session,
+        )
+        assert ws_default.ssl_verify is True
+        assert ws_default.uri == "wss://openevse.test.tld/ws"
+
+        # Explicit ssl_verify=False
+        ws_no_verify = OpenEVSEWebsocket(
+            "https://openevse.test.tld/",
+            mock_callback,
+            session=session,
+            ssl_verify=False,
+        )
+        assert ws_no_verify.ssl_verify is False
+        assert ws_no_verify.uri == "wss://openevse.test.tld/ws"
+
+        # Mock ws_connect to check that it is called with ssl=False when ssl_verify=False
+        mock_ws = AsyncMock()
+        mock_ws.__aenter__ = AsyncMock(return_value=mock_ws)
+        mock_ws.__aexit__ = AsyncMock(return_value=None)
+
+        async def empty_iter():
+            return
+            yield
+
+        mock_ws.__aiter__.side_effect = empty_iter
+
+        with patch(
+            "aiohttp.ClientSession.ws_connect", return_value=mock_ws
+        ) as mock_connect:
+            await ws_no_verify.running()
+            mock_connect.assert_called_once()
+            call_kwargs = mock_connect.call_args.kwargs
+            assert call_kwargs.get("ssl") is False
+
+        # When ssl_verify=True, ws_connect should NOT pass ssl=False
+        with patch(
+            "aiohttp.ClientSession.ws_connect", return_value=mock_ws
+        ) as mock_connect:
+            await ws_default.running()
+            mock_connect.assert_called_once()
+            call_kwargs = mock_connect.call_args.kwargs
+            assert "ssl" not in call_kwargs

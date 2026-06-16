@@ -42,9 +42,11 @@ class OpenEVSEWebsocket:
         user: str | None = None,
         password: str | None = None,
         session: aiohttp.ClientSession | None = None,
+        ssl_verify: bool = True,
     ) -> None:
         """Initialize a OpenEVSEWebsocket instance."""
         self.session = session
+        self.ssl_verify = ssl_verify
         self.uri = self._get_uri(server)
         self._user = user
         self._password = password
@@ -133,10 +135,16 @@ class OpenEVSEWebsocket:
         try:
             # Narrow type for mypy since _ensure_session sets self.session
             assert self.session is not None
+            ws_kwargs: dict[str, Any] = {
+                "heartbeat": 15,
+                "auth": auth,
+            }
+            if self.uri.startswith("wss://") and not self.ssl_verify:
+                ws_kwargs["ssl"] = False
+
             async with self.session.ws_connect(
                 self.uri,
-                heartbeat=15,
-                auth=auth,
+                **ws_kwargs,
             ) as ws_client:
                 self._client = ws_client
                 await self._set_state(STATE_CONNECTED)
