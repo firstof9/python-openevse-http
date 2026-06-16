@@ -51,6 +51,35 @@ async def main():
 if __name__ == "__main__":
     asyncio.run(main())
 ```
+### HTTPS and SSL Verification Options
+
+If your OpenEVSE WiFi/ethernet module uses HTTPS, you can configure the client to connect securely using the `ssl=True` parameter:
+
+```python
+        # Connect securely using HTTPS (validating SSL/TLS certificates)
+        charger = OpenEVSE(
+            "192.168.1.30",
+            session=session,
+            ssl=True,
+        )
+```
+
+#### Bypassing SSL Verification (Self-Signed Certificates)
+
+> [!WARNING]
+> Disabling SSL certificate validation (`ssl_verify=False`) disables TLS verification and exposes the connection to Man-in-the-Middle (MITM) attacks. Only use this configuration when connecting to an OpenEVSE module with a self-signed certificate over a trusted local network.
+
+To bypass certificate verification:
+
+```python
+        # Connect using HTTPS, and disable certificate verification
+        charger = OpenEVSE(
+            "192.168.1.30",
+            session=session,
+            ssl=True,
+            ssl_verify=False,
+        )
+```
 
 ## API Support Matrix
 

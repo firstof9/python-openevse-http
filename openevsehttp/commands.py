@@ -23,6 +23,8 @@ class CommandsMixin:
     """Mixin providing command methods for OpenEVSE."""
 
     url: str
+    ssl: bool
+    ssl_verify: bool
     _status: dict[str, Any]
     _config: dict[str, Any]
     _session: aiohttp.ClientSession | None

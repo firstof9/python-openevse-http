@@ -53,11 +53,16 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
         user: str | None = None,
         pwd: str | None = None,
         session: aiohttp.ClientSession | None = None,
+        ssl: bool = False,
+        ssl_verify: bool = True,
     ) -> None:
         """Connect to an OpenEVSE charger equipped with wifi or ethernet."""
         self._user = user or ""
         self._pwd = pwd or ""
-        self.url = f"http://{host}/"
+        self.ssl = ssl
+        self.ssl_verify = ssl_verify
+        scheme = "https" if ssl else "http"
+        self.url = f"{scheme}://{host}/"
         self._status: dict[str, Any] = {}
         self._config: dict[str, Any] = {}
         self._override: Any = None
@@ -134,6 +139,8 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
             kwargs = {"data": rapi, "auth": auth}
             if data is not None:
                 kwargs["json"] = data
+            if url.startswith("https://") and not self.ssl_verify:
+                kwargs["ssl"] = False
             async with http_method(url, **kwargs) as resp:
                 try:
                     raw = await resp.text()
@@ -285,6 +292,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
             self._user,
             self._pwd,
             self._session,
+            ssl_verify=self.ssl_verify,
         )
 
     def _validate_session_loop(self, loop: asyncio.AbstractEventLoop) -> None:

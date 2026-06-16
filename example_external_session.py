@@ -49,6 +49,24 @@ async def example_shared_session():
         await charger2.ws_disconnect()
 
 
+async def example_with_https_and_ssl_bypass():
+    """Demonstrate using HTTPS with bypassed SSL verification."""
+    async with aiohttp.ClientSession() as session:
+        # Pass ssl=True to construct an https:// URL,
+        # and ssl_verify=False to bypass certificate validation.
+        charger = OpenEVSE(
+            "192.168.1.30",
+            session=session,
+            ssl=True,
+            ssl_verify=False,
+        )
+
+        # Use the charger normally
+        await charger.update()
+        print(f"Status: {charger.status}")
+        await charger.ws_disconnect()
+
+
 if __name__ == "__main__":
     # Run one of the examples
     asyncio.run(example_with_external_session())

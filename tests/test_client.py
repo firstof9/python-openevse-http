@@ -1887,3 +1887,44 @@ async def test_get_session_no_running_loop_mocked(charger_factory):
     charger = charger_factory()
     with patch("asyncio.get_running_loop", side_effect=RuntimeError):
         assert charger._get_session() is charger._session
+
+
+async def test_ssl_options(mock_aioclient):
+    """Test SSL options and SSL verification configuration."""
+    # 1. Default (ssl=False, ssl_verify=True)
+    charger_default = OpenEVSE(SERVER_URL, session=MockClientSession(mock_aioclient))
+    assert charger_default.url == f"http://{SERVER_URL}/"
+    assert charger_default.ssl is False
+    assert charger_default.ssl_verify is True
+
+    # 2. Secure connection (ssl=True, ssl_verify=True)
+    charger_ssl = OpenEVSE(
+        SERVER_URL, ssl=True, session=MockClientSession(mock_aioclient)
+    )
+    assert charger_ssl.url == f"https://{SERVER_URL}/"
+    assert charger_ssl.ssl is True
+    assert charger_ssl.ssl_verify is True
+
+    # 3. Secure connection with disabled validation (ssl=True, ssl_verify=False)
+    charger_no_verify = OpenEVSE(
+        SERVER_URL,
+        ssl=True,
+        ssl_verify=False,
+        session=MockClientSession(mock_aioclient),
+    )
+    assert charger_no_verify.url == f"https://{SERVER_URL}/"
+    assert charger_no_verify.ssl is True
+    assert charger_no_verify.ssl_verify is False
+
+    # Check request parameter passing
+    url = f"https://{SERVER_URL}/status"
+    mock_aioclient.get(url, status=200, body='{"state": "sleeping"}')
+
+    # When ssl_verify=False, ssl=False should be passed to session request kwargs
+    await charger_no_verify.process_request(url, method="get")
+    assert mock_aioclient.requests[-1][2].get("ssl") is False
+
+    # When ssl_verify=True, ssl should NOT be passed as False
+    mock_aioclient.get(url, status=200, body='{"state": "sleeping"}')
+    await charger_ssl.process_request(url, method="get")
+    assert "ssl" not in mock_aioclient.requests[-1][2]
