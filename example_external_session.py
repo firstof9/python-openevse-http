@@ -69,4 +69,4 @@ async def example_with_https_and_ssl_bypass():
 
 if __name__ == "__main__":
     # Run one of the examples
-    asyncio.run(example_with_https_and_ssl_bypass())
+    asyncio.run(example_with_external_session())
