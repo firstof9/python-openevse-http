@@ -1334,3 +1334,36 @@ async def test_update_firmware_bytes_empty(test_charger, caplog):
         with pytest.raises(ValueError):
             await test_charger.update_firmware(firmware_bytes=b"")
         assert "Empty firmware bytes provided" in caplog.text
+
+
+async def test_set_mqtt_vehicle_range_miles(test_charger_new, mock_aioclient, caplog):
+    """Test set_mqtt_vehicle_range_miles command."""
+    await test_charger_new.update()
+    mock_aioclient.post(
+        TEST_URL_CONFIG,
+        status=200,
+        body='{"msg": "OK"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_new.set_mqtt_vehicle_range_miles(True)
+    assert "Setting mqtt_vehicle_range_miles to True" in caplog.text
+
+    mock_aioclient.post(
+        TEST_URL_CONFIG,
+        status=200,
+        body='{"msg": "OK"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_new.set_mqtt_vehicle_range_miles(False)
+    assert "Setting mqtt_vehicle_range_miles to False" in caplog.text
+
+    with pytest.raises(TypeError, match=r"Value must be a boolean\."):
+        await test_charger_new.set_mqtt_vehicle_range_miles("invalid")
+
+    mock_aioclient.post(
+        TEST_URL_CONFIG,
+        status=200,
+        body='{"msg": "error"}',
+    )
+    with pytest.raises(UnknownError):
+        await test_charger_new.set_mqtt_vehicle_range_miles(True)

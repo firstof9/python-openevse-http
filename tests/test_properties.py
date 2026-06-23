@@ -159,6 +159,8 @@ SERVER_URL = "openevse.test.tld"
         ("test_charger_v2", "vehicle_soc", None),
         ("test_charger", "vehicle_range", 468),
         ("test_charger_v2", "vehicle_range", None),
+        ("test_charger", "vehicle_range_with_unit", (468, "km")),
+        ("test_charger_v2", "vehicle_range_with_unit", None),
         # shaper
         ("test_charger", "shaper_active", True),
         ("test_charger_v2", "shaper_active", None),
@@ -207,7 +209,11 @@ async def test_simple_properties(fixture, prop, expected, request):
         with pytest.raises(expected):
             _ = getattr(charger, prop)
     else:
-        assert getattr(charger, prop) == expected
+        if prop == "vehicle_range":
+            with pytest.deprecated_call():
+                assert getattr(charger, prop) == expected
+        else:
+            assert getattr(charger, prop) == expected
     await charger.ws_disconnect()
 
 
@@ -490,3 +496,23 @@ async def test_wifi_firmware_none():
     charger = OpenEVSE(SERVER_URL)
     charger._config = {}
     assert charger.wifi_firmware is None
+
+
+async def test_mqtt_vehicle_range_miles():
+    """Test mqtt_vehicle_range_miles property and vehicle_range_with_unit unit selection."""
+    charger = OpenEVSE(SERVER_URL)
+    # Default is False
+    assert charger.mqtt_vehicle_range_miles is False
+
+    charger._config = {"mqtt_vehicle_range_miles": True}
+    assert charger.mqtt_vehicle_range_miles is True
+
+    charger._status = {"vehicle_range": 150}
+    with pytest.deprecated_call():
+        assert charger.vehicle_range == 150
+    assert charger.vehicle_range_with_unit == (150, "miles")
+
+    charger._config = {"mqtt_vehicle_range_miles": False}
+    with pytest.deprecated_call():
+        assert charger.vehicle_range == 150
+    assert charger.vehicle_range_with_unit == (150, "km")
