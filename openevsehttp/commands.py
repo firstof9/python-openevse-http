@@ -667,3 +667,23 @@ class CommandsMixin:
 
         new_state = not bool(shaper_active)
         await self.set_shaper(new_state)
+
+    async def set_mqtt_vehicle_range_miles(self, enable: bool = True) -> None:
+        """Set mqtt_vehicle_range_miles configuration setting.
+
+        Dynamically changing this setting will affect future evaluations of
+        the vehicle_range_with_unit property.
+        """
+        if not isinstance(enable, bool):
+            raise TypeError("Value must be a boolean.")
+
+        url = f"{self.url}config"
+        data = {"mqtt_vehicle_range_miles": enable}
+
+        _LOGGER.debug("Setting mqtt_vehicle_range_miles to %s", enable)
+        response = await self.process_request(url=url, method="post", data=data)
+        response = self._normalize_response(response)
+        msg = response.get("msg") if isinstance(response, Mapping) else None
+        if msg not in SUCCESS_ANSWERS:
+            _LOGGER.error("Problem issuing command: %s", response)
+            raise UnknownError

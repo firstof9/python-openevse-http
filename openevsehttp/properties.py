@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import warnings
 from collections.abc import Mapping
 from datetime import datetime, timedelta, timezone
 from typing import Any, cast
@@ -458,10 +459,32 @@ class PropertiesMixin:
     @property
     def vehicle_range(self) -> int | None:
         """Return battery range."""
+        warnings.warn(
+            "vehicle_range is deprecated, use vehicle_range_with_unit instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return cast(
             "int | None",
             self._status.get("vehicle_range", self._status.get("battery_range", None)),
         )
+
+    @property
+    def vehicle_range_with_unit(self) -> tuple[int, str] | None:
+        """Return battery range and its unit."""
+        value = cast(
+            "int | None",
+            self._status.get("vehicle_range", self._status.get("battery_range", None)),
+        )
+        if value is None:
+            return None
+        unit = "miles" if self.mqtt_vehicle_range_miles else "km"
+        return (value, unit)
+
+    @property
+    def mqtt_vehicle_range_miles(self) -> bool:
+        """Return True if mqtt vehicle range is in miles, False if km."""
+        return bool(self._config.get("mqtt_vehicle_range_miles", False))
 
     @property
     def vehicle_eta(self) -> datetime | None:
