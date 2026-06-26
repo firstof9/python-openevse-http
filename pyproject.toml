@@ -32,7 +32,7 @@ ignore = [
 max-complexity = 18
 
 [build-system]
-requires = ["setuptools>=82.0.1", "setuptools-scm>=10.1.2"]
+requires = ["setuptools>=82.0.1", "setuptools-scm>=10.2.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
