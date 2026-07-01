@@ -1,5 +1,5 @@
 -r requirements.txt
-prek==0.4.5
+prek==0.4.6
 pytest==9.1.1
 pytest-cov==7.1.0
 pytest-timeout==2.4.0
