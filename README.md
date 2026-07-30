@@ -32,6 +32,7 @@ import asyncio
 import aiohttp
 from openevsehttp import OpenEVSE
 
+
 async def main():
     async with aiohttp.ClientSession() as session:
         charger = OpenEVSE("192.168.1.30", session=session)
@@ -47,6 +48,7 @@ async def main():
 
         await charger.toggle_shaper()
         await charger.ws_disconnect()
+
 
 if __name__ == "__main__":
     asyncio.run(main())

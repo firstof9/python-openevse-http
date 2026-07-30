@@ -19,6 +19,7 @@ The `python-openevse-http` library requires you to pass an external `aiohttp.Cli
 import aiohttp
 from openevsehttp import OpenEVSE
 
+
 async def main():
     timeout = aiohttp.ClientTimeout(total=30)
     async with aiohttp.ClientSession(timeout=timeout) as session:
@@ -33,6 +34,7 @@ async def main():
 ```python
 import aiohttp
 from openevsehttp import OpenEVSE
+
 
 async def main():
     async with aiohttp.ClientSession() as session:
@@ -51,6 +53,7 @@ Start websocket listening from the same event loop that owns the
 ```python
 import aiohttp
 from openevsehttp import OpenEVSE
+
 
 async def main():
     async with aiohttp.ClientSession() as session:
