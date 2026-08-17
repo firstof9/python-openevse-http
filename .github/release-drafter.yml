@@ -20,6 +20,7 @@ categories:
     labels:
       - "performance"
   - title: "🔧 Maintenance 🔧"
+    collapse-after: 2
     labels:
       - "chore"
       - "documentation"
