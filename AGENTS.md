@@ -102,14 +102,27 @@ tox -e mypy
 
 ---
 
-## 6. Commit & Pull Request Guidelines
+## 6. Commit, Pull Request & Issue Guidelines
 
-- **Semantic PR Titles**: Use conventional commit titles matching `.github/release-drafter.yml`:
+### Creating Pull Requests
+- **Use the PR Template**: Always structure PR descriptions according to [`.github/pull_request_template.md`](.github/pull_request_template.md):
+  - **Description**: Provide a clear summary of changes, motivation, and link related issues (`Fixes #<number>`).
+  - **Type of change**: Check the relevant boxes (`Bug fix`, `New feature`, `Breaking change`, `Code quality / Refactoring`, `Documentation update`).
+  - **Checklist**: Complete all checklist items before opening or marking ready for review.
+- **Semantic PR Titles**: Use conventional commit titles matching [`.github/release-drafter.yml`](.github/release-drafter.yml):
   - `feat:` New features / enhancements
   - `fix:` Bug fixes
   - `refactor:` Refactoring / code quality
   - `test:` Test additions / updates
   - `docs:` Documentation changes
   - `chore:` Maintenance / dependency updates
-- Fill out the checklist in `.github/pull_request_template.md`.
 - Ensure all tests (`tox -e py314`), linting (`tox -e lint`), and type checks (`tox -e mypy`) pass before submitting PRs.
+
+### Creating Issues & Feature Requests
+Always follow the templates in [`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE/):
+- **Bug Reports** ([`bug_report.yml`](.github/ISSUE_TEMPLATE/bug_report.yml)):
+  - Prefix title with `[Bug]: <summary>`.
+  - Include: Description, Steps to Reproduce, Expected Behavior, Environment Info (Library version, Python version, OpenEVSE WiFi Firmware version), and Debug Logs / Stack Trace.
+- **Feature Requests** ([`feature_request.yml`](.github/ISSUE_TEMPLATE/feature_request.yml)):
+  - Prefix title with `[Feature Request]: <summary>`.
+  - Include: Problem statement, Desired solution, Alternatives considered, and Context.

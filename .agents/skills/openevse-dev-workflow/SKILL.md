@@ -75,3 +75,13 @@ Pre-commit hooks are configured via `.pre-commit-config.yaml`. They run automati
 ```bash
 pre-commit run --all-files
 ```
+
+### 6. Pull Requests & Issue Creation
+
+- **Pull Requests**:
+  - Always use the template in [`.github/pull_request_template.md`](../../.github/pull_request_template.md).
+  - Include a summary, issue link (`Fixes #<number>`), type of change, and completed checklist.
+  - Follow conventional commits in PR titles (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`).
+- **Issues & Feature Requests**:
+  - Use [`.github/ISSUE_TEMPLATE/bug_report.yml`](../../.github/ISSUE_TEMPLATE/bug_report.yml) for bugs (`[Bug]: <summary>`).
+  - Use [`.github/ISSUE_TEMPLATE/feature_request.yml`](../../.github/ISSUE_TEMPLATE/feature_request.yml) for feature requests (`[Feature Request]: <summary>`).
