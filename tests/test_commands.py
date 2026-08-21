@@ -9,7 +9,9 @@ from aiohttp.client_exceptions import ContentTypeError
 
 import openevsehttp as main
 from openevsehttp.exceptions import (
-    UnknownError,
+    CommandFailedError,
+    FirmwareResolutionError,
+    UnknownStateError,
     UnsupportedFeature,
 )
 from tests.common import load_fixture
@@ -159,7 +161,9 @@ async def test_toggle_override_v2_fail(test_charger_v2, mock_aioclient, caplog):
         body=json.dumps(value),
     )
     with caplog.at_level(logging.ERROR):
-        with pytest.raises(RuntimeError, match="Failed to toggle override via RAPI:"):
+        with pytest.raises(
+            CommandFailedError, match="Failed to toggle override via RAPI:"
+        ):
             await test_charger_v2.toggle_override()
     assert "Problem toggling override via RAPI: $NK^21" in caplog.text
 
@@ -173,7 +177,7 @@ async def test_toggle_override_fail(test_charger, mock_aioclient, caplog):
         body='{"msg": "failure!"}',
     )
     with caplog.at_level(logging.ERROR):
-        with pytest.raises(RuntimeError, match="Failed to toggle override:"):
+        with pytest.raises(CommandFailedError, match="Failed to toggle override:"):
             await test_charger.toggle_override()
     assert "Problem toggling override: {'msg': 'failure!'}" in caplog.text
 
@@ -249,7 +253,7 @@ async def test_toggle_override_refresh_fail(mock_aioclient, caplog):
 
     with caplog.at_level(logging.ERROR):
         with pytest.raises(
-            RuntimeError, match=r"Cannot toggle override: unknown charger state\."
+            UnknownStateError, match=r"Cannot toggle override: unknown charger state\."
         ):
             await charger.toggle_override()
     assert "Cannot toggle override: unknown charger state." in caplog.text
@@ -351,7 +355,7 @@ async def test_set_current_http_fail(test_charger, mock_aioclient, caplog):
         body='{"msg": "failure!"}',
     )
     with caplog.at_level(logging.ERROR):
-        with pytest.raises(UnknownError):
+        with pytest.raises(CommandFailedError):
             await test_charger.set_current(12)
     assert "Problem setting current limit: {'msg': 'failure!'}" in caplog.text
 
@@ -405,7 +409,7 @@ async def test_set_current_rapi_fail(test_charger_v2, mock_aioclient, caplog):
         body=json.dumps(value),
     )
     with caplog.at_level(logging.ERROR):
-        with pytest.raises(UnknownError):
+        with pytest.raises(CommandFailedError):
             await test_charger_v2.set_current(12)
     assert "Problem setting current via RAPI: $NK^21" in caplog.text
 
@@ -416,7 +420,7 @@ async def test_set_current_rapi_fail(test_charger_v2, mock_aioclient, caplog):
 async def test_divert_mode_no_config(test_charger):
     """Test divert_mode with no config."""
     test_charger._config = {}
-    with pytest.raises(RuntimeError, match="Missing configuration"):
+    with pytest.raises(UnknownStateError, match="Missing configuration"):
         await test_charger.divert_mode()
 
 
@@ -523,7 +527,7 @@ async def test_set_divertmode_fail(test_charger_new, mock_aioclient):
         status=200,
         body='{"msg": "failure!"}',
     )
-    with pytest.raises(main.UnknownError):
+    with pytest.raises(main.CommandFailedError):
         await test_charger_new.set_divert_mode("eco")
 
 
@@ -567,7 +571,7 @@ async def test_set_charge_mode(test_charger, mock_aioclient, caplog):
         status=200,
         body=json.dumps(value),
     )
-    with pytest.raises(UnknownError):
+    with pytest.raises(CommandFailedError):
         with caplog.at_level(logging.DEBUG):
             await test_charger.set_charge_mode("fast")
     assert "Problem issuing command: {'msg': 'error'}" in caplog.text
@@ -623,7 +627,7 @@ async def test_set_service_level(test_charger, mock_aioclient, caplog):
         status=200,
         body=json.dumps(value),
     )
-    with pytest.raises(UnknownError):
+    with pytest.raises(CommandFailedError):
         with caplog.at_level(logging.DEBUG):
             await test_charger.set_service_level(1)
     assert "Problem issuing command: {'msg': 'error'}" in caplog.text
@@ -668,7 +672,7 @@ async def test_restart_wifi_fail(test_charger, mock_aioclient, caplog):
         body='{"result": "error", "success": false, "msg": "failed"}',
     )
     with caplog.at_level(logging.ERROR):
-        with pytest.raises(RuntimeError, match="Failed to restart WiFi: failed"):
+        with pytest.raises(CommandFailedError, match="Failed to restart WiFi: failed"):
             await test_charger.restart_wifi()
     assert (
         "Problem restarting WiFi: {'result': 'error', 'success': False, 'msg': 'failed'}"
@@ -683,7 +687,9 @@ async def test_restart_wifi_fail(test_charger, mock_aioclient, caplog):
         body="[]",
     )
     with caplog.at_level(logging.ERROR):
-        with pytest.raises(RuntimeError, match="Failed to restart WiFi: Unknown error"):
+        with pytest.raises(
+            CommandFailedError, match="Failed to restart WiFi: Unknown error"
+        ):
             await test_charger.restart_wifi()
     assert "Problem restarting WiFi: []" in caplog.text
 
@@ -696,7 +702,7 @@ async def test_restart_wifi_fail(test_charger, mock_aioclient, caplog):
     )
     with caplog.at_level(logging.ERROR):
         with pytest.raises(
-            RuntimeError, match="Failed to restart WiFi: failed completely"
+            CommandFailedError, match="Failed to restart WiFi: failed completely"
         ):
             await test_charger.restart_wifi()
     assert (
@@ -744,7 +750,7 @@ async def test_evse_restart_fail(test_charger_v2, mock_aioclient, caplog):
     )
     with caplog.at_level(logging.ERROR):
         with pytest.raises(
-            RuntimeError, match="Failed to restart EVSE module via RAPI:"
+            CommandFailedError, match="Failed to restart EVSE module via RAPI:"
         ):
             await test_charger_v2.restart_evse()
     assert "Problem restarting EVSE module via RAPI: $NK^21" in caplog.text
@@ -759,14 +765,16 @@ async def test_restart_evse_http_failure(test_charger, mock_aioclient):
     # 1. Test False reply
     mock_aioclient.post(TEST_URL_RESTART, status=200, body="false")
     with pytest.raises(
-        RuntimeError, match=r"Failed to restart EVSE module via HTTP: \{'msg': False\}"
+        CommandFailedError,
+        match=r"Failed to restart EVSE module via HTTP: \{'msg': False\}",
     ):
         await test_charger.restart_evse()
 
     # 2. Test NK message
     mock_aioclient.post(TEST_URL_RESTART, status=200, body='{"msg": "NK"}')
     with pytest.raises(
-        RuntimeError, match=r"Failed to restart EVSE module via HTTP: \{'msg': 'NK'\}"
+        CommandFailedError,
+        match=r"Failed to restart EVSE module via HTTP: \{'msg': 'NK'\}",
     ):
         await test_charger.restart_evse()
 
@@ -778,7 +786,7 @@ async def test_restart_evse_http_failure(test_charger, mock_aioclient):
         TEST_URL_RESTART, status=200, body=json.dumps({"msg": error_msg})
     )
     with pytest.raises(
-        RuntimeError,
+        CommandFailedError,
         match=f"Failed to restart EVSE module via HTTP: {{'msg': '{error_msg}'}}",
     ):
         await test_charger.restart_evse()
@@ -822,7 +830,7 @@ async def test_set_divert_mode(
         status=200,
         body="error",
     )
-    with pytest.raises(UnknownError):
+    with pytest.raises(CommandFailedError):
         with caplog.at_level(logging.DEBUG):
             await test_charger_new.set_divert_mode("fast")
     assert "Problem issuing command: error" in caplog.text
@@ -876,7 +884,7 @@ async def test_set_led_brightness_fail(test_charger_new, mock_aioclient, caplog)
         body=value,
     )
     with caplog.at_level(logging.ERROR):
-        with pytest.raises(UnknownError):
+        with pytest.raises(CommandFailedError):
             await test_charger_new.set_led_brightness(255)
     assert "Problem issuing command: {'msg': 'failure!'}" in caplog.text
 
@@ -1191,7 +1199,7 @@ async def test_update_firmware_auto_missing_buildenv(
 
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(
-            RuntimeError,
+            FirmwareResolutionError,
             match=r"Could not resolve latest firmware download URL from GitHub\.",
         ):
             await test_charger.update_firmware()
@@ -1282,7 +1290,7 @@ async def test_update_firmware_assets_invalid_type(
 
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(
-            RuntimeError,
+            FirmwareResolutionError,
             match=r"Could not resolve latest firmware download URL from GitHub\.",
         ):
             await test_charger.update_firmware()
@@ -1365,5 +1373,5 @@ async def test_set_mqtt_vehicle_range_miles(test_charger_new, mock_aioclient, ca
         status=200,
         body='{"msg": "error"}',
     )
-    with pytest.raises(UnknownError):
+    with pytest.raises(CommandFailedError):
         await test_charger_new.set_mqtt_vehicle_range_miles(True)

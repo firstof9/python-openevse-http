@@ -4,7 +4,11 @@ import logging
 
 import pytest
 
-from openevsehttp.exceptions import UnknownError, UnsupportedFeature
+from openevsehttp.exceptions import (
+    CommandFailedError,
+    UnknownStateError,
+    UnsupportedFeature,
+)
 from tests.conftest import MockClientSession
 
 pytestmark = pytest.mark.asyncio
@@ -43,7 +47,7 @@ async def test_set_shaper_fail(test_charger, mock_aioclient, caplog):
         status=200,
         body='{"msg": "failure!"}',
     )
-    with pytest.raises(UnknownError):
+    with pytest.raises(CommandFailedError):
         await test_charger.set_shaper(True)
 
 
@@ -149,7 +153,7 @@ async def test_toggle_shaper_failed_update(mock_aioclient, caplog):
     )
 
     with pytest.raises(
-        RuntimeError, match="Cannot toggle shaper: unknown shaper state."
+        UnknownStateError, match=r"Cannot toggle shaper: unknown shaper state\."
     ):
         await charger.toggle_shaper()
 

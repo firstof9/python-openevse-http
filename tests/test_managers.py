@@ -6,6 +6,7 @@ import logging
 import pytest
 
 from openevsehttp.exceptions import (
+    CommandFailedError,
     InvalidType,
     UnsupportedFeature,
 )
@@ -188,7 +189,7 @@ async def test_clear_override_fail(test_charger, mock_aioclient, caplog):
         body='{"msg": "failure!"}',
     )
     with caplog.at_level(logging.ERROR):
-        with pytest.raises(RuntimeError, match="Failed to clear override:"):
+        with pytest.raises(CommandFailedError, match="Failed to clear override:"):
             await test_charger.clear_override()
     assert "Problem clearing override: {'msg': 'failure!'}" in caplog.text
 
