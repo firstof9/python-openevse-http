@@ -63,6 +63,28 @@ All custom exceptions inherit from `OpenEVSEError(Exception)`.
 from .exceptions import CommandFailedError, UnknownStateError, UnsupportedFeature
 ```
 
+## Validating Endpoints Against Firmware Repositories
+
+When adding, modifying, or debugging endpoints and RAPI commands, cross-reference against the upstream OpenEVSE firmware sources:
+
+- **WiFi Gateway Firmware (v3/v4/v5)**: [`OpenEVSE/ESP32_WiFi_V4.x`](https://github.com/OpenEVSE/ESP32_WiFi_V4.x)
+- **Legacy WiFi Firmware (v2)**: [`OpenEVSE/ESP8266_WiFi_v2.x`](https://github.com/OpenEVSE/ESP8266_WiFi_v2.x)
+- **OpenEVSE Controller Firmware (RAPI)**: [`OpenEVSE/open_evse`](https://github.com/OpenEVSE/open_evse)
+
+### What to Verify in Firmware Sources:
+1. **Route & Method Handlers**:
+   - Check `src/http.cpp`, `src/web_server.cpp`, or `src/web_server.h` in `ESP32_WiFi_V4.x` to confirm HTTP methods (`GET`, `POST`, `PATCH`, `DELETE`).
+   - Confirm expected query parameters or JSON body fields (e.g. `divertmode=...`, `{"device": "gateway"}`, `{"charge_current": ...}`).
+2. **Response Formats & Statuses**:
+   - Verify success and error response payloads (e.g., `{"msg": "done"}`, `{"result": "OK", "msg": "..."}`, or plain string messages like `"Current Shaper state changed"`).
+   - Update `SUCCESS_ANSWERS` in `openevsehttp/const.py` if new success indicators are introduced.
+3. **Firmware Version Thresholds**:
+   - Check git history or release tags in `ESP32_WiFi_V4.x` to determine when a route or feature was introduced, ensuring accurate `_version_check("x.y.z")` values.
+4. **RAPI Command Specifications**:
+   - Check `src/rapi.cpp` or OpenEVSE controller docs for valid RAPI commands (e.g., `$SC`, `$FE`, `$FS`, `$FR`, `$ST`) and return formats (`$OK`, `$NK`).
+5. **Mock Test Fixtures**:
+   - Update or add mock JSON payloads under `tests/fixtures/v4_json/` and `tests/fixtures/v2_json/` to mirror real firmware response shapes.
+
 ## Writing Tests for Commands
 
 When testing command methods:

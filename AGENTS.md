@@ -23,12 +23,19 @@ The main client class `OpenEVSE` in `openevsehttp/client.py` inherits from multi
 
 ---
 
-## 2. Firmware Version Handling & RAPI Compatibility
+## 2. Firmware Version Handling & Upstream Validation
 
 OpenEVSE chargers run various firmware versions (v2.x, v3.x, v4.x, v5.x) with different capabilities:
 - **`self._version_check(min_version, max_version="")`**: Use this helper to conditionally execute HTTP API endpoints (v4+) versus RAPI command fallbacks (v2/v3, e.g. `$FE`, `$FS`, `$SC`, `$FR`).
 - Always handle version edge cases (e.g. non-semver development strings like `4.1.2.dev`).
 - Raise `UnsupportedFeature` if a feature is not supported on older firmware.
+
+### Validating Endpoints Against Firmware Sources
+When adding or updating endpoints, payload keys, or RAPI commands, cross-reference against:
+- **WiFi Gateway (v3/v4/v5)**: [`OpenEVSE/ESP32_WiFi_V4.x`](https://github.com/OpenEVSE/ESP32_WiFi_V4.x) (routes in `src/http.cpp`, `src/web_server.cpp`)
+- **Legacy WiFi (v2)**: [`OpenEVSE/ESP8266_WiFi_v2.x`](https://github.com/OpenEVSE/ESP8266_WiFi_v2.x)
+- **Controller / RAPI**: [`OpenEVSE/open_evse`](https://github.com/OpenEVSE/open_evse) (commands in `src/rapi.cpp`)
+Verify HTTP methods, expected JSON fields, success/error payload shapes, and version thresholds.
 
 ---
 
