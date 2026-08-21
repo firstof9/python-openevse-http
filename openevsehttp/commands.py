@@ -13,7 +13,12 @@ from awesomeversion import AwesomeVersion
 from awesomeversion.exceptions import AwesomeVersionCompareException
 
 from .const import MAX_AMPS, MIN_AMPS, RAPI_ERRORS, SUCCESS_ANSWERS, divert_mode
-from .exceptions import UnknownError, UnsupportedFeature
+from .exceptions import (
+    CommandFailedError,
+    FirmwareResolutionError,
+    UnknownStateError,
+    UnsupportedFeature,
+)
 from .utils import get_awesome_version
 
 _LOGGER = logging.getLogger(__name__)
@@ -90,12 +95,12 @@ class CommandsMixin:
         msg = response.get("msg") if isinstance(response, Mapping) else None
         if msg not in SUCCESS_ANSWERS:
             _LOGGER.error("Problem issuing command: %s", response)
-            raise UnknownError
+            raise CommandFailedError(f"Problem issuing command: {response}")
 
     async def divert_mode(self) -> Mapping[str, Any] | list[Any]:
         """Set the divert mode to either Normal or Eco modes."""
         if not self._config:
-            raise RuntimeError("Missing configuration: self._config is required")
+            raise UnknownStateError("Missing configuration: self._config is required")
 
         if not self._version_check("2.9.1"):
             _LOGGER.debug("Feature not supported for older firmware.")
@@ -213,7 +218,7 @@ class CommandsMixin:
                 or response.get("msg") not in SUCCESS_ANSWERS
             ):
                 _LOGGER.error("Problem toggling override: %s", response)
-                raise RuntimeError(f"Failed to toggle override: {response}")
+                raise CommandFailedError(f"Failed to toggle override: {response}")
         else:
             # Older firmware use RAPI commands
             _LOGGER.debug("Toggling manual override via RAPI")
@@ -222,7 +227,9 @@ class CommandsMixin:
 
             if "state" not in self._status:
                 _LOGGER.error("Cannot toggle override: unknown charger state.")
-                raise RuntimeError("Cannot toggle override: unknown charger state.")
+                raise UnknownStateError(
+                    "Cannot toggle override: unknown charger state."
+                )
 
             command = "$FE" if self._status.get("state") == 254 else "$FS"
             response, msg = await self.send_command(command)
@@ -231,7 +238,7 @@ class CommandsMixin:
                 isinstance(msg, str) and (msg.startswith("$NK") or msg in RAPI_ERRORS)
             ):
                 _LOGGER.error("Problem toggling override via RAPI: %s", msg)
-                raise RuntimeError(f"Failed to toggle override via RAPI: {msg}")
+                raise CommandFailedError(f"Failed to toggle override via RAPI: {msg}")
 
     async def clear_override(self) -> None:
         """Clear the manual override status."""
@@ -247,7 +254,7 @@ class CommandsMixin:
         _LOGGER.debug("Clear override response: %s", msg)
         if msg not in SUCCESS_ANSWERS:
             _LOGGER.error("Problem clearing override: %s", response)
-            raise RuntimeError(f"Failed to clear override: {response}")
+            raise CommandFailedError(f"Failed to clear override: {response}")
 
     async def set_current(self, amps: int = 6) -> None:
         """Set the soft current limit."""
@@ -276,7 +283,7 @@ class CommandsMixin:
                 or response.get("msg") not in SUCCESS_ANSWERS
             ):
                 _LOGGER.error("Problem setting current limit: %s", response)
-                raise UnknownError
+                raise CommandFailedError(f"Problem setting current limit: {response}")
 
         else:
             # RAPI commands
@@ -291,7 +298,7 @@ class CommandsMixin:
                 isinstance(msg, str) and (msg.startswith("$NK") or msg in RAPI_ERRORS)
             ):
                 _LOGGER.error("Problem setting current via RAPI: %s", msg)
-                raise UnknownError
+                raise CommandFailedError(f"Problem setting current via RAPI: {msg}")
 
     async def set_service_level(self, level: int | str = 2) -> None:
         """Set the service level of the EVSE."""
@@ -311,7 +318,7 @@ class CommandsMixin:
         msg = response.get("msg") if isinstance(response, Mapping) else None
         if msg not in SUCCESS_ANSWERS:
             _LOGGER.error("Problem issuing command: %s", response)
-            raise UnknownError
+            raise CommandFailedError(f"Problem issuing command: {response}")
 
     # Restart OpenEVSE WiFi
     async def restart_wifi(self) -> None:
@@ -346,7 +353,7 @@ class CommandsMixin:
 
         if not success:
             _LOGGER.error("Problem restarting WiFi: %s", response)
-            raise RuntimeError(f"Failed to restart WiFi: {msg}")
+            raise CommandFailedError(f"Failed to restart WiFi: {msg}")
 
     # Restart EVSE module
     async def restart_evse(self) -> None:
@@ -364,7 +371,9 @@ class CommandsMixin:
                 or reply.get("error")
             ):
                 _LOGGER.error("Problem restarting EVSE module via HTTP: %s", reply)
-                raise RuntimeError(f"Failed to restart EVSE module via HTTP: {reply}")
+                raise CommandFailedError(
+                    f"Failed to restart EVSE module via HTTP: {reply}"
+                )
 
             response = (
                 reply.get("msg", "Unknown error")
@@ -381,7 +390,7 @@ class CommandsMixin:
                 and (response.startswith("$NK") or response in RAPI_ERRORS)
             ):
                 _LOGGER.error("Problem restarting EVSE module via RAPI: %s", response)
-                raise RuntimeError(
+                raise CommandFailedError(
                     f"Failed to restart EVSE module via RAPI: {response}"
                 )
 
@@ -563,7 +572,7 @@ class CommandsMixin:
                 _LOGGER.error(
                     "Could not resolve latest firmware download URL from GitHub."
                 )
-                raise RuntimeError(
+                raise FirmwareResolutionError(
                     "Could not resolve latest firmware download URL from GitHub."
                 )
             firmware_url = check_result["browser_download_url"]
@@ -605,7 +614,7 @@ class CommandsMixin:
         msg = response.get("msg") if isinstance(response, Mapping) else None
         if msg not in SUCCESS_ANSWERS:
             _LOGGER.error("Problem issuing command: %s", response)
-            raise UnknownError
+            raise CommandFailedError(f"Problem issuing command: {response}")
 
     async def set_divert_mode(self, mode: str = "fast") -> None:
         """Set the divert mode."""
@@ -630,7 +639,7 @@ class CommandsMixin:
 
         if not success:
             _LOGGER.error("Problem issuing command: %s", response)
-            raise UnknownError
+            raise CommandFailedError(f"Problem issuing command: {response}")
 
         self._status["divertmode"] = new_mode
 
@@ -650,7 +659,7 @@ class CommandsMixin:
         msg = response.get("msg") if isinstance(response, Mapping) else None
         if msg not in SUCCESS_ANSWERS and msg != "Current Shaper state changed":
             _LOGGER.error("Problem issuing command: %s", response)
-            raise UnknownError
+            raise CommandFailedError(f"Problem issuing command: {response}")
 
         self._status["shaper"] = mode
 
@@ -663,7 +672,7 @@ class CommandsMixin:
 
         if shaper_active is None:
             _LOGGER.error("Cannot toggle shaper: unknown shaper state.")
-            raise RuntimeError("Cannot toggle shaper: unknown shaper state.")
+            raise UnknownStateError("Cannot toggle shaper: unknown shaper state.")
 
         new_state = not bool(shaper_active)
         await self.set_shaper(new_state)
@@ -686,4 +695,4 @@ class CommandsMixin:
         msg = response.get("msg") if isinstance(response, Mapping) else None
         if msg not in SUCCESS_ANSWERS:
             _LOGGER.error("Problem issuing command: %s", response)
-            raise UnknownError
+            raise CommandFailedError(f"Problem issuing command: {response}")

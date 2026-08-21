@@ -21,6 +21,7 @@ from openevsehttp.const import (
 from openevsehttp.exceptions import (
     AlreadyListening,
     AuthenticationError,
+    CommandFailedError,
     MissingMethod,
     MissingSerial,
     ParseJSONError,
@@ -75,6 +76,39 @@ async def test_public_api_export():
     """Verify OpenEVSE is exported from the package root."""
     assert PublicOpenEVSE is not None
     assert PublicOpenEVSE is OpenEVSE
+
+
+async def test_exceptions_hierarchy():
+    """Verify library exceptions inherit from OpenEVSEError."""
+    import openevsehttp as pkg
+
+    exception_classes = [
+        pkg.AuthenticationError,
+        pkg.ParseJSONError,
+        pkg.UnknownError,
+        pkg.MissingMethod,
+        pkg.AlreadyListening,
+        pkg.MissingSerial,
+        pkg.UnsupportedFeature,
+        pkg.InvalidType,
+        pkg.CommandFailedError,
+        pkg.UnknownStateError,
+        pkg.FirmwareResolutionError,
+    ]
+
+    for exc_cls in exception_classes:
+        assert issubclass(exc_cls, pkg.OpenEVSEError)
+        assert issubclass(exc_cls, Exception)
+
+    # Test catching with base class
+    with pytest.raises(pkg.OpenEVSEError):
+        raise pkg.CommandFailedError("Command rejected")
+
+    with pytest.raises(pkg.OpenEVSEError):
+        raise pkg.UnknownStateError("State unknown")
+
+    with pytest.raises(pkg.OpenEVSEError):
+        raise pkg.FirmwareResolutionError("Download URL resolution failed")
 
 
 async def test_get_status_auth(test_charger_auth):
@@ -968,7 +1002,7 @@ async def test_send_command_rapi_rejection(test_charger, mock_aioclient):
     mock_aioclient.post(TEST_URL_RAPI, status=200, body=json.dumps(value))
 
     with pytest.raises(
-        RuntimeError, match=r"Failed to toggle override via RAPI: \$NK\^21"
+        CommandFailedError, match=r"Failed to toggle override via RAPI: \$NK\^21"
     ):
         await test_charger.toggle_override()
 
@@ -977,7 +1011,8 @@ async def test_send_command_rapi_rejection(test_charger, mock_aioclient):
     mock_aioclient.post(TEST_URL_RAPI, status=200, body=json.dumps(value))
 
     with pytest.raises(
-        RuntimeError, match="Failed to toggle override via RAPI: RAPI_RESPONSE_TIMEOUT"
+        CommandFailedError,
+        match="Failed to toggle override via RAPI: RAPI_RESPONSE_TIMEOUT",
     ):
         await test_charger.toggle_override()
 
@@ -1000,7 +1035,7 @@ async def test_restart_evse_rapi_failure(test_charger, mock_aioclient, caplog):
     )
     with caplog.at_level(logging.ERROR):
         with pytest.raises(
-            RuntimeError, match="Failed to restart EVSE module via RAPI:"
+            CommandFailedError, match="Failed to restart EVSE module via RAPI:"
         ):
             await test_charger.restart_evse()
     assert "Problem restarting EVSE module via RAPI: $NK^21" in caplog.text
