@@ -153,7 +153,7 @@ async def test_toggle_shaper_failed_update(mock_aioclient, caplog):
     )
 
     with pytest.raises(
-        UnknownStateError, match="Cannot toggle shaper: unknown shaper state."
+        UnknownStateError, match=r"Cannot toggle shaper: unknown shaper state\."
     ):
         await charger.toggle_shaper()
 
