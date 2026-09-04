@@ -696,3 +696,25 @@ class CommandsMixin:
         if msg not in SUCCESS_ANSWERS:
             _LOGGER.error("Problem issuing command: %s", response)
             raise CommandFailedError(f"Problem issuing command: {response}")
+
+    async def set_rfid_enabled(self, enable: bool = True) -> None:
+        """Enable or disable RFID access."""
+        if not self._version_check("4.1.4"):
+            _LOGGER.debug("Feature not supported for older firmware.")
+            raise UnsupportedFeature
+
+        if not isinstance(enable, bool):
+            raise TypeError("Value must be a boolean.")
+
+        url = f"{self.url}config"
+        data = {"rfid_enabled": enable}
+
+        _LOGGER.debug("Setting rfid_enabled to %s", enable)
+        response = await self.process_request(url=url, method="post", data=data)
+        response = self._normalize_response(response)
+        msg = response.get("msg") if isinstance(response, Mapping) else None
+        if msg not in SUCCESS_ANSWERS:
+            _LOGGER.error("Problem issuing command: %s", response)
+            raise CommandFailedError(f"Problem issuing command: {response}")
+
+        self._config["rfid_enabled"] = enable

@@ -568,3 +568,11 @@ class PropertiesMixin:
             _LOGGER.debug("Feature not supported for older firmware.")
             raise UnsupportedFeature
         return int(self._status.get("power", 0))
+
+    @property
+    def rfid_enabled(self) -> bool | None:
+        """Return charger RFID enabled state."""
+        if not self._version_check("4.1.4"):
+            _LOGGER.debug("Feature not supported for older firmware.")
+            raise UnsupportedFeature
+        return self._config.get("rfid_enabled")

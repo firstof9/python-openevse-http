@@ -199,6 +199,10 @@ SERVER_URL = "openevse.test.tld"
         ("test_charger_v2", "current_power", UnsupportedFeature),
         ("test_charger_broken", "current_power", UnsupportedFeature),
         ("test_charger_new", "current_power", 4500),
+        # RFID
+        ("test_charger", "rfid_enabled", UnsupportedFeature),
+        ("test_charger_v2", "rfid_enabled", UnsupportedFeature),
+        ("test_charger_new", "rfid_enabled", False),
     ],
 )
 async def test_simple_properties(fixture, prop, expected, request):
@@ -516,3 +520,22 @@ async def test_mqtt_vehicle_range_miles():
     with pytest.deprecated_call():
         assert charger.vehicle_range == 150
     assert charger.vehicle_range_with_unit == (150, "km")
+
+
+async def test_rfid_enabled_property():
+    """Test rfid_enabled property."""
+    charger = OpenEVSE(SERVER_URL)
+    # Older firmware raises UnsupportedFeature
+    charger._config = {"version": "4.1.2", "rfid_enabled": True}
+    with pytest.raises(UnsupportedFeature):
+        _ = charger.rfid_enabled
+
+    # Supported firmware >= 4.1.4
+    charger._config = {"version": "4.1.4", "rfid_enabled": True}
+    assert charger.rfid_enabled is True
+
+    charger._config = {"version": "4.1.4", "rfid_enabled": False}
+    assert charger.rfid_enabled is False
+
+    charger._config = {"version": "4.1.4"}
+    assert charger.rfid_enabled is None
