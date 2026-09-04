@@ -1375,3 +1375,43 @@ async def test_set_mqtt_vehicle_range_miles(test_charger_new, mock_aioclient, ca
     )
     with pytest.raises(CommandFailedError):
         await test_charger_new.set_mqtt_vehicle_range_miles(True)
+
+
+async def test_set_rfid_enabled(test_charger, test_charger_new, mock_aioclient, caplog):
+    """Test set_rfid_enabled command."""
+    # Version gate check on older firmware
+    await test_charger.update()
+    with pytest.raises(UnsupportedFeature):
+        await test_charger.set_rfid_enabled(True)
+
+    await test_charger_new.update()
+    mock_aioclient.post(
+        TEST_URL_CONFIG,
+        status=200,
+        body='{"msg": "OK"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_new.set_rfid_enabled(True)
+    assert "Setting rfid_enabled to True" in caplog.text
+    assert test_charger_new._config["rfid_enabled"] is True
+
+    mock_aioclient.post(
+        TEST_URL_CONFIG,
+        status=200,
+        body='{"msg": "OK"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_new.set_rfid_enabled(False)
+    assert "Setting rfid_enabled to False" in caplog.text
+    assert test_charger_new._config["rfid_enabled"] is False
+
+    with pytest.raises(TypeError, match=r"Value must be a boolean\."):
+        await test_charger_new.set_rfid_enabled("invalid")  # type: ignore[arg-type]
+
+    mock_aioclient.post(
+        TEST_URL_CONFIG,
+        status=200,
+        body='{"msg": "error"}',
+    )
+    with pytest.raises(CommandFailedError):
+        await test_charger_new.set_rfid_enabled(True)
