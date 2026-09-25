@@ -1314,6 +1314,23 @@ async def test_process_request_with_session_invalid_method(test_charger):
             )
 
 
+async def test_process_request_custom_headers(test_charger_new, mock_aioclient):
+    """Test process_request with custom headers supplied."""
+    url = "http://openevse.test.tld/test-headers"
+    mock_aioclient.get(
+        url,
+        status=200,
+        body='{"msg": "OK"}',
+    )
+    custom_headers = {"Custom-Header": "TestValue", "X-Requested-With": "CustomApp"}
+    await test_charger_new.process_request(url, method="get", headers=custom_headers)
+    last_req = mock_aioclient.requests[-1]
+    req_headers = last_req[2].get("headers", {})
+    assert req_headers.get("Custom-Header") == "TestValue"
+    assert req_headers.get("X-Requested-With") == "CustomApp"
+    assert "python-openevse-http" in req_headers.get("User-Agent", "")
+
+
 @pytest.mark.parametrize("method", ["post", "patch", "delete"])
 @pytest.mark.parametrize("trigger_key", UPDATE_TRIGGERS)
 async def test_process_request_triggers_update(
