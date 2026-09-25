@@ -32,6 +32,8 @@ For a comprehensive matrix of all endpoints across firmware generations (v2.x, v
 | Divert Mode | `/divertmode` or `/config` | N/A | POST |
 | Module Restart | `/restart` (`device: gateway\|evse`) | `$FR` (evse restart) | POST |
 | Firmware Update | `/update` | N/A | POST (multipart or JSON URL) |
+| Relay Stuck Recovery | `/relay/recovery` | `$FK` (controller stuck recovery) | POST |
+| Relay Health Reset | `/relay/reset` | `$FH` (controller health reset) | POST |
 
 > [!NOTE]
 > Firmware development for **v2.x (ESP8266)** and **v3.x (ESP32)** has ended. Active development occurs in **`OpenEVSE/openevse_esp32_firmware`** (v4.x/v5.x). Always check `openevse_esp32_firmware` as the primary reference when evaluating new endpoints, features, or behaviors.

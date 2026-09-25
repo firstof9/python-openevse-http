@@ -738,6 +738,51 @@ async def test_version_check_dev_branches():
     assert charger._version_check("5.0.0") is False
 
 
+async def test_controller_version_check():
+    """Test _controller_version_check and controller_version_check."""
+    charger = OpenEVSE(SERVER_URL, session=MagicMock())
+
+    # Missing firmware key
+    charger._config = {}
+    assert charger._controller_version_check("9.3.0") is False
+    assert charger.controller_version_check("9.3.0") is False
+
+    # Invalid semver
+    charger._config = {"firmware": "invalid"}
+    assert charger._controller_version_check("9.3.0") is False
+
+    # Below minimum
+    charger._config = {"firmware": "7.1.3"}
+    assert charger._controller_version_check("9.3.0") is False
+
+    # Equal to minimum
+    charger._config = {"firmware": "9.3.0"}
+    assert charger._controller_version_check("9.3.0") is True
+
+    # Above minimum
+    charger._config = {"firmware": "9.4.0"}
+    assert charger._controller_version_check("9.3.0") is True
+    assert charger.controller_version_check("9.3.0") is True
+
+    # With max_version limit
+    assert charger._controller_version_check("9.3.0", "9.5.0") is True
+    assert charger._controller_version_check("9.3.0", "9.4.0") is False
+
+    # AwesomeVersionCompareException in limit comparison
+    with patch(
+        "awesomeversion.AwesomeVersion.__le__",
+        side_effect=AwesomeVersionCompareException,
+    ):
+        assert charger._controller_version_check("9.3.0", "9.5.0") is False
+
+    # AwesomeVersionCompareException in GE comparison
+    with patch(
+        "awesomeversion.AwesomeVersion.__ge__",
+        side_effect=AwesomeVersionCompareException,
+    ):
+        assert charger._controller_version_check("9.3.0") is False
+
+
 # ── websocket lifecycle ──────────────────────────────────────────────
 
 
@@ -1267,6 +1312,23 @@ async def test_process_request_with_session_invalid_method(test_charger):
             await test_charger._process_request_with_session(
                 session, "http://test", "invalid", None, None, None
             )
+
+
+async def test_process_request_custom_headers(test_charger_new, mock_aioclient):
+    """Test process_request with custom headers supplied."""
+    url = "http://openevse.test.tld/test-headers"
+    mock_aioclient.get(
+        url,
+        status=200,
+        body='{"msg": "OK"}',
+    )
+    custom_headers = {"Custom-Header": "TestValue", "X-Requested-With": "CustomApp"}
+    await test_charger_new.process_request(url, method="get", headers=custom_headers)
+    last_req = mock_aioclient.requests[-1]
+    req_headers = last_req[2].get("headers", {})
+    assert req_headers.get("Custom-Header") == "TestValue"
+    assert req_headers.get("X-Requested-With") == "CustomApp"
+    assert "python-openevse-http" in req_headers.get("User-Agent", "")
 
 
 @pytest.mark.parametrize("method", ["post", "patch", "delete"])

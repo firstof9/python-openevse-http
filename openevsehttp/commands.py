@@ -38,8 +38,18 @@ class CommandsMixin:
     def _version_check(self, min_version: str, max_version: str = "") -> bool:
         raise NotImplementedError
 
+    def _controller_version_check(
+        self, min_version: str, max_version: str = ""
+    ) -> bool:
+        raise NotImplementedError
+
     async def process_request(
-        self, url: str, method: str = "", data: Any = None, rapi: Any = None
+        self,
+        url: str,
+        method: str = "",
+        data: Any = None,
+        rapi: Any = None,
+        headers: dict[str, str] | None = None,
     ) -> Mapping[str, Any] | list[Any] | str | bool:
         raise NotImplementedError
 
@@ -718,3 +728,83 @@ class CommandsMixin:
             raise CommandFailedError(f"Problem issuing command: {response}")
 
         self._config["rfid_enabled"] = enable
+
+    async def run_stuck_relay_recovery(self) -> None:
+        """Run the stuck-relay recovery cycle.
+
+        Requires OpenEVSE controller firmware 9.3.0+.
+        On gateway firmware v5.1.0+, uses HTTP POST /relay/recovery.
+        On older gateway firmware, falls back to RAPI command $FK.
+        Note: The controller will reject ($NK / HTTP 500) if an EV is connected.
+        """
+        if not self._controller_version_check("9.3.0"):
+            _LOGGER.debug(
+                "Stuck-relay recovery requires OpenEVSE controller firmware 9.3.0 or higher."
+            )
+            raise UnsupportedFeature(
+                "Stuck-relay recovery requires OpenEVSE controller firmware 9.3.0 or higher."
+            )
+
+        if self._version_check("5.1.0"):
+            _LOGGER.debug("Running stuck-relay recovery via HTTP")
+            url = f"{self.url}relay/recovery"
+            response = await self.process_request(url=url, method="post")
+            response = self._normalize_response(response)
+            msg = response.get("msg") if isinstance(response, Mapping) else None
+            if msg not in SUCCESS_ANSWERS:
+                _LOGGER.error("Problem running stuck-relay recovery: %s", response)
+                raise CommandFailedError(
+                    f"Problem running stuck-relay recovery: {response}"
+                )
+        else:
+            _LOGGER.debug("Running stuck-relay recovery via RAPI")
+            command = "$FK"
+            reply, response = await self.send_command(command)
+            if reply in [False, "NK"] or (
+                isinstance(response, str)
+                and (response.startswith("$NK") or response in RAPI_ERRORS)
+            ):
+                _LOGGER.error(
+                    "Problem running stuck-relay recovery via RAPI: %s", response
+                )
+                raise CommandFailedError(
+                    f"Problem running stuck-relay recovery via RAPI: {response}"
+                )
+
+    async def reset_relay_health(self) -> None:
+        """Reset the relay contact-life health estimation metrics.
+
+        Use after a physical relay replacement so wear metrics do not carry over.
+        Requires OpenEVSE controller firmware 9.3.0+.
+        On gateway firmware v5.1.0+, uses HTTP POST /relay/reset.
+        On older gateway firmware, falls back to RAPI command $FH.
+        """
+        if not self._controller_version_check("9.3.0"):
+            _LOGGER.debug(
+                "Resetting relay health requires OpenEVSE controller firmware 9.3.0 or higher."
+            )
+            raise UnsupportedFeature(
+                "Resetting relay health requires OpenEVSE controller firmware 9.3.0 or higher."
+            )
+
+        if self._version_check("5.1.0"):
+            _LOGGER.debug("Resetting relay health via HTTP")
+            url = f"{self.url}relay/reset"
+            response = await self.process_request(url=url, method="post")
+            response = self._normalize_response(response)
+            msg = response.get("msg") if isinstance(response, Mapping) else None
+            if msg not in SUCCESS_ANSWERS:
+                _LOGGER.error("Problem resetting relay health: %s", response)
+                raise CommandFailedError(f"Problem resetting relay health: {response}")
+        else:
+            _LOGGER.debug("Resetting relay health via RAPI")
+            command = "$FH"
+            reply, response = await self.send_command(command)
+            if reply in [False, "NK"] or (
+                isinstance(response, str)
+                and (response.startswith("$NK") or response in RAPI_ERRORS)
+            ):
+                _LOGGER.error("Problem resetting relay health via RAPI: %s", response)
+                raise CommandFailedError(
+                    f"Problem resetting relay health via RAPI: {response}"
+                )

@@ -80,6 +80,7 @@ def _setup_charger(
     config_code=200,
     is_ws=True,
     version_override=None,
+    controller_firmware_override=None,
     status_exception=None,
 ):
     """Set up mocked endpoints and return an OpenEVSE client."""
@@ -96,9 +97,12 @@ def _setup_charger(
         )
 
     if config_fixture:
-        if version_override:
+        if version_override or controller_firmware_override:
             config = json.loads(load_fixture(config_fixture))
-            config["version"] = version_override
+            if version_override:
+                config["version"] = version_override
+            if controller_firmware_override:
+                config["firmware"] = controller_firmware_override
             body = json.dumps(config)
         else:
             body = load_fixture(config_fixture) if config_code == 200 else ""
