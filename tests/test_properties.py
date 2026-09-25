@@ -577,3 +577,27 @@ async def test_cable_temp_properties():
     assert temps["ev2"] is None
     assert temps["in1"] is None
     assert temps["in2"] is None
+
+
+async def test_time_properties():
+    """Test time-related properties with empty config/status."""
+    charger = OpenEVSE(SERVER_URL)
+    charger._config = {}
+    charger._status = {}
+
+    assert charger.timezone is None
+    assert charger.time_offset is None
+    assert charger.sntp_enabled is False
+    assert charger.sntp_hostname is None
+
+    charger._config = {
+        "sntp_enabled": True,
+        "time_zone": "UTC0",
+        "sntp_hostname": "pool.ntp.org",
+    }
+    charger._status = {"offset": "+0000"}
+
+    assert charger.timezone == "UTC0"
+    assert charger.time_offset == "+0000"
+    assert charger.sntp_enabled is True
+    assert charger.sntp_hostname == "pool.ntp.org"
