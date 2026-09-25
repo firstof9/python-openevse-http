@@ -19,6 +19,9 @@ The main client `OpenEVSE` combines several mixins:
 
 ## Endpoints & RAPI Commands Reference
 
+For a comprehensive matrix of all endpoints across firmware generations (v2.x, v3.x, and active v4.x/v5.x), field variations (`/config`, `/status`), and RAPI fallbacks, see:
+- [OpenEVSE Endpoints Matrix](file:///home/firstof9/github/python-openevse-http/.agents/skills/openevse-api-guide/references/endpoints_matrix.md)
+
 | Action | HTTP Endpoint (v4+) | RAPI Command (v2/v3) | Method |
 | :--- | :--- | :--- | :--- |
 | Status | `/status` | N/A | GET |
@@ -29,6 +32,9 @@ The main client `OpenEVSE` combines several mixins:
 | Divert Mode | `/divertmode` or `/config` | N/A | POST |
 | Module Restart | `/restart` (`device: gateway\|evse`) | `$FR` (evse restart) | POST |
 | Firmware Update | `/update` | N/A | POST (multipart or JSON URL) |
+
+> [!NOTE]
+> Firmware development for **v2.x (ESP8266)** and **v3.x (ESP32)** has ended. Active development occurs in **`OpenEVSE/openevse_esp32_firmware`** (v4.x/v5.x). Always check `openevse_esp32_firmware` as the primary reference when evaluating new endpoints, features, or behaviors.
 
 ## Firmware Version Branching
 
@@ -67,19 +73,20 @@ from .exceptions import CommandFailedError, UnknownStateError, UnsupportedFeatur
 
 When adding, modifying, or debugging endpoints and RAPI commands, cross-reference against the upstream OpenEVSE firmware sources:
 
-- **WiFi Gateway Firmware (v3/v4/v5)**: [`OpenEVSE/ESP32_WiFi_V4.x`](https://github.com/OpenEVSE/ESP32_WiFi_V4.x)
-- **Legacy WiFi Firmware (v2)**: [`OpenEVSE/ESP8266_WiFi_v2.x`](https://github.com/OpenEVSE/ESP8266_WiFi_v2.x)
+- **WiFi Gateway Firmware (Current ESP32 v4/v5)**: [`OpenEVSE/openevse_esp32_firmware`](https://github.com/OpenEVSE/openevse_esp32_firmware) (formerly [`OpenEVSE/ESP32_WiFi_V4.x`](https://github.com/OpenEVSE/ESP32_WiFi_V4.x))
+- **WiFi Gateway Firmware (Legacy ESP32 v3.x)**: [`OpenEVSE/ESP32_WiFi_V3.x`](https://github.com/OpenEVSE/ESP32_WiFi_V3.x)
+- **Legacy WiFi Firmware (ESP8266 v2.x)**: [`OpenEVSE/ESP8266_WiFi_v2.x`](https://github.com/OpenEVSE/ESP8266_WiFi_v2.x)
 - **OpenEVSE Controller Firmware (RAPI)**: [`OpenEVSE/open_evse`](https://github.com/OpenEVSE/open_evse)
 
 ### What to Verify in Firmware Sources:
 1. **Route & Method Handlers**:
-   - Check `src/http.cpp`, `src/web_server.cpp`, or `src/web_server.h` in `ESP32_WiFi_V4.x` to confirm HTTP methods (`GET`, `POST`, `PATCH`, `DELETE`).
+   - Check `src/web_server.cpp`, `src/web_server_config.cpp`, `src/web_server_*.cpp` (in `openevse_esp32_firmware` / `ESP32_WiFi_V4.x`) or `src/web_server.cpp` (in `ESP32_WiFi_V3.x` / `ESP8266_WiFi_v2.x`) to confirm HTTP methods (`GET`, `POST`, `PATCH`, `DELETE`).
    - Confirm expected query parameters or JSON body fields (e.g. `divertmode=...`, `{"device": "gateway"}`, `{"charge_current": ...}`).
 2. **Response Formats & Statuses**:
    - Verify success and error response payloads (e.g., `{"msg": "done"}`, `{"result": "OK", "msg": "..."}`, or plain string messages like `"Current Shaper state changed"`).
    - Update `SUCCESS_ANSWERS` in `openevsehttp/const.py` if new success indicators are introduced.
 3. **Firmware Version Thresholds**:
-   - Check git history or release tags in `ESP32_WiFi_V4.x` to determine when a route or feature was introduced, ensuring accurate `_version_check("x.y.z")` values.
+   - Check git history or release tags across `openevse_esp32_firmware`, `ESP32_WiFi_V3.x`, and `ESP8266_WiFi_v2.x` to determine when a route or feature was introduced, ensuring accurate `_version_check("x.y.z")` values.
 4. **RAPI Command Specifications**:
    - Check `src/rapi.cpp` or OpenEVSE controller docs for valid RAPI commands (e.g., `$SC`, `$FE`, `$FS`, `$FR`, `$ST`) and return formats (`$OK`, `$NK`).
 5. **Mock Test Fixtures**:
