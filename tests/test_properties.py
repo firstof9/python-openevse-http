@@ -203,6 +203,16 @@ SERVER_URL = "openevse.test.tld"
         ("test_charger", "rfid_enabled", UnsupportedFeature),
         ("test_charger_v2", "rfid_enabled", UnsupportedFeature),
         ("test_charger_new", "rfid_enabled", False),
+        # time
+        ("test_charger", "timezone", "America/Phoenix|MST7"),
+        ("test_charger_v2", "timezone", None),
+        ("test_charger", "time_offset", "-0700"),
+        ("test_charger_v2", "time_offset", None),
+        ("test_charger", "sntp_enabled", True),
+        ("test_charger_new", "sntp_enabled", True),
+        ("test_charger_v2", "sntp_enabled", False),
+        ("test_charger", "sntp_hostname", "0.us.pool.ntp.org"),
+        ("test_charger_v2", "sntp_hostname", None),
     ],
 )
 async def test_simple_properties(fixture, prop, expected, request):

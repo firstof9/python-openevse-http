@@ -613,3 +613,25 @@ class PropertiesMixin:
                     except (ValueError, TypeError):
                         temps[src] = None
         return temps
+
+    @property
+    def timezone(self) -> str | None:
+        """Return charger timezone string."""
+        return self._config.get("time_zone")
+
+    @property
+    def time_offset(self) -> str | None:
+        """Return charger timezone offset string (e.g. +0000 or -0700)."""
+        return self._status.get("offset")
+
+    @property
+    def sntp_enabled(self) -> bool:
+        """Return whether SNTP / NTP time synchronization is enabled."""
+        if not self._config:
+            return False
+        return bool(self._config.get("sntp_enabled", False))
+
+    @property
+    def sntp_hostname(self) -> str | None:
+        """Return configured SNTP server hostname."""
+        return self._config.get("sntp_hostname")

@@ -2,6 +2,7 @@
 
 import json
 import logging
+from datetime import datetime, timezone
 from unittest import mock
 
 import pytest
@@ -29,6 +30,8 @@ TEST_URL_CLAIMS_TARGET = "http://openevse.test.tld/claims/target"
 TEST_URL_RELAY_RECOVERY = "http://openevse.test.tld/relay/recovery"
 TEST_URL_RELAY_RESET = "http://openevse.test.tld/relay/reset"
 TEST_URL_CABLE_TEMP = "http://openevse.test.tld/cabletemp"
+TEST_URL_TIME = "http://openevse.test.tld/time"
+TEST_URL_SETTIME = "http://openevse.test.tld/settime"
 SERVER_URL = "openevse.test.tld"
 
 
@@ -1766,3 +1769,224 @@ async def test_set_cable_temp_enabled(test_charger, test_charger_new, mock_aiocl
     )
     with pytest.raises(CommandFailedError, match="Problem toggling cable_temp"):
         await test_charger_new.set_cable_temp_enabled(False)
+
+
+# ── time endpoints (/time, /settime, sync_time) ──────────────────────
+
+
+async def test_get_time(test_charger, test_charger_v2, mock_aioclient):
+    """Test get_time across firmware versions."""
+    await test_charger.update()
+
+    # Success on v4.x
+    mock_aioclient.get(
+        TEST_URL_TIME,
+        status=200,
+        body=json.dumps(
+            {
+                "time": "2026-03-25T15:30:00Z",
+                "offset": "-0700",
+                "time_zone": "America/Phoenix|MST7",
+                "sntp_enabled": True,
+            }
+        ),
+    )
+    res = await test_charger.get_time()
+    assert res["time"] == "2026-03-25T15:30:00Z"
+    assert res["offset"] == "-0700"
+    assert res["sntp_enabled"] is True
+
+    # Invalid response on v4.x
+    mock_aioclient.get(
+        TEST_URL_TIME,
+        status=200,
+        body="invalid json string",
+    )
+    with pytest.raises(CommandFailedError, match="Invalid response from /time"):
+        await test_charger.get_time()
+
+    # Legacy fallback on v2.x
+    await test_charger_v2.update()
+    legacy_time = await test_charger_v2.get_time()
+    assert legacy_time["time"] is None
+    assert legacy_time["offset"] is None
+
+
+async def test_set_time_v4(test_charger, mock_aioclient):
+    """Test set_time on v4.x firmware."""
+    await test_charger.update()
+
+    # Invalid argument types
+    with pytest.raises(TypeError, match="sntp must be a boolean"):
+        await test_charger.set_time(sntp="yes")  # type: ignore[arg-type]
+
+    with pytest.raises(TypeError, match="timezone_str must be a string"):
+        await test_charger.set_time(timezone_str=123)  # type: ignore[arg-type]
+
+    with pytest.raises(
+        TypeError, match="target_time must be a datetime or ISO-8601 string"
+    ):
+        await test_charger.set_time(target_time=12345)  # type: ignore[arg-type]
+
+    # Success with datetime object
+    mock_aioclient.post(
+        TEST_URL_TIME,
+        status=200,
+        body='{"msg": "done"}',
+    )
+    dt = datetime(2026, 3, 25, 12, 0, 0, tzinfo=timezone.utc)
+    await test_charger.set_time(
+        target_time=dt,
+        timezone_str="UTC0",
+        sntp=False,
+    )
+    assert test_charger._config["sntp_enabled"] is False
+    assert test_charger._config["time_zone"] == "UTC0"
+
+    # Success with string and default sntp
+    mock_aioclient.post(
+        TEST_URL_TIME,
+        status=200,
+        body='{"msg": "set"}',
+    )
+    await test_charger.set_time(
+        target_time="2026-03-25T12:00:00Z",
+        timezone_str="America/New_York|EST5EDT",
+        sntp=True,
+    )
+    assert test_charger._config["sntp_enabled"] is True
+    assert test_charger._config["time_zone"] == "America/New_York|EST5EDT"
+
+    # Success with target_time=None and sntp=False (auto UTC now)
+    mock_aioclient.post(
+        TEST_URL_TIME,
+        status=200,
+        body='{"msg": "done"}',
+    )
+    await test_charger.set_time(sntp=False)
+
+    # Failure response
+    mock_aioclient.post(
+        TEST_URL_TIME,
+        status=200,
+        body='{"msg": "error"}',
+    )
+    with pytest.raises(CommandFailedError, match="Problem setting time"):
+        await test_charger.set_time(sntp=True)
+
+
+async def test_set_time_v3(test_charger, mock_aioclient):
+    """Test set_time on legacy v3.x firmware using /settime."""
+    await test_charger.update()
+    test_charger._config["version"] = "3.3.1"
+
+    # Invalid target_time
+    with pytest.raises(
+        TypeError, match="target_time must be a datetime or ISO-8601 string"
+    ):
+        await test_charger.set_time(target_time=12345)  # type: ignore[arg-type]
+
+    # Success with datetime and sntp=False
+    mock_aioclient.post(
+        TEST_URL_SETTIME,
+        status=200,
+        body='{"msg": "done"}',
+    )
+    dt = datetime(2026, 3, 25, 15, 0, 0, tzinfo=timezone.utc)
+    await test_charger.set_time(target_time=dt, timezone_str="UTC0", sntp=False)
+
+    # Success with sntp=False and target_time=None
+    mock_aioclient.post(
+        TEST_URL_SETTIME,
+        status=200,
+        body='{"msg": "set"}',
+    )
+    await test_charger.set_time(sntp=False)
+
+    # Failure response
+    mock_aioclient.post(
+        TEST_URL_SETTIME,
+        status=200,
+        body='{"msg": "error"}',
+    )
+    with pytest.raises(CommandFailedError, match="Problem setting time"):
+        await test_charger.set_time(sntp=False)
+
+
+async def test_set_time_v2(test_charger_v2, mock_aioclient):
+    """Test set_time fallback to RAPI $S1 on legacy v2.x firmware."""
+    await test_charger_v2.update()
+
+    # Invalid string format
+    with pytest.raises(ValueError, match="Could not parse date string"):
+        await test_charger_v2.set_time(target_time="not-a-date")
+
+    with pytest.raises(
+        TypeError, match="target_time must be a datetime or ISO-8601 string"
+    ):
+        await test_charger_v2.set_time(target_time=9999)  # type: ignore[arg-type]
+
+    # Success with string
+    mock_aioclient.post(
+        TEST_URL_RAPI,
+        status=200,
+        body='{"cmd": "OK", "ret": "$OK"}',
+    )
+    await test_charger_v2.set_time(target_time="2026-03-25T15:30:45Z")
+
+    # Success with datetime
+    mock_aioclient.post(
+        TEST_URL_RAPI,
+        status=200,
+        body='{"cmd": "OK", "ret": "$OK"}',
+    )
+    dt = datetime(2026, 3, 25, 15, 30, 45, tzinfo=timezone.utc)
+    await test_charger_v2.set_time(target_time=dt)
+
+    # Success with target_time=None (auto UTC now)
+    mock_aioclient.post(
+        TEST_URL_RAPI,
+        status=200,
+        body='{"cmd": "OK", "ret": "$OK"}',
+    )
+    await test_charger_v2.set_time(target_time=None)
+
+    # Failure with RAPI rejection
+    mock_aioclient.post(
+        TEST_URL_RAPI,
+        status=200,
+        body='{"cmd": "NK", "ret": "$NK"}',
+    )
+    with pytest.raises(CommandFailedError, match="Problem setting RTC via RAPI"):
+        await test_charger_v2.set_time(target_time=dt)
+
+
+async def test_sync_time_unsupported(test_charger_v2):
+    """Test sync_time on older firmware raises UnsupportedFeature."""
+    await test_charger_v2.update()
+    with pytest.raises(
+        UnsupportedFeature, match="sync_time requires gateway firmware 4.0.0 or higher"
+    ):
+        await test_charger_v2.sync_time()
+
+
+async def test_sync_time(test_charger, mock_aioclient):
+    """Test sync_time command on supported firmware."""
+    await test_charger.update()
+
+    # Success
+    mock_aioclient.post(
+        TEST_URL_TIME,
+        status=200,
+        body='{"msg": "done"}',
+    )
+    await test_charger.sync_time()
+
+    # Failure
+    mock_aioclient.post(
+        TEST_URL_TIME,
+        status=200,
+        body='{"msg": "error"}',
+    )
+    with pytest.raises(CommandFailedError, match="Problem triggering NTP sync"):
+        await test_charger.sync_time()
