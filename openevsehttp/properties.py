@@ -576,3 +576,40 @@ class PropertiesMixin:
             _LOGGER.debug("Feature not supported for older firmware.")
             raise UnsupportedFeature
         return self._config.get("rfid_enabled")
+
+    @property
+    def cable_temp_enabled(self) -> bool:
+        """Return whether cable temperature monitoring is enabled."""
+        if not self._config:
+            return False
+        return bool(self._config.get("cable_temp", False))
+
+    @property
+    def cable_temperatures(self) -> dict[str, float | None]:
+        """Return decoded cable temperatures in degrees C.
+
+        Returns a mapping of logical source name ('ev1', 'ev2', 'in1', 'in2')
+        to temperature in degrees C, or None if unassigned or unavailable.
+        Values in status are stored in tenths of a degree C (c10).
+        """
+        temps: dict[str, float | None] = {}
+        if not self._status:
+            return temps
+
+        source_keys = [
+            ("ev1", "cable_temp_ev1"),
+            ("ev2", "cable_temp_ev2"),
+            ("in1", "cable_temp_in1"),
+            ("in2", "cable_temp_in2"),
+        ]
+        for src, key in source_keys:
+            if key in self._status:
+                val = self._status[key]
+                if val is False or val is None:
+                    temps[src] = None
+                else:
+                    try:
+                        temps[src] = float(val) / 10.0
+                    except (ValueError, TypeError):
+                        temps[src] = None
+        return temps
