@@ -27,8 +27,8 @@ This reference document compiles all known HTTP REST API endpoints, WebSocket pa
 | `/ws` | `WebSocket` | ✅ | ✅ | ✅ | N/A | ✅ Fully Supported |
 | `/schedule` | `GET`, `POST`, `DELETE` | ❌ | ❌ | ✅ (v4.0.0+) | `$ST` / `$GD` | ⚠️ Retrieval Supported |
 | `/schedule/plan` | `GET` | ❌ | ❌ | ✅ (v4.1.0+) | N/A | ❌ Not Implemented |
-| `/time` | `GET`, `POST` | ❌ | ❌ (`/settime`) | ✅ (v4.0.0+) | `$S1` (RTC set) | ❌ Not Implemented |
-| `/settime` | `GET`, `POST` | ❌ | ✅ | ⚠️ Legacy alias | `$S1` | ❌ Not Implemented |
+| `/time` | `GET`, `POST` | ❌ | ❌ (`/settime`) | ✅ (v4.0.0+) | `$S1` (RTC set) | ✅ Fully Supported |
+| `/settime` | `GET`, `POST` | ❌ | ✅ | ⚠️ Legacy alias | `$S1` | ✅ Fully Supported |
 | `/emeter` | `DELETE` | ❌ | ❌ | ✅ (v4.0.0+) | N/A | ❌ Not Implemented |
 | `/notifications` | `GET` | ❌ | ❌ | ✅ (v5.1.0+) | N/A | ❌ Not Implemented |
 | `/notifications/ack` | `POST` | ❌ | ❌ | ✅ (v5.1.0+) | N/A | ❌ Not Implemented |
