@@ -106,6 +106,9 @@ To bypass certificate verification:
 | `/certificates`| GET, POST, DELETE | ❌ | SSL/TLS certificate management |
 | `/schedule/plan`| GET | ❌ | Schedule planning and optimization |
 | `/update` | POST | ✅ | Firmware update interface |
+| `/relay/recovery` | POST | ✅ | Stuck relay recovery cycle (v5.1.0+ / `$FK`) |
+| `/relay/reset` | POST | ✅ | Relay contact-life health estimation reset (v5.1.0+ / `$FH`) |
+| `/cabletemp` | GET, POST | ✅ | Cable temperature monitor configuration and status (v5.1.0+) |
 | `/rfid/add` | POST | ❌ | RFID tag management |
 
 ✅ = Fully Supported \| ⚠️ = Partial Support \| ❌ = Not yet implemented
