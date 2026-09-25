@@ -32,8 +32,9 @@ OpenEVSE chargers run various firmware versions (v2.x, v3.x, v4.x, v5.x) with di
 
 ### Validating Endpoints Against Firmware Sources
 When adding or updating endpoints, payload keys, or RAPI commands, cross-reference against:
-- **WiFi Gateway (v3/v4/v5)**: [`OpenEVSE/ESP32_WiFi_V4.x`](https://github.com/OpenEVSE/ESP32_WiFi_V4.x) (routes in `src/http.cpp`, `src/web_server.cpp`)
-- **Legacy WiFi (v2)**: [`OpenEVSE/ESP8266_WiFi_v2.x`](https://github.com/OpenEVSE/ESP8266_WiFi_v2.x)
+- **WiFi Gateway (Current ESP32 v4/v5)**: [`OpenEVSE/openevse_esp32_firmware`](https://github.com/OpenEVSE/openevse_esp32_firmware) (formerly [`OpenEVSE/ESP32_WiFi_V4.x`](https://github.com/OpenEVSE/ESP32_WiFi_V4.x))
+- **WiFi Gateway (Legacy ESP32 v3.x)**: [`OpenEVSE/ESP32_WiFi_V3.x`](https://github.com/OpenEVSE/ESP32_WiFi_V3.x)
+- **Legacy WiFi (ESP8266 v2.x)**: [`OpenEVSE/ESP8266_WiFi_v2.x`](https://github.com/OpenEVSE/ESP8266_WiFi_v2.x)
 - **Controller / RAPI**: [`OpenEVSE/open_evse`](https://github.com/OpenEVSE/open_evse) (commands in `src/rapi.cpp`)
 Verify HTTP methods, expected JSON fields, success/error payload shapes, and version thresholds.
 
