@@ -26,6 +26,8 @@ TEST_URL_CONFIG = "http://openevse.test.tld/config"
 TEST_URL_DIVERT = "http://openevse.test.tld/divertmode"
 TEST_URL_RESTART = "http://openevse.test.tld/restart"
 TEST_URL_CLAIMS_TARGET = "http://openevse.test.tld/claims/target"
+TEST_URL_RELAY_RECOVERY = "http://openevse.test.tld/relay/recovery"
+TEST_URL_RELAY_RESET = "http://openevse.test.tld/relay/reset"
 SERVER_URL = "openevse.test.tld"
 
 
@@ -1415,3 +1417,178 @@ async def test_set_rfid_enabled(test_charger, test_charger_new, mock_aioclient, 
     )
     with pytest.raises(CommandFailedError):
         await test_charger_new.set_rfid_enabled(True)
+
+
+# ── run_stuck_relay_recovery ─────────────────────────────────────────
+
+
+async def test_run_stuck_relay_recovery_http(test_charger_new, mock_aioclient, caplog):
+    """Test run_stuck_relay_recovery via HTTP on v5.1.0+ with controller 9.3.0+."""
+    await test_charger_new.update()
+
+    # Older controller firmware (< 9.3.0) raises UnsupportedFeature
+    with pytest.raises(
+        UnsupportedFeature, match="requires OpenEVSE controller firmware 9.3.0"
+    ):
+        await test_charger_new.run_stuck_relay_recovery()
+
+    # Update controller firmware to 9.3.0
+    test_charger_new._config["firmware"] = "9.3.0"
+
+    # Success
+    mock_aioclient.post(
+        TEST_URL_RELAY_RECOVERY,
+        status=200,
+        body='{"msg": "done"}',
+        headers={"Content-Type": "application/json"},
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_new.run_stuck_relay_recovery()
+    assert "Running stuck-relay recovery via HTTP" in caplog.text
+    last_req = mock_aioclient.requests[-1]
+    headers = last_req[2].get("headers", {})
+    assert headers.get("X-Requested-With") == "OpenEVSE"
+    assert "python-openevse-http" in headers.get("User-Agent", "")
+
+    # Failure
+    mock_aioclient.post(
+        TEST_URL_RELAY_RECOVERY,
+        status=200,
+        body='{"msg": "error"}',
+    )
+    with pytest.raises(
+        CommandFailedError, match="Problem running stuck-relay recovery"
+    ):
+        await test_charger_new.run_stuck_relay_recovery()
+
+
+async def test_run_stuck_relay_recovery_rapi(test_charger, mock_aioclient, caplog):
+    """Test run_stuck_relay_recovery via RAPI on older gateway firmware with controller 9.3.0+."""
+    await test_charger.update()
+
+    # Controller firmware 7.1.3 (< 9.3.0) raises UnsupportedFeature
+    with pytest.raises(
+        UnsupportedFeature, match="requires OpenEVSE controller firmware 9.3.0"
+    ):
+        await test_charger.run_stuck_relay_recovery()
+
+    # Update controller firmware to 9.3.1
+    test_charger._config["firmware"] = "9.3.1"
+
+    # Success
+    mock_aioclient.post(
+        TEST_URL_RAPI,
+        status=200,
+        body='{"cmd": "OK", "ret": "$OK"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.run_stuck_relay_recovery()
+    assert "Running stuck-relay recovery via RAPI" in caplog.text
+
+    # Failure ($NK when EV is connected)
+    mock_aioclient.post(
+        TEST_URL_RAPI,
+        status=200,
+        body='{"cmd": "NK", "ret": "$NK"}',
+    )
+    with pytest.raises(
+        CommandFailedError, match="Problem running stuck-relay recovery via RAPI"
+    ):
+        await test_charger.run_stuck_relay_recovery()
+
+    # Failure (RAPI queue error)
+    mock_aioclient.post(
+        TEST_URL_RAPI,
+        status=200,
+        body='{"cmd": false, "msg": "RAPI_RESPONSE_QUEUE_FULL"}',
+    )
+    with pytest.raises(
+        CommandFailedError, match="Problem running stuck-relay recovery via RAPI"
+    ):
+        await test_charger.run_stuck_relay_recovery()
+
+
+# ── reset_relay_health ───────────────────────────────────────────────
+
+
+async def test_reset_relay_health_http(test_charger_new, mock_aioclient, caplog):
+    """Test reset_relay_health via HTTP on v5.1.0+ with controller 9.3.0+."""
+    await test_charger_new.update()
+
+    # Older controller firmware (< 9.3.0) raises UnsupportedFeature
+    with pytest.raises(
+        UnsupportedFeature, match="requires OpenEVSE controller firmware 9.3.0"
+    ):
+        await test_charger_new.reset_relay_health()
+
+    # Update controller firmware to 9.3.0
+    test_charger_new._config["firmware"] = "9.3.0"
+
+    # Success
+    mock_aioclient.post(
+        TEST_URL_RELAY_RESET,
+        status=200,
+        body='{"msg": "done"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_new.reset_relay_health()
+    assert "Resetting relay health via HTTP" in caplog.text
+    last_req = mock_aioclient.requests[-1]
+    headers = last_req[2].get("headers", {})
+    assert headers.get("X-Requested-With") == "OpenEVSE"
+    assert "python-openevse-http" in headers.get("User-Agent", "")
+
+    # Failure
+    mock_aioclient.post(
+        TEST_URL_RELAY_RESET,
+        status=200,
+        body='{"msg": "error"}',
+    )
+    with pytest.raises(CommandFailedError, match="Problem resetting relay health"):
+        await test_charger_new.reset_relay_health()
+
+
+async def test_reset_relay_health_rapi(test_charger, mock_aioclient, caplog):
+    """Test reset_relay_health via RAPI on older gateway firmware with controller 9.3.0+."""
+    await test_charger.update()
+
+    # Controller firmware 7.1.3 (< 9.3.0) raises UnsupportedFeature
+    with pytest.raises(
+        UnsupportedFeature, match="requires OpenEVSE controller firmware 9.3.0"
+    ):
+        await test_charger.reset_relay_health()
+
+    # Update controller firmware to 9.3.0
+    test_charger._config["firmware"] = "9.3.0"
+
+    # Success
+    mock_aioclient.post(
+        TEST_URL_RAPI,
+        status=200,
+        body='{"cmd": "OK", "ret": "$OK"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.reset_relay_health()
+    assert "Resetting relay health via RAPI" in caplog.text
+
+    # Failure ($NK)
+    mock_aioclient.post(
+        TEST_URL_RAPI,
+        status=200,
+        body='{"cmd": "NK", "ret": "$NK"}',
+    )
+    with pytest.raises(
+        CommandFailedError, match="Problem resetting relay health via RAPI"
+    ):
+        await test_charger.reset_relay_health()
+
+    # Failure (RAPI queue error)
+    mock_aioclient.post(
+        TEST_URL_RAPI,
+        status=200,
+        body='{"cmd": false, "msg": "RAPI_RESPONSE_TIMEOUT"}',
+    )
+    with pytest.raises(
+        CommandFailedError, match="Problem resetting relay health via RAPI"
+    ):
+        await test_charger.reset_relay_health()

@@ -31,7 +31,12 @@ class SensorsMixin:
         raise NotImplementedError
 
     async def process_request(
-        self, url: str, method: str = "", data: Any = None, rapi: Any = None
+        self,
+        url: str,
+        method: str = "",
+        data: Any = None,
+        rapi: Any = None,
+        headers: dict[str, str] | None = None,
     ) -> Mapping[str, Any] | list[Any] | str | bool:
         raise NotImplementedError
 

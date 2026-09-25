@@ -41,8 +41,8 @@ This reference document compiles all known HTTP REST API endpoints, WebSocket pa
 | `/reset` | `GET`, `POST` | ✅ | ✅ | ✅ | N/A | ❌ Not Implemented |
 | `/rfid/add` | `POST` | ❌ | ❌ | ✅ (v4.0.0+) | N/A | ❌ Not Implemented |
 | `/rfid/users` | `GET`, `POST`, `DELETE` | ❌ | ❌ | ✅ (v5.0.0+) | N/A | ❌ Not Implemented |
-| `/relay/reset` | `POST` | ❌ | ❌ | ✅ (v5.1.0+) | `$FH` | ❌ Not Implemented |
-| `/relay/recovery` | `POST` | ❌ | ❌ | ✅ (v5.1.0+) | `$FK` | ❌ Not Implemented |
+| `/relay/reset` | `POST` | ❌ | ❌ | ✅ (v5.1.0+) | `$FH` | ✅ Fully Supported |
+| `/relay/recovery` | `POST` | ❌ | ❌ | ✅ (v5.1.0+) | `$FK` | ✅ Fully Supported |
 | `/cabletemp` | `GET`, `POST` | ❌ | ❌ | ✅ (v5.1.0+) | `$GN`, `$SN` | ❌ Not Implemented |
 | `/teslaveh` / `/tesla/vehicles` | `GET` | ❌ | ✅ (`/teslaveh`) | ✅ | N/A | ❌ Not Implemented |
 | `/energy/raw`, `/daily`, etc. | `GET` | ❌ | ❌ | ✅ (v4.0.0+) | N/A | ❌ Not Implemented |
