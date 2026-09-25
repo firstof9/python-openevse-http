@@ -28,6 +28,7 @@ TEST_URL_RESTART = "http://openevse.test.tld/restart"
 TEST_URL_CLAIMS_TARGET = "http://openevse.test.tld/claims/target"
 TEST_URL_RELAY_RECOVERY = "http://openevse.test.tld/relay/recovery"
 TEST_URL_RELAY_RESET = "http://openevse.test.tld/relay/reset"
+TEST_URL_CABLE_TEMP = "http://openevse.test.tld/cabletemp"
 SERVER_URL = "openevse.test.tld"
 
 
@@ -1592,3 +1593,176 @@ async def test_reset_relay_health_rapi(test_charger, mock_aioclient, caplog):
         CommandFailedError, match="Problem resetting relay health via RAPI"
     ):
         await test_charger.reset_relay_health()
+
+
+# ── cable_temp ───────────────────────────────────────────────────────
+
+
+async def test_get_cable_temp(test_charger, test_charger_new, mock_aioclient, caplog):
+    """Test get_cable_temp endpoint."""
+    await test_charger.update()
+
+    # Controller firmware < 9.4.0 raises UnsupportedFeature
+    with pytest.raises(
+        UnsupportedFeature, match="requires OpenEVSE controller firmware 9.4.0"
+    ):
+        await test_charger.get_cable_temp()
+
+    test_charger._config["firmware"] = "9.4.0"
+    # Gateway firmware < 5.1.0 raises UnsupportedFeature
+    with pytest.raises(UnsupportedFeature, match="requires gateway firmware 5.1.0"):
+        await test_charger.get_cable_temp()
+
+    await test_charger_new.update()
+    test_charger_new._config["firmware"] = "9.4.0"
+
+    # Success
+    payload = {
+        "supported": True,
+        "enabled": True,
+        "sources": [
+            {
+                "source": 0,
+                "name": "ev1",
+                "pin": 2,
+                "status": 0,
+                "temperature": 45.2,
+                "r25": 10000,
+                "beta": 3443,
+                "offset_c10": 0,
+                "panic_c10": 900,
+            }
+        ],
+    }
+    mock_aioclient.get(
+        TEST_URL_CABLE_TEMP,
+        status=200,
+        body=json.dumps(payload),
+    )
+    result = await test_charger_new.get_cable_temp()
+    assert result["supported"] is True
+    assert result["sources"][0]["name"] == "ev1"
+
+    # Invalid non-dict response
+    mock_aioclient.get(
+        TEST_URL_CABLE_TEMP,
+        status=200,
+        body="invalid non json",
+    )
+    with pytest.raises(CommandFailedError, match="Invalid response from /cabletemp"):
+        await test_charger_new.get_cable_temp()
+
+
+async def test_set_cable_temp(test_charger, test_charger_new, mock_aioclient):
+    """Test set_cable_temp command."""
+    await test_charger.update()
+    with pytest.raises(
+        UnsupportedFeature, match="requires OpenEVSE controller firmware 9.4.0"
+    ):
+        await test_charger.set_cable_temp(0, 1)
+
+    test_charger._config["firmware"] = "9.4.0"
+    with pytest.raises(UnsupportedFeature, match="requires gateway firmware 5.1.0"):
+        await test_charger.set_cable_temp(0, 1)
+
+    await test_charger_new.update()
+    test_charger_new._config["firmware"] = "9.4.0"
+
+    # Input validation
+    with pytest.raises(ValueError, match="source must be an integer between 0 and 3"):
+        await test_charger_new.set_cable_temp(4, 1)
+    with pytest.raises(ValueError, match="source must be an integer between 0 and 3"):
+        await test_charger_new.set_cable_temp(True, 1)  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="pin must be an integer between 0 and 2"):
+        await test_charger_new.set_cable_temp(0, 3)
+
+    # Incomplete calibration parameters
+    with pytest.raises(ValueError, match="must all be provided together"):
+        await test_charger_new.set_cable_temp(0, 1, r25=10000, beta=3443)
+
+    # Type check calibration parameters
+    with pytest.raises(TypeError, match="r25 must be an integer"):
+        await test_charger_new.set_cable_temp(
+            0,
+            1,
+            r25="bad",
+            beta=3443,
+            offset_c10=0,
+            panic_c10=900,  # type: ignore[arg-type]
+        )
+
+    # Success pin only
+    mock_aioclient.post(
+        TEST_URL_CABLE_TEMP,
+        status=200,
+        body='{"msg": "done"}',
+    )
+    await test_charger_new.set_cable_temp(0, 2)
+    last_req = mock_aioclient.requests[-1]
+    assert last_req[2]["json"] == {"source": 0, "pin": 2}
+    headers = last_req[2].get("headers", {})
+    assert headers.get("X-Requested-With") == "OpenEVSE"
+    assert "python-openevse-http" in headers.get("User-Agent", "")
+
+    # Success full calibration
+    mock_aioclient.post(
+        TEST_URL_CABLE_TEMP,
+        status=200,
+        body='{"msg": "done"}',
+    )
+    await test_charger_new.set_cable_temp(
+        0, 2, r25=10000, beta=3443, offset_c10=5, panic_c10=900
+    )
+    last_req = mock_aioclient.requests[-1]
+    assert last_req[2]["json"] == {
+        "source": 0,
+        "pin": 2,
+        "r25": 10000,
+        "beta": 3443,
+        "offset_c10": 5,
+        "panic_c10": 900,
+    }
+
+    # Failure response
+    mock_aioclient.post(
+        TEST_URL_CABLE_TEMP,
+        status=200,
+        body='{"msg": "error"}',
+    )
+    with pytest.raises(
+        CommandFailedError, match="Problem configuring cable temperature"
+    ):
+        await test_charger_new.set_cable_temp(0, 2)
+
+
+async def test_set_cable_temp_enabled(test_charger, test_charger_new, mock_aioclient):
+    """Test set_cable_temp_enabled command."""
+    await test_charger.update()
+    with pytest.raises(
+        UnsupportedFeature, match="requires OpenEVSE controller firmware 9.4.0"
+    ):
+        await test_charger.set_cable_temp_enabled(True)
+
+    await test_charger_new.update()
+    test_charger_new._config["firmware"] = "9.4.0"
+
+    with pytest.raises(TypeError, match="Value must be a boolean"):
+        await test_charger_new.set_cable_temp_enabled("invalid")  # type: ignore[arg-type]
+
+    # Success
+    mock_aioclient.post(
+        TEST_URL_CONFIG,
+        status=200,
+        body='{"msg": "OK"}',
+    )
+    await test_charger_new.set_cable_temp_enabled(True)
+    assert test_charger_new._config["cable_temp"] is True
+
+    # Failure
+    mock_aioclient.post(
+        TEST_URL_CONFIG,
+        status=200,
+        body='{"msg": "error"}',
+    )
+    with pytest.raises(CommandFailedError, match="Problem toggling cable_temp"):
+        await test_charger_new.set_cable_temp_enabled(False)

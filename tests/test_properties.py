@@ -539,3 +539,31 @@ async def test_rfid_enabled_property():
 
     charger._config = {"version": "4.1.4"}
     assert charger.rfid_enabled is None
+
+
+async def test_cable_temp_properties():
+    """Test cable_temp_enabled and cable_temperatures properties."""
+    charger = OpenEVSE(SERVER_URL)
+
+    # Defaults
+    charger._config = {}
+    charger._status = {}
+    assert charger.cable_temp_enabled is False
+    assert charger.cable_temperatures == {}
+
+    # Enabled
+    charger._config = {"cable_temp": True}
+    assert charger.cable_temp_enabled is True
+
+    # Cable temperatures
+    charger._status = {
+        "cable_temp_ev1": 452,
+        "cable_temp_ev2": False,  # assigned but not reading
+        "cable_temp_in1": None,
+        "cable_temp_in2": "invalid",
+    }
+    temps = charger.cable_temperatures
+    assert temps["ev1"] == 45.2
+    assert temps["ev2"] is None
+    assert temps["in1"] is None
+    assert temps["in2"] is None

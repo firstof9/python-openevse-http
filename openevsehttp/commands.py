@@ -808,3 +808,137 @@ class CommandsMixin:
                 raise CommandFailedError(
                     f"Problem resetting relay health via RAPI: {response}"
                 )
+
+    async def get_cable_temp(self) -> dict[str, Any]:
+        """Get cable temperature monitoring status, sources, and calibration.
+
+        Requires OpenEVSE controller firmware 9.4.0+ and gateway firmware 5.1.0+.
+        """
+        if not self._controller_version_check("9.4.0"):
+            _LOGGER.debug(
+                "Cable temperature monitoring requires OpenEVSE controller firmware 9.4.0 or higher."
+            )
+            raise UnsupportedFeature(
+                "Cable temperature monitoring requires OpenEVSE controller firmware 9.4.0 or higher."
+            )
+        if not self._version_check("5.1.0"):
+            _LOGGER.debug(
+                "Cable temperature endpoint requires gateway firmware 5.1.0 or higher."
+            )
+            raise UnsupportedFeature(
+                "Cable temperature endpoint requires gateway firmware 5.1.0 or higher."
+            )
+
+        url = f"{self.url}cabletemp"
+        response = await self.process_request(url=url, method="get")
+        if not isinstance(response, dict):
+            _LOGGER.error("Invalid response from /cabletemp: %s", response)
+            raise CommandFailedError(f"Invalid response from /cabletemp: {response}")
+        return response
+
+    async def set_cable_temp(
+        self,
+        source: int,
+        pin: int,
+        r25: int | None = None,
+        beta: int | None = None,
+        offset_c10: int | None = None,
+        panic_c10: int | None = None,
+    ) -> None:
+        """Configure cable temperature sensor source and calibration.
+
+        :param source: Logical source index (0=ev1, 1=ev2, 2=in1, 3=in2).
+        :param pin: Pin assignment (0=unassigned, 1=PP_READ, 2=PP2_READ).
+        :param r25: Thermistor resistance at 25C (Ohms).
+        :param beta: Thermistor beta coefficient.
+        :param offset_c10: Calibration offset in tenths of a degree C.
+        :param panic_c10: Shutdown threshold in tenths of a degree C.
+        """
+        if not self._controller_version_check("9.4.0"):
+            _LOGGER.debug(
+                "Cable temperature monitoring requires OpenEVSE controller firmware 9.4.0 or higher."
+            )
+            raise UnsupportedFeature(
+                "Cable temperature monitoring requires OpenEVSE controller firmware 9.4.0 or higher."
+            )
+        if not self._version_check("5.1.0"):
+            _LOGGER.debug(
+                "Cable temperature endpoint requires gateway firmware 5.1.0 or higher."
+            )
+            raise UnsupportedFeature(
+                "Cable temperature endpoint requires gateway firmware 5.1.0 or higher."
+            )
+
+        if (
+            not isinstance(source, int)
+            or isinstance(source, bool)
+            or not (0 <= source <= 3)
+        ):
+            raise ValueError("source must be an integer between 0 and 3.")
+        if not isinstance(pin, int) or isinstance(pin, bool) or not (0 <= pin <= 2):
+            raise ValueError("pin must be an integer between 0 and 2.")
+
+        data: dict[str, Any] = {"source": source, "pin": pin}
+        cal_fields = [r25, beta, offset_c10, panic_c10]
+        has_cal = all(f is not None for f in cal_fields)
+        any_cal = any(f is not None for f in cal_fields)
+
+        if any_cal and not has_cal:
+            raise ValueError(
+                "r25, beta, offset_c10, and panic_c10 must all be provided together."
+            )
+
+        if has_cal:
+            for name, val in [
+                ("r25", r25),
+                ("beta", beta),
+                ("offset_c10", offset_c10),
+                ("panic_c10", panic_c10),
+            ]:
+                if not isinstance(val, int) or isinstance(val, bool):
+                    raise TypeError(f"{name} must be an integer.")
+            data.update(
+                {
+                    "r25": r25,
+                    "beta": beta,
+                    "offset_c10": offset_c10,
+                    "panic_c10": panic_c10,
+                }
+            )
+
+        url = f"{self.url}cabletemp"
+        _LOGGER.debug("Setting cable temperature config: %s", data)
+        response = await self.process_request(url=url, method="post", data=data)
+        normalized = self._normalize_response(response)
+        msg = normalized.get("msg") if isinstance(normalized, Mapping) else None
+        if msg not in SUCCESS_ANSWERS:
+            _LOGGER.error("Problem configuring cable temperature: %s", response)
+            raise CommandFailedError(
+                f"Problem configuring cable temperature: {response}"
+            )
+
+    async def set_cable_temp_enabled(self, enable: bool = True) -> None:
+        """Enable or disable cable temperature monitoring."""
+        if not self._controller_version_check("9.4.0"):
+            _LOGGER.debug(
+                "Cable temperature monitoring requires OpenEVSE controller firmware 9.4.0 or higher."
+            )
+            raise UnsupportedFeature(
+                "Cable temperature monitoring requires OpenEVSE controller firmware 9.4.0 or higher."
+            )
+
+        if not isinstance(enable, bool):
+            raise TypeError("Value must be a boolean.")
+
+        url = f"{self.url}config"
+        data = {"cable_temp": enable}
+
+        _LOGGER.debug("Setting cable_temp to %s", enable)
+        response = await self.process_request(url=url, method="post", data=data)
+        normalized = self._normalize_response(response)
+        msg = normalized.get("msg") if isinstance(normalized, Mapping) else None
+        if msg not in SUCCESS_ANSWERS:
+            _LOGGER.error("Problem toggling cable_temp: %s", response)
+            raise CommandFailedError(f"Problem toggling cable_temp: {response}")
+
+        self._config["cable_temp"] = enable
