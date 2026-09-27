@@ -1105,3 +1105,136 @@ class CommandsMixin:
             raise CommandFailedError(f"Invalid response from /logs: {response}")
 
         return dict(response)
+
+    async def get_certificates(
+        self, certificate_id: str | None = None
+    ) -> list[dict[str, Any]] | dict[str, Any]:
+        """Retrieve installed certificates or a specific certificate by hex ID.
+
+        When certificate_id is None, queries 'GET /certificates' and returns a list
+        of installed certificate dictionaries.
+        When certificate_id is specified, queries 'GET /certificates/{certificate_id}'
+        and returns the specific certificate dictionary.
+
+        Requires gateway firmware 4.0.0 or higher.
+
+        :param certificate_id: Hexadecimal certificate ID string, or None for all.
+        :return: List of certificate dicts or single certificate dict.
+        """
+        self._require_firmware("4.0.0", "get_certificates")
+
+        if certificate_id is not None:
+            if not isinstance(certificate_id, str) or not certificate_id.strip():
+                raise TypeError("certificate_id must be a non-empty string.")
+            clean_id = certificate_id.strip()
+            url = f"{self.url}certificates/{clean_id}"
+        else:
+            url = f"{self.url}certificates"
+
+        _LOGGER.debug("Querying certificates: %s", url)
+        response = await self.process_request(url=url, method="get")
+
+        if certificate_id is not None:
+            if not isinstance(response, Mapping):
+                _LOGGER.error(
+                    "Invalid response from /certificates/%s: %s", clean_id, response
+                )
+                raise CommandFailedError(
+                    f"Invalid response from /certificates/{clean_id}: {response}"
+                )
+            return dict(response)
+
+        if not isinstance(response, list):
+            _LOGGER.error("Invalid response from /certificates: %s", response)
+            raise CommandFailedError(f"Invalid response from /certificates: {response}")
+
+        return [dict(item) for item in response if isinstance(item, Mapping)]
+
+    async def get_root_ca(self) -> str:
+        """Retrieve the concatenated root CA bundle as text.
+
+        Queries 'GET /certificates/root'.
+
+        Requires gateway firmware 4.0.0 or higher.
+
+        :return: Root CA certificate bundle in PEM text format.
+        """
+        self._require_firmware("4.0.0", "get_root_ca")
+
+        url = f"{self.url}certificates/root"
+        _LOGGER.debug("Querying root CA certificates: %s", url)
+        response = await self.process_request(url=url, method="get")
+        if not isinstance(response, str):
+            _LOGGER.error("Invalid response from /certificates/root: %s", response)
+            raise CommandFailedError(
+                f"Invalid response from /certificates/root: {response}"
+            )
+        return response
+
+    async def add_certificate(
+        self, name: str, certificate: str, key: str | None = None
+    ) -> dict[str, Any]:
+        """Add a certificate to the charger's certificate manager.
+
+        Sends 'POST /certificates' with JSON payload.
+        To install a Root CA, provide name and certificate.
+        To install a client certificate, provide name, certificate, and private key.
+
+        Requires gateway firmware 4.0.0 or higher.
+
+        :param name: Friendly name for the certificate.
+        :param certificate: PEM-encoded certificate string.
+        :param key: Optional PEM-encoded private key string (for client certs).
+        :return: Response dict containing 'id' and 'msg'.
+        """
+        self._require_firmware("4.0.0", "add_certificate")
+
+        if not isinstance(name, str) or not name.strip():
+            raise TypeError("name must be a non-empty string.")
+        if not isinstance(certificate, str) or not certificate.strip():
+            raise TypeError("certificate must be a non-empty string.")
+        if key is not None and (not isinstance(key, str) or not key.strip()):
+            raise TypeError("key must be a non-empty string or None.")
+
+        url = f"{self.url}certificates"
+        data: dict[str, Any] = {
+            "name": name.strip(),
+            "certificate": certificate,
+        }
+        if key is not None:
+            data["key"] = key
+
+        _LOGGER.debug("Adding certificate '%s'", name)
+        response = await self.process_request(url=url, method="post", data=data)
+        normalized = self._normalize_response(response)
+        msg = normalized.get("msg") if isinstance(normalized, Mapping) else None
+        if msg not in SUCCESS_ANSWERS:
+            _LOGGER.error("Problem adding certificate: %s", response)
+            raise CommandFailedError(f"Problem adding certificate: {response}")
+
+        return dict(normalized)
+
+    async def delete_certificate(self, certificate_id: str) -> None:
+        """Delete a certificate by hexadecimal ID.
+
+        Sends 'DELETE /certificates/{certificate_id}'.
+
+        Requires gateway firmware 4.0.0 or higher.
+
+        :param certificate_id: Hexadecimal certificate ID string.
+        """
+        self._require_firmware("4.0.0", "delete_certificate")
+
+        if not isinstance(certificate_id, str) or not certificate_id.strip():
+            raise TypeError("certificate_id must be a non-empty string.")
+
+        clean_id = certificate_id.strip()
+        url = f"{self.url}certificates/{clean_id}"
+
+        _LOGGER.debug("Deleting certificate %s", url)
+        response = await self.process_request(url=url, method="delete")
+        normalized = self._normalize_response(response)
+        msg = normalized.get("msg") if isinstance(normalized, Mapping) else None
+        if msg not in SUCCESS_ANSWERS:
+            _LOGGER.error("Problem deleting certificate: %s", response)
+            raise CommandFailedError(f"Problem deleting certificate: {response}")
