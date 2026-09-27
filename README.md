@@ -113,7 +113,8 @@ To bypass certificate verification:
 | `/relay/recovery` | POST | ✅ | Stuck relay recovery cycle (v5.1.0+ / `$FK`) |
 | `/relay/reset` | POST | ✅ | Relay contact-life health estimation reset (v5.1.0+ / `$FH`) |
 | `/cabletemp` | GET, POST | ✅ | Cable temperature monitor configuration and status (v5.1.0+) |
-| `/rfid/add` | POST | ❌ | RFID tag management |
+| `/rfid/add` | POST | ✅ | RFID tag pairing mode (v4.0.0+) |
+| `/rfid/users` | GET, POST, DELETE | ✅ | RFID tag to user mappings (v5.0.0+) |
 
 ✅ = Fully Supported \| ⚠️ = Partial Support \| ❌ = Not yet implemented
 

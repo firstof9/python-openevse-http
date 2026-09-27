@@ -63,7 +63,16 @@ RAPI_ERRORS = [
     "RAPI_RESPONSE_INVALID_COMMAND",
 ]
 
-SUCCESS_ANSWERS = ["OK", "done", "no change", "Created", "Updated", "Deleted"]
+SUCCESS_ANSWERS = [
+    "OK",
+    "done",
+    "no change",
+    "Created",
+    "Updated",
+    "Deleted",
+    "User name saved",
+    "User name removed",
+]
 
 ERROR_SESSION_REQUIRED = (
     "An aiohttp.ClientSession must be provided via the session argument."

@@ -34,6 +34,8 @@ TEST_URL_TIME = "http://openevse.test.tld/time"
 TEST_URL_SETTIME = "http://openevse.test.tld/settime"
 TEST_URL_LOGS = "http://openevse.test.tld/logs"
 TEST_URL_CERTIFICATES = "http://openevse.test.tld/certificates"
+TEST_URL_RFID_ADD = "http://openevse.test.tld/rfid/add"
+TEST_URL_RFID_USERS = "http://openevse.test.tld/rfid/users"
 SERVER_URL = "openevse.test.tld"
 
 
@@ -2295,3 +2297,162 @@ async def test_delete_certificate(test_charger, mock_aioclient, caplog):
         CommandFailedError, match="Problem deleting certificate: {'msg': 'Not found'}"
     ):
         await test_charger.delete_certificate("not_found")
+
+
+# ── rfid endpoints ───────────────────────────────────────────────────
+
+
+async def test_add_rfid_tag(test_charger, test_charger_v2, mock_aioclient, caplog):
+    """Test add_rfid_tag."""
+    await test_charger.update()
+    await test_charger_v2.update()
+
+    # 1. Firmware version check (requires >= 4.0.0)
+    with pytest.raises(
+        UnsupportedFeature, match="add_rfid_tag requires gateway firmware 4.0.0"
+    ):
+        await test_charger_v2.add_rfid_tag()
+
+    # 2. Successful add tag mode
+    mock_aioclient.post(
+        TEST_URL_RFID_ADD,
+        status=200,
+        body='{"msg": "OK"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.add_rfid_tag()
+    assert (
+        "Triggering RFID add tag mode: http://openevse.test.tld/rfid/add" in caplog.text
+    )
+
+    # 3. Failed add tag mode
+    mock_aioclient.post(
+        TEST_URL_RFID_ADD,
+        status=500,
+        body='{"msg": "Failed"}',
+    )
+    with pytest.raises(
+        CommandFailedError, match="Problem adding RFID tag: {'msg': 'Failed'}"
+    ):
+        await test_charger.add_rfid_tag()
+
+
+async def test_get_rfid_users(test_charger, test_charger_new, mock_aioclient, caplog):
+    """Test get_rfid_users."""
+    await test_charger.update()
+    await test_charger_new.update()
+
+    # 1. Firmware version check (requires >= 5.0.0)
+    with pytest.raises(
+        UnsupportedFeature, match="get_rfid_users requires gateway firmware 5.0.0"
+    ):
+        await test_charger.get_rfid_users()
+
+    # 2. Successful fetch
+    users_data = {
+        "01020304": "Alice",
+        "05060708": "Bob",
+    }
+    mock_aioclient.get(
+        TEST_URL_RFID_USERS,
+        status=200,
+        body=json.dumps(users_data),
+    )
+    with caplog.at_level(logging.DEBUG):
+        result = await test_charger_new.get_rfid_users()
+    assert result == {"01020304": "Alice", "05060708": "Bob"}
+    assert "Fetching RFID users from http://openevse.test.tld/rfid/users" in caplog.text
+
+    # 3. Invalid non-mapping response
+    mock_aioclient.get(
+        TEST_URL_RFID_USERS,
+        status=200,
+        body="invalid",
+    )
+    with pytest.raises(
+        CommandFailedError,
+        match="Invalid response format for /rfid/users: invalid",
+    ):
+        await test_charger_new.get_rfid_users()
+
+
+async def test_set_rfid_user(test_charger, test_charger_new, mock_aioclient, caplog):
+    """Test set_rfid_user."""
+    await test_charger.update()
+    await test_charger_new.update()
+
+    # 1. Firmware version check (requires >= 5.0.0)
+    with pytest.raises(
+        UnsupportedFeature, match="set_rfid_user requires gateway firmware 5.0.0"
+    ):
+        await test_charger.set_rfid_user("01020304", "Alice")
+
+    # 2. Input validation
+    with pytest.raises(TypeError, match="rfid must be a non-empty string."):
+        await test_charger_new.set_rfid_user("", "Alice")
+    with pytest.raises(TypeError, match="rfid must be a non-empty string."):
+        await test_charger_new.set_rfid_user(12345, "Alice")  # type: ignore
+    with pytest.raises(TypeError, match="name must be a non-empty string."):
+        await test_charger_new.set_rfid_user("01020304", "")
+    with pytest.raises(TypeError, match="name must be a non-empty string."):
+        await test_charger_new.set_rfid_user("01020304", None)  # type: ignore
+
+    # 3. Successful set user
+    mock_aioclient.post(
+        TEST_URL_RFID_USERS,
+        status=200,
+        body='{"msg": "User name saved"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_new.set_rfid_user("01020304", "Alice")
+    assert "Setting RFID user 'Alice' for tag '01020304'" in caplog.text
+
+    # 4. Failed set user
+    mock_aioclient.post(
+        TEST_URL_RFID_USERS,
+        status=500,
+        body='{"msg": "Failed"}',
+    )
+    with pytest.raises(
+        CommandFailedError, match="Problem setting RFID user: {'msg': 'Failed'}"
+    ):
+        await test_charger_new.set_rfid_user("01020304", "Alice")
+
+
+async def test_delete_rfid_user(test_charger, test_charger_new, mock_aioclient, caplog):
+    """Test delete_rfid_user."""
+    await test_charger.update()
+    await test_charger_new.update()
+
+    # 1. Firmware version check (requires >= 5.0.0)
+    with pytest.raises(
+        UnsupportedFeature, match="delete_rfid_user requires gateway firmware 5.0.0"
+    ):
+        await test_charger.delete_rfid_user("01020304")
+
+    # 2. Input validation
+    with pytest.raises(TypeError, match="rfid must be a non-empty string."):
+        await test_charger_new.delete_rfid_user("")
+    with pytest.raises(TypeError, match="rfid must be a non-empty string."):
+        await test_charger_new.delete_rfid_user(12345)  # type: ignore
+
+    # 3. Successful delete user
+    mock_aioclient.delete(
+        f"{TEST_URL_RFID_USERS}?rfid=01020304",
+        status=200,
+        body='{"msg": "User name removed"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_new.delete_rfid_user("01020304")
+    assert "Deleting RFID user for tag '01020304'" in caplog.text
+
+    # 4. Failed delete user
+    mock_aioclient.delete(
+        f"{TEST_URL_RFID_USERS}?rfid=01020304",
+        status=500,
+        body='{"msg": "Failed"}',
+    )
+    with pytest.raises(
+        CommandFailedError, match="Problem deleting RFID user: {'msg': 'Failed'}"
+    ):
+        await test_charger_new.delete_rfid_user("01020304")
