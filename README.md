@@ -100,7 +100,7 @@ To bypass certificate verification:
 | `/ws` | GET | ✅ | WebSocket real-time updates |
 | `/time` | GET, POST | ✅ | RTC and NTP time settings (v4.0.0+) |
 | `/settime` | POST | ✅ | Legacy time setting interface (v3.x / fallback to `$S1` on v2.x) |
-| `/logs` | GET | ❌ | System and debug event logs |
+| `/logs` | GET | ✅ | Event log block bounds and block events (v4.0.0+) |
 | `/emeter` | DELETE | ❌ | Energy meter reset |
 | `/wifi` | GET, POST | ❌ | Network scanning and AP configuration |
 | `/tesla` | GET | ❌ | Tesla vehicle integration |

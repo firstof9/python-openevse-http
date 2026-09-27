@@ -32,6 +32,7 @@ TEST_URL_RELAY_RESET = "http://openevse.test.tld/relay/reset"
 TEST_URL_CABLE_TEMP = "http://openevse.test.tld/cabletemp"
 TEST_URL_TIME = "http://openevse.test.tld/time"
 TEST_URL_SETTIME = "http://openevse.test.tld/settime"
+TEST_URL_LOGS = "http://openevse.test.tld/logs"
 SERVER_URL = "openevse.test.tld"
 
 
@@ -1990,3 +1991,81 @@ async def test_sync_time(test_charger, mock_aioclient):
     )
     with pytest.raises(CommandFailedError, match="Problem triggering NTP sync"):
         await test_charger.sync_time()
+
+
+# ── logs endpoint (/logs, /logs/{index}) ─────────────────────────────
+
+
+async def test_get_logs_unsupported(test_charger_v2):
+    """Test get_logs on older firmware raises UnsupportedFeature."""
+    await test_charger_v2.update()
+    with pytest.raises(
+        UnsupportedFeature, match="get_logs requires gateway firmware 4.0.0 or higher"
+    ):
+        await test_charger_v2.get_logs()
+
+
+async def test_get_logs(test_charger, mock_aioclient):
+    """Test get_logs endpoint on supported firmware."""
+    await test_charger.update()
+
+    # Invalid index type
+    with pytest.raises(TypeError, match="index must be an integer"):
+        await test_charger.get_logs(index="0")  # type: ignore[arg-type]
+
+    with pytest.raises(TypeError, match="index must be an integer"):
+        await test_charger.get_logs(index=True)  # type: ignore[arg-type]
+
+    # Success: block index range (index is None)
+    mock_aioclient.get(
+        TEST_URL_LOGS,
+        status=200,
+        body=json.dumps({"min": 0, "max": 15}),
+    )
+    res_range = await test_charger.get_logs()
+    assert res_range == {"min": 0, "max": 15}
+
+    # Invalid non-dict response for block index range
+    mock_aioclient.get(
+        TEST_URL_LOGS,
+        status=200,
+        body="invalid response",
+    )
+    with pytest.raises(CommandFailedError, match="Invalid response from /logs"):
+        await test_charger.get_logs()
+
+    # Success: specific log event block
+    events = [
+        {
+            "time": "2026-03-25T15:30:00Z",
+            "type": "notification",
+            "evseState": 1,
+            "pilot": 32,
+            "energy": 12500,
+        },
+        {
+            "time": "2026-03-25T15:35:00Z",
+            "type": "information",
+            "evseState": 2,
+            "pilot": 32,
+            "energy": 12600,
+        },
+    ]
+    mock_aioclient.get(
+        f"{TEST_URL_LOGS}/2",
+        status=200,
+        body=json.dumps(events),
+    )
+    res_events = await test_charger.get_logs(index=2)
+    assert len(res_events) == 2
+    assert res_events[0]["type"] == "notification"
+    assert res_events[1]["pilot"] == 32
+
+    # Invalid non-list response for specific block
+    mock_aioclient.get(
+        f"{TEST_URL_LOGS}/3",
+        status=200,
+        body='{"msg": "not a list"}',
+    )
+    with pytest.raises(CommandFailedError, match="Invalid response from /logs/3"):
+        await test_charger.get_logs(index=3)

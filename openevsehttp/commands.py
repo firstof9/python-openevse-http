@@ -1115,3 +1115,47 @@ class CommandsMixin:
         if msg not in SUCCESS_ANSWERS and msg != "set":
             _LOGGER.error("Problem triggering NTP sync: %s", response)
             raise CommandFailedError(f"Problem triggering NTP sync: {response}")
+
+    async def get_logs(
+        self, index: int | None = None
+    ) -> dict[str, Any] | list[dict[str, Any]]:
+        """Retrieve log event block information or specific log event block.
+
+        When index is None, queries 'GET /logs' and returns a dict with 'min' and 'max'
+        block index bounds (e.g. {'min': 0, 'max': 12}).
+        When index is an integer, queries 'GET /logs/{index}' and returns a list of log event dicts.
+
+        Requires gateway firmware 4.0.0 or higher.
+
+        :param index: Block index integer, or None for block range info.
+        :return: Dict containing 'min' and 'max' block indices, or list of event dicts.
+        """
+        if not self._version_check("4.0.0"):
+            _LOGGER.debug("get_logs requires gateway firmware 4.0.0 or higher.")
+            raise UnsupportedFeature(
+                "get_logs requires gateway firmware 4.0.0 or higher."
+            )
+
+        if index is not None:
+            if not isinstance(index, int) or isinstance(index, bool):
+                raise TypeError("index must be an integer.")
+            url = f"{self.url}logs/{index}"
+        else:
+            url = f"{self.url}logs"
+
+        _LOGGER.debug("Querying logs: %s", url)
+        response = await self.process_request(url=url, method="get")
+
+        if index is not None:
+            if not isinstance(response, list):
+                _LOGGER.error("Invalid response from /logs/%s: %s", index, response)
+                raise CommandFailedError(
+                    f"Invalid response from /logs/{index}: {response}"
+                )
+            return [dict(item) for item in response if isinstance(item, Mapping)]
+
+        if not isinstance(response, Mapping):
+            _LOGGER.error("Invalid response from /logs: %s", response)
+            raise CommandFailedError(f"Invalid response from /logs: {response}")
+
+        return dict(response)
