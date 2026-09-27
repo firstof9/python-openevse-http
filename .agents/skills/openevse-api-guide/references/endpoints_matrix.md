@@ -25,8 +25,8 @@ This reference document compiles all known HTTP REST API endpoints, WebSocket pa
 | `/restart` | `POST` | ✅ (`/restart`) | ✅ (`/restart`) | ✅ (`/restart`) | `$FR` (EVSE controller reboot) | ✅ Fully Supported |
 | `/r` or `/rapi` | `GET`, `POST` | `GET` (html/json) | `GET`, `POST` | `POST` (Mongoose) | Direct RAPI | ✅ Fully Supported |
 | `/ws` | `WebSocket` | ✅ | ✅ | ✅ | N/A | ✅ Fully Supported |
-| `/schedule` | `GET`, `POST`, `DELETE` | ❌ | ❌ | ✅ (v4.0.0+) | `$ST` / `$GD` | ⚠️ Retrieval Supported |
-| `/schedule/plan` | `GET` | ❌ | ❌ | ✅ (v4.1.0+) | N/A | ❌ Not Implemented |
+| `/schedule` | `GET`, `POST`, `DELETE` | ❌ | ❌ | ✅ (v4.0.0+) | `$ST` / `$GD` | ✅ Fully Supported |
+| `/schedule/plan` | `GET` | ❌ | ❌ | ✅ (v4.1.0+) | N/A | ✅ Fully Supported |
 | `/time` | `GET`, `POST` | ❌ | ❌ (`/settime`) | ✅ (v4.0.0+) | `$S1` (RTC set) | ✅ Fully Supported |
 | `/settime` | `GET`, `POST` | ❌ | ✅ | ⚠️ Legacy alias | `$S1` | ✅ Fully Supported |
 | `/emeter` | `DELETE` | ❌ | ❌ | ✅ (v4.0.0+) | N/A | ❌ Not Implemented |

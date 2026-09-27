@@ -213,6 +213,16 @@ SERVER_URL = "openevse.test.tld"
         ("test_charger_v2", "sntp_enabled", False),
         ("test_charger", "sntp_hostname", "0.us.pool.ntp.org"),
         ("test_charger_v2", "sntp_hostname", None),
+        # scheduler
+        ("test_charger", "scheduler_start_window", None),
+        ("test_charger_new", "scheduler_start_window", 600),
+        ("test_charger_v2", "scheduler_start_window", None),
+        ("test_charger", "schedule_version", None),
+        ("test_charger_new", "schedule_version", 1),
+        ("test_charger_v2", "schedule_version", None),
+        ("test_charger", "schedule_plan_version", None),
+        ("test_charger_new", "schedule_plan_version", 30),
+        ("test_charger_v2", "schedule_plan_version", None),
     ],
 )
 async def test_simple_properties(fixture, prop, expected, request):

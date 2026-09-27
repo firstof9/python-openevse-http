@@ -635,3 +635,18 @@ class PropertiesMixin:
     def sntp_hostname(self) -> str | None:
         """Return configured SNTP server hostname."""
         return self._config.get("sntp_hostname")
+
+    @property
+    def scheduler_start_window(self) -> int | None:
+        """Return scheduler start window in seconds."""
+        return self._config.get("scheduler_start_window")
+
+    @property
+    def schedule_version(self) -> int | None:
+        """Return schedule version integer."""
+        return self._status.get("schedule_version")
+
+    @property
+    def schedule_plan_version(self) -> int | None:
+        """Return schedule plan version integer."""
+        return self._status.get("schedule_plan_version")

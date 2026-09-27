@@ -976,12 +976,13 @@ async def test_is_coroutine_function(test_charger):
 
 async def test_get_schedule(mock_aioclient, charger_factory):
     """Test get_schedule method."""
-    mock_aioclient.post(
+    mock_aioclient.get(
         "http://openevse.test.tld/schedule",
         status=200,
         body='{"sc": 1}',
     )
     charger = charger_factory(SERVER_URL)
+    charger._config["version"] = "4.0.0"
     result = await charger.get_schedule()
     assert result == {"sc": 1}
 
