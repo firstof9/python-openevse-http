@@ -2617,7 +2617,15 @@ async def test_set_schedule(test_charger, test_charger_v2, mock_aioclient, caplo
     )
     await test_charger.set_schedule(batch_payload)
 
-    # 6. Failed POST /schedule
+    # 6. Successful POST /schedule with empty list (clearing schedule batch)
+    mock_aioclient.post(
+        TEST_URL_SCHEDULE,
+        status=200,
+        body='{"msg": "done"}',
+    )
+    await test_charger.set_schedule([])
+
+    # 7. Failed POST /schedule
     mock_aioclient.post(
         TEST_URL_SCHEDULE,
         status=500,

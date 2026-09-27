@@ -643,10 +643,18 @@ class PropertiesMixin:
 
     @property
     def schedule_version(self) -> int | None:
-        """Return schedule version integer."""
+        """Return schedule version counter integer.
+
+        Monotonically incremented by the gateway whenever schedule events
+        are created, modified, or deleted. Used to trigger state updates.
+        """
         return self._status.get("schedule_version")
 
     @property
     def schedule_plan_version(self) -> int | None:
-        """Return schedule plan version integer."""
+        """Return schedule plan version counter integer.
+
+        Monotonically incremented by the gateway whenever the calculated
+        weekly schedule execution plan changes or advances.
+        """
         return self._status.get("schedule_plan_version")
