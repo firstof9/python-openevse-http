@@ -33,7 +33,7 @@ This reference document compiles all known HTTP REST API endpoints, WebSocket pa
 | `/notifications` | `GET` | ❌ | ❌ | ✅ (v5.1.0+) | N/A | ❌ Not Implemented |
 | `/notifications/ack` | `POST` | ❌ | ❌ | ✅ (v5.1.0+) | N/A | ❌ Not Implemented |
 | `/update` | `GET`, `POST` | `GET`, `POST` | `GET`, `POST` | `GET`, `POST` | N/A | ✅ Fully Supported |
-| `/logs` | `GET` | ❌ | ❌ | ✅ (v4.0.0+) | N/A | ❌ Not Implemented |
+| `/logs` | `GET` | ❌ | ❌ | ✅ (v4.0.0+) | N/A | ✅ Fully Supported |
 | `/logs/export` | `GET` | ❌ | ❌ | ✅ (v4.0.0+) | N/A | ❌ Not Implemented |
 | `/certificates` | `GET`, `POST`, `DELETE` | ❌ | ❌ | ✅ (v4.0.0+) | N/A | ❌ Not Implemented |
 | `/scan` | `GET` | ✅ | ✅ | ✅ | N/A | ❌ Not Implemented |
