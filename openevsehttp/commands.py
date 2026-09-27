@@ -44,6 +44,16 @@ class CommandsMixin:
     ) -> bool:
         raise NotImplementedError
 
+    def _require_firmware(
+        self, min_version: str, feature: str, max_version: str = ""
+    ) -> None:
+        raise NotImplementedError
+
+    def _require_controller_firmware(
+        self, min_version: str, feature: str, max_version: str = ""
+    ) -> None:
+        raise NotImplementedError
+
     async def process_request(
         self,
         url: str,
@@ -113,9 +123,7 @@ class CommandsMixin:
         if not self._config:
             raise UnknownStateError("Missing configuration: self._config is required")
 
-        if not self._version_check("2.9.1"):
-            _LOGGER.debug("Feature not supported for older firmware.")
-            raise UnsupportedFeature
+        self._require_firmware("2.9.1", "divert_mode")
 
         if "divert_enabled" in self._config:
             _LOGGER.debug("Divert Enabled: %s", self._config["divert_enabled"])
@@ -140,9 +148,7 @@ class CommandsMixin:
 
     async def get_override(self) -> Mapping[str, Any] | list[Any]:
         """Get the manual override status."""
-        if not self._version_check("4.0.1"):
-            _LOGGER.debug("Feature not supported for older firmware.")
-            raise UnsupportedFeature
+        self._require_firmware("4.0.1", "get_override")
         url = f"{self.url}override"
 
         _LOGGER.debug("Getting data from %s", url)
@@ -164,9 +170,7 @@ class CommandsMixin:
         into the request payload. This prevents the firmware from clearing/resetting
         previously configured properties that are not passed in the function call.
         """
-        if not self._version_check("4.0.1"):
-            _LOGGER.debug("Feature not supported for older firmware.")
-            raise UnsupportedFeature
+        self._require_firmware("4.0.1", "set_override")
         url = f"{self.url}override"
 
         response = await self.get_override()
@@ -253,9 +257,7 @@ class CommandsMixin:
 
     async def clear_override(self) -> None:
         """Clear the manual override status."""
-        if not self._version_check("4.0.1"):
-            _LOGGER.debug("Feature not supported for older firmware.")
-            raise UnsupportedFeature
+        self._require_firmware("4.0.1", "clear_override")
         url = f"{self.url}override"
 
         _LOGGER.debug("Clearing manual override %s", url)
@@ -611,9 +613,7 @@ class CommandsMixin:
             _LOGGER.error("Invalid value for LED brightness: %s", level)
             raise ValueError(f"LED brightness {level} is out of range (0-255)")
 
-        if not self._version_check("4.1.0"):
-            _LOGGER.debug("Feature not supported for older firmware.")
-            raise UnsupportedFeature
+        self._require_firmware("4.1.0", "set_led_brightness")
 
         url = f"{self.url}config"
         data: dict[str, Any] = {}
@@ -656,9 +656,7 @@ class CommandsMixin:
 
     async def set_shaper(self, enable: bool = True) -> None:
         """Set shaper mode."""
-        if not self._version_check("4.0.0"):
-            _LOGGER.debug("Feature not supported for older firmware.")
-            raise UnsupportedFeature
+        self._require_firmware("4.0.0", "set_shaper")
 
         url = f"{self.url}shaper"
         mode = 1 if enable else 0
@@ -710,9 +708,7 @@ class CommandsMixin:
 
     async def set_rfid_enabled(self, enable: bool = True) -> None:
         """Enable or disable RFID access."""
-        if not self._version_check("4.1.4"):
-            _LOGGER.debug("Feature not supported for older firmware.")
-            raise UnsupportedFeature
+        self._require_firmware("4.1.4", "set_rfid_enabled")
 
         if not isinstance(enable, bool):
             raise TypeError("Value must be a boolean.")
@@ -738,13 +734,7 @@ class CommandsMixin:
         On older gateway firmware, falls back to RAPI command $FK.
         Note: The controller will reject ($NK / HTTP 500) if an EV is connected.
         """
-        if not self._controller_version_check("9.3.0"):
-            _LOGGER.debug(
-                "Stuck-relay recovery requires OpenEVSE controller firmware 9.3.0 or higher."
-            )
-            raise UnsupportedFeature(
-                "Stuck-relay recovery requires OpenEVSE controller firmware 9.3.0 or higher."
-            )
+        self._require_controller_firmware("9.3.0", "Stuck-relay recovery")
 
         if self._version_check("5.1.0"):
             _LOGGER.debug("Running stuck-relay recovery via HTTP")
@@ -780,13 +770,7 @@ class CommandsMixin:
         On gateway firmware v5.1.0+, uses HTTP POST /relay/reset.
         On older gateway firmware, falls back to RAPI command $FH.
         """
-        if not self._controller_version_check("9.3.0"):
-            _LOGGER.debug(
-                "Resetting relay health requires OpenEVSE controller firmware 9.3.0 or higher."
-            )
-            raise UnsupportedFeature(
-                "Resetting relay health requires OpenEVSE controller firmware 9.3.0 or higher."
-            )
+        self._require_controller_firmware("9.3.0", "Resetting relay health")
 
         if self._version_check("5.1.0"):
             _LOGGER.debug("Resetting relay health via HTTP")
@@ -815,20 +799,8 @@ class CommandsMixin:
 
         Requires OpenEVSE controller firmware 9.4.0+ and gateway firmware 5.1.0+.
         """
-        if not self._controller_version_check("9.4.0"):
-            _LOGGER.debug(
-                "Cable temperature monitoring requires OpenEVSE controller firmware 9.4.0 or higher."
-            )
-            raise UnsupportedFeature(
-                "Cable temperature monitoring requires OpenEVSE controller firmware 9.4.0 or higher."
-            )
-        if not self._version_check("5.1.0"):
-            _LOGGER.debug(
-                "Cable temperature endpoint requires gateway firmware 5.1.0 or higher."
-            )
-            raise UnsupportedFeature(
-                "Cable temperature endpoint requires gateway firmware 5.1.0 or higher."
-            )
+        self._require_controller_firmware("9.4.0", "Cable temperature monitoring")
+        self._require_firmware("5.1.0", "Cable temperature endpoint")
 
         url = f"{self.url}cabletemp"
         response = await self.process_request(url=url, method="get")
@@ -855,20 +827,8 @@ class CommandsMixin:
         :param offset_c10: Calibration offset in tenths of a degree C.
         :param panic_c10: Shutdown threshold in tenths of a degree C.
         """
-        if not self._controller_version_check("9.4.0"):
-            _LOGGER.debug(
-                "Cable temperature monitoring requires OpenEVSE controller firmware 9.4.0 or higher."
-            )
-            raise UnsupportedFeature(
-                "Cable temperature monitoring requires OpenEVSE controller firmware 9.4.0 or higher."
-            )
-        if not self._version_check("5.1.0"):
-            _LOGGER.debug(
-                "Cable temperature endpoint requires gateway firmware 5.1.0 or higher."
-            )
-            raise UnsupportedFeature(
-                "Cable temperature endpoint requires gateway firmware 5.1.0 or higher."
-            )
+        self._require_controller_firmware("9.4.0", "Cable temperature monitoring")
+        self._require_firmware("5.1.0", "Cable temperature endpoint")
 
         if (
             not isinstance(source, int)
@@ -920,13 +880,7 @@ class CommandsMixin:
 
     async def set_cable_temp_enabled(self, enable: bool = True) -> None:
         """Enable or disable cable temperature monitoring."""
-        if not self._controller_version_check("9.4.0"):
-            _LOGGER.debug(
-                "Cable temperature monitoring requires OpenEVSE controller firmware 9.4.0 or higher."
-            )
-            raise UnsupportedFeature(
-                "Cable temperature monitoring requires OpenEVSE controller firmware 9.4.0 or higher."
-            )
+        self._require_controller_firmware("9.4.0", "Cable temperature monitoring")
 
         if not isinstance(enable, bool):
             raise TypeError("Value must be a boolean.")
@@ -1100,11 +1054,7 @@ class CommandsMixin:
 
         Sends POST /time with '{"sync_now": true}' on firmware v4.0.0+.
         """
-        if not self._version_check("4.0.0"):
-            _LOGGER.debug("sync_time requires gateway firmware 4.0.0 or higher.")
-            raise UnsupportedFeature(
-                "sync_time requires gateway firmware 4.0.0 or higher."
-            )
+        self._require_firmware("4.0.0", "sync_time")
 
         url = f"{self.url}time"
         data = {"sync_now": True}
@@ -1130,11 +1080,7 @@ class CommandsMixin:
         :param index: Block index integer, or None for block range info.
         :return: Dict containing 'min' and 'max' block indices, or list of event dicts.
         """
-        if not self._version_check("4.0.0"):
-            _LOGGER.debug("get_logs requires gateway firmware 4.0.0 or higher.")
-            raise UnsupportedFeature(
-                "get_logs requires gateway firmware 4.0.0 or higher."
-            )
+        self._require_firmware("4.0.0", "get_logs")
 
         if index is not None:
             if not isinstance(index, int) or isinstance(index, bool):

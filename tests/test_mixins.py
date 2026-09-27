@@ -18,6 +18,10 @@ async def test_commands_mixin_not_implemented():
     with pytest.raises(NotImplementedError):
         mixin._controller_version_check("1.0.0")
     with pytest.raises(NotImplementedError):
+        mixin._require_firmware("1.0.0", "test")
+    with pytest.raises(NotImplementedError):
+        mixin._require_controller_firmware("1.0.0", "test")
+    with pytest.raises(NotImplementedError):
         await mixin.process_request("url")
     with pytest.raises(NotImplementedError):
         await mixin.send_command("cmd")
