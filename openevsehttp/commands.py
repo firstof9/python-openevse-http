@@ -1238,3 +1238,98 @@ class CommandsMixin:
         if msg not in SUCCESS_ANSWERS:
             _LOGGER.error("Problem deleting certificate: %s", response)
             raise CommandFailedError(f"Problem deleting certificate: {response}")
+
+    async def add_rfid_tag(self) -> None:
+        """Put the charger into RFID learning/pairing mode to add the next scanned RFID tag.
+
+        Sends 'POST /rfid/add'.
+
+        Requires gateway firmware 4.0.0 or higher.
+        """
+        self._require_firmware("4.0.0", "add_rfid_tag")
+
+        url = f"{self.url}rfid/add"
+        _LOGGER.debug("Triggering RFID add tag mode: %s", url)
+        response = await self.process_request(url=url, method="post", data={})
+        normalized = self._normalize_response(response)
+        msg = normalized.get("msg") if isinstance(normalized, Mapping) else None
+        if msg not in SUCCESS_ANSWERS:
+            _LOGGER.error("Problem adding RFID tag: %s", response)
+            raise CommandFailedError(f"Problem adding RFID tag: {response}")
+
+    async def get_rfid_users(self) -> dict[str, str]:
+        """Get the mapping of RFID tags to user names.
+
+        Sends 'GET /rfid/users'.
+
+        Requires gateway firmware 5.0.0 or higher.
+
+        :return: Dictionary mapping RFID tag ID to user name string.
+        """
+        self._require_firmware("5.0.0", "get_rfid_users")
+
+        url = f"{self.url}rfid/users"
+        _LOGGER.debug("Fetching RFID users from %s", url)
+        response = await self.process_request(url=url, method="get")
+        if not isinstance(response, Mapping):
+            _LOGGER.error("Invalid response format for /rfid/users: %s", response)
+            raise CommandFailedError(
+                f"Invalid response format for /rfid/users: {response}"
+            )
+
+        return {str(k): str(v) for k, v in response.items()}
+
+    async def set_rfid_user(self, rfid: str, name: str) -> None:
+        """Assign or update a user name for an RFID tag.
+
+        Sends 'POST /rfid/users' with JSON body {"rfid": rfid, "name": name}.
+
+        Requires gateway firmware 5.0.0 or higher.
+
+        :param rfid: RFID tag ID string.
+        :param name: Friendly user name string.
+        """
+        self._require_firmware("5.0.0", "set_rfid_user")
+
+        if not isinstance(rfid, str) or not rfid.strip():
+            raise TypeError("rfid must be a non-empty string.")
+        if not isinstance(name, str) or not name.strip():
+            raise TypeError("name must be a non-empty string.")
+
+        clean_rfid = rfid.strip()
+        clean_name = name.strip()
+        url = f"{self.url}rfid/users"
+        data = {"rfid": clean_rfid, "name": clean_name}
+
+        _LOGGER.debug("Setting RFID user '%s' for tag '%s'", clean_name, clean_rfid)
+        response = await self.process_request(url=url, method="post", data=data)
+        normalized = self._normalize_response(response)
+        msg = normalized.get("msg") if isinstance(normalized, Mapping) else None
+        if msg not in SUCCESS_ANSWERS:
+            _LOGGER.error("Problem setting RFID user: %s", response)
+            raise CommandFailedError(f"Problem setting RFID user: {response}")
+
+    async def delete_rfid_user(self, rfid: str) -> None:
+        """Delete an RFID tag to user name mapping.
+
+        Sends 'DELETE /rfid/users?rfid={rfid}'.
+
+        Requires gateway firmware 5.0.0 or higher.
+
+        :param rfid: RFID tag ID string to delete.
+        """
+        self._require_firmware("5.0.0", "delete_rfid_user")
+
+        if not isinstance(rfid, str) or not rfid.strip():
+            raise TypeError("rfid must be a non-empty string.")
+
+        clean_rfid = rfid.strip()
+        url = f"{self.url}rfid/users?rfid={clean_rfid}"
+
+        _LOGGER.debug("Deleting RFID user for tag '%s'", clean_rfid)
+        response = await self.process_request(url=url, method="delete")
+        normalized = self._normalize_response(response)
+        msg = normalized.get("msg") if isinstance(normalized, Mapping) else None
+        if msg not in SUCCESS_ANSWERS:
+            _LOGGER.error("Problem deleting RFID user: %s", response)
+            raise CommandFailedError(f"Problem deleting RFID user: {response}")
