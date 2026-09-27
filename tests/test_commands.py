@@ -33,6 +33,7 @@ TEST_URL_CABLE_TEMP = "http://openevse.test.tld/cabletemp"
 TEST_URL_TIME = "http://openevse.test.tld/time"
 TEST_URL_SETTIME = "http://openevse.test.tld/settime"
 TEST_URL_LOGS = "http://openevse.test.tld/logs"
+TEST_URL_CERTIFICATES = "http://openevse.test.tld/certificates"
 SERVER_URL = "openevse.test.tld"
 
 
@@ -2071,3 +2072,226 @@ async def test_get_logs(test_charger, mock_aioclient):
     )
     with pytest.raises(CommandFailedError, match="Invalid response from /logs/3"):
         await test_charger.get_logs(index=3)
+
+
+# ── certificates ─────────────────────────────────────────────────────
+
+
+async def test_certificates_unsupported(test_charger_v2):
+    """Test certificate methods on older firmware raise UnsupportedFeature."""
+    await test_charger_v2.update()
+
+    with pytest.raises(
+        UnsupportedFeature,
+        match="get_certificates requires gateway firmware 4.0.0 or higher",
+    ):
+        await test_charger_v2.get_certificates()
+
+    with pytest.raises(
+        UnsupportedFeature,
+        match="get_root_ca requires gateway firmware 4.0.0 or higher",
+    ):
+        await test_charger_v2.get_root_ca()
+
+    with pytest.raises(
+        UnsupportedFeature,
+        match="add_certificate requires gateway firmware 4.0.0 or higher",
+    ):
+        await test_charger_v2.add_certificate("test", "cert")
+
+    with pytest.raises(
+        UnsupportedFeature,
+        match="delete_certificate requires gateway firmware 4.0.0 or higher",
+    ):
+        await test_charger_v2.delete_certificate("133e62267a1a5cf8")
+
+
+async def test_get_certificates(test_charger, mock_aioclient, caplog):
+    """Test get_certificates for all certificates and specific certificate."""
+    await test_charger.update()
+
+    # 1. Validation errors
+    with pytest.raises(TypeError, match="certificate_id must be a non-empty string"):
+        await test_charger.get_certificates(certificate_id="")
+    with pytest.raises(TypeError, match="certificate_id must be a non-empty string"):
+        await test_charger.get_certificates(certificate_id=123)  # type: ignore
+
+    # 2. Get all certificates list
+    certs_list = [
+        {
+            "id": "133e62267a1a5cf8",
+            "type": "client",
+            "name": "Self Signed Test",
+            "certificate": "-----BEGIN CERTIFICATE-----\n...",
+            "key": "__REDACTED__",
+        },
+        {
+            "id": "1154b5ac394",
+            "type": "root",
+            "name": "GlobalSign",
+            "certificate": "-----BEGIN CERTIFICATE-----\n...",
+        },
+    ]
+    mock_aioclient.get(
+        TEST_URL_CERTIFICATES,
+        status=200,
+        body=json.dumps(certs_list),
+    )
+    with caplog.at_level(logging.DEBUG):
+        result = await test_charger.get_certificates()
+    assert isinstance(result, list)
+    assert len(result) == 2
+    assert result[0]["id"] == "133e62267a1a5cf8"
+    assert "Querying certificates: http://openevse.test.tld/certificates" in caplog.text
+
+    # 3. Invalid non-list response for all certificates
+    mock_aioclient.get(
+        TEST_URL_CERTIFICATES,
+        status=200,
+        body='{"msg": "unexpected dict"}',
+    )
+    with pytest.raises(CommandFailedError, match="Invalid response from /certificates"):
+        await test_charger.get_certificates()
+
+    # 4. Get specific certificate by ID
+    single_cert = certs_list[0]
+    mock_aioclient.get(
+        f"{TEST_URL_CERTIFICATES}/133e62267a1a5cf8",
+        status=200,
+        body=json.dumps(single_cert),
+    )
+    with caplog.at_level(logging.DEBUG):
+        single_res = await test_charger.get_certificates(
+            certificate_id="133e62267a1a5cf8"
+        )
+    assert isinstance(single_res, dict)
+    assert single_res["name"] == "Self Signed Test"
+
+    # 5. Invalid non-dict response for single certificate
+    mock_aioclient.get(
+        f"{TEST_URL_CERTIFICATES}/bad_cert",
+        status=200,
+        body="[1, 2, 3]",
+    )
+    with pytest.raises(
+        CommandFailedError, match="Invalid response from /certificates/bad_cert"
+    ):
+        await test_charger.get_certificates(certificate_id="bad_cert")
+
+
+async def test_get_root_ca(test_charger, mock_aioclient, caplog):
+    """Test get_root_ca retrieving root CA bundle text."""
+    await test_charger.update()
+
+    pem_bundle = (
+        "-----BEGIN CERTIFICATE-----\nROOT_CA_1\n-----END CERTIFICATE-----\n"
+        "-----BEGIN CERTIFICATE-----\nROOT_CA_2\n-----END CERTIFICATE-----\n"
+    )
+    mock_aioclient.get(
+        f"{TEST_URL_CERTIFICATES}/root",
+        status=200,
+        body=pem_bundle,
+    )
+    with caplog.at_level(logging.DEBUG):
+        root_ca = await test_charger.get_root_ca()
+    assert root_ca == pem_bundle
+    assert "Querying root CA certificates" in caplog.text
+
+    # Invalid non-str response
+    mock_aioclient.get(
+        f"{TEST_URL_CERTIFICATES}/root",
+        status=200,
+        body='{"error": "bad"}',
+    )
+    # Note: If JSON body is returned and auto-parsed as dict, get_root_ca raises CommandFailedError
+    with pytest.raises(
+        CommandFailedError, match="Invalid response from /certificates/root"
+    ):
+        await test_charger.get_root_ca()
+
+
+async def test_add_certificate(test_charger, mock_aioclient, caplog):
+    """Test add_certificate for root CA and client cert with private key."""
+    await test_charger.update()
+
+    # 1. Type validation
+    with pytest.raises(TypeError, match="name must be a non-empty string"):
+        await test_charger.add_certificate("", "cert")
+    with pytest.raises(TypeError, match="certificate must be a non-empty string"):
+        await test_charger.add_certificate("test", "")
+    with pytest.raises(TypeError, match="key must be a non-empty string or None"):
+        await test_charger.add_certificate("test", "cert", key="")
+
+    # 2. Add root certificate (no key)
+    mock_aioclient.post(
+        TEST_URL_CERTIFICATES,
+        status=200,
+        body='{"id": "1154b5ac394", "msg": "done"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        res = await test_charger.add_certificate(
+            name="My Root CA", certificate="-----BEGIN CERTIFICATE-----\n..."
+        )
+    assert res["id"] == "1154b5ac394"
+    assert res["msg"] == "done"
+    assert "Adding certificate 'My Root CA'" in caplog.text
+
+    # 3. Add client certificate (with key)
+    mock_aioclient.post(
+        TEST_URL_CERTIFICATES,
+        status=200,
+        body='{"id": "133e62267a1a5cf8", "msg": "done"}',
+    )
+    res_client = await test_charger.add_certificate(
+        name="Client Cert",
+        certificate="-----BEGIN CERTIFICATE-----\n...",
+        key="-----BEGIN PRIVATE KEY-----\n...",
+    )
+    assert res_client["id"] == "133e62267a1a5cf8"
+
+    # 4. Error response
+    mock_aioclient.post(
+        TEST_URL_CERTIFICATES,
+        status=200,
+        body='{"msg": "Could not add certificate"}',
+    )
+    with pytest.raises(
+        CommandFailedError,
+        match="Problem adding certificate: {'msg': 'Could not add certificate'}",
+    ):
+        await test_charger.add_certificate("bad", "bad_cert")
+
+
+async def test_delete_certificate(test_charger, mock_aioclient, caplog):
+    """Test delete_certificate."""
+    await test_charger.update()
+
+    # 1. Type validation
+    with pytest.raises(TypeError, match="certificate_id must be a non-empty string"):
+        await test_charger.delete_certificate("")
+    with pytest.raises(TypeError, match="certificate_id must be a non-empty string"):
+        await test_charger.delete_certificate(12345)  # type: ignore
+
+    # 2. Successful deletion
+    mock_aioclient.delete(
+        f"{TEST_URL_CERTIFICATES}/133e62267a1a5cf8",
+        status=200,
+        body='{"msg": "done"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.delete_certificate("133e62267a1a5cf8")
+    assert (
+        "Deleting certificate http://openevse.test.tld/certificates/133e62267a1a5cf8"
+        in caplog.text
+    )
+
+    # 3. Failed deletion
+    mock_aioclient.delete(
+        f"{TEST_URL_CERTIFICATES}/not_found",
+        status=404,
+        body='{"msg": "Not found"}',
+    )
+    with pytest.raises(
+        CommandFailedError, match="Problem deleting certificate: {'msg': 'Not found'}"
+    ):
+        await test_charger.delete_certificate("not_found")

@@ -37,6 +37,7 @@ For a comprehensive matrix of all endpoints across firmware generations (v2.x, v
 | Cable Temperature | `/cabletemp` | `$GN` / `$SN` (cable temp monitor) | GET / POST |
 | Time Settings | `/time` (v4+) / `/settime` (v3) | `$S1` (RTC set) | GET / POST |
 | Event Logs | `/logs` / `/logs/{index}` | N/A | GET |
+| Certificates | `/certificates` (`/root`, `/{id}`) | N/A | GET / POST / DELETE |
 
 > [!NOTE]
 > Firmware development for **v2.x (ESP8266)** and **v3.x (ESP32)** has ended. Active development occurs in **`OpenEVSE/openevse_esp32_firmware`** (v4.x/v5.x). Always check `openevse_esp32_firmware` as the primary reference when evaluating new endpoints, features, or behaviors.
