@@ -148,14 +148,14 @@ async def test_set_override(
     with pytest.raises(UnsupportedFeature):
         with caplog.at_level(logging.DEBUG):
             status = await test_charger_v2.set_override("active")
-    assert "Feature not supported for older firmware." in caplog.text
+    assert "set_override requires gateway firmware 4.0.1 or higher." in caplog.text
     caplog.clear()
 
     await test_charger_unknown_semver.update()
     with pytest.raises(UnsupportedFeature):
         with caplog.at_level(logging.DEBUG):
             status = await test_charger_unknown_semver.set_override("active")
-    assert "Feature not supported for older firmware." in caplog.text
+    assert "set_override requires gateway firmware 4.0.1 or higher." in caplog.text
 
 
 # ── clear_override ──────────────────────────────────────────────────
@@ -177,7 +177,7 @@ async def test_clear_override(test_charger, test_charger_v2, mock_aioclient, cap
     with pytest.raises(UnsupportedFeature):
         with caplog.at_level(logging.DEBUG):
             await test_charger_v2.clear_override()
-    assert "Feature not supported for older firmware." in caplog.text
+    assert "clear_override requires gateway firmware 4.0.1 or higher." in caplog.text
 
 
 async def test_clear_override_fail(test_charger, mock_aioclient, caplog):
@@ -221,7 +221,7 @@ async def test_get_override(test_charger, test_charger_v2, mock_aioclient, caplo
     with pytest.raises(UnsupportedFeature):
         with caplog.at_level(logging.DEBUG):
             await test_charger_v2.get_override()
-    assert "Feature not supported for older firmware." in caplog.text
+    assert "get_override requires gateway firmware 4.0.1 or higher." in caplog.text
 
 
 # ── set_limit / get_limit / clear_limit ──────────────────────────────

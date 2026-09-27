@@ -878,7 +878,9 @@ async def test_set_led_brightness(
     with pytest.raises(UnsupportedFeature):
         with caplog.at_level(logging.DEBUG):
             await test_charger_v2.set_led_brightness(255)
-    assert "Feature not supported for older firmware." in caplog.text
+    assert (
+        "set_led_brightness requires gateway firmware 4.1.0 or higher." in caplog.text
+    )
 
 
 async def test_set_led_brightness_fail(test_charger_new, mock_aioclient, caplog):

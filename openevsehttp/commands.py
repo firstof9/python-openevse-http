@@ -123,9 +123,7 @@ class CommandsMixin:
         if not self._config:
             raise UnknownStateError("Missing configuration: self._config is required")
 
-        if not self._version_check("2.9.1"):
-            _LOGGER.debug("Feature not supported for older firmware.")
-            raise UnsupportedFeature
+        self._require_firmware("2.9.1", "divert_mode")
 
         if "divert_enabled" in self._config:
             _LOGGER.debug("Divert Enabled: %s", self._config["divert_enabled"])
@@ -150,9 +148,7 @@ class CommandsMixin:
 
     async def get_override(self) -> Mapping[str, Any] | list[Any]:
         """Get the manual override status."""
-        if not self._version_check("4.0.1"):
-            _LOGGER.debug("Feature not supported for older firmware.")
-            raise UnsupportedFeature
+        self._require_firmware("4.0.1", "get_override")
         url = f"{self.url}override"
 
         _LOGGER.debug("Getting data from %s", url)
@@ -174,9 +170,7 @@ class CommandsMixin:
         into the request payload. This prevents the firmware from clearing/resetting
         previously configured properties that are not passed in the function call.
         """
-        if not self._version_check("4.0.1"):
-            _LOGGER.debug("Feature not supported for older firmware.")
-            raise UnsupportedFeature
+        self._require_firmware("4.0.1", "set_override")
         url = f"{self.url}override"
 
         response = await self.get_override()
@@ -263,9 +257,7 @@ class CommandsMixin:
 
     async def clear_override(self) -> None:
         """Clear the manual override status."""
-        if not self._version_check("4.0.1"):
-            _LOGGER.debug("Feature not supported for older firmware.")
-            raise UnsupportedFeature
+        self._require_firmware("4.0.1", "clear_override")
         url = f"{self.url}override"
 
         _LOGGER.debug("Clearing manual override %s", url)
@@ -621,9 +613,7 @@ class CommandsMixin:
             _LOGGER.error("Invalid value for LED brightness: %s", level)
             raise ValueError(f"LED brightness {level} is out of range (0-255)")
 
-        if not self._version_check("4.1.0"):
-            _LOGGER.debug("Feature not supported for older firmware.")
-            raise UnsupportedFeature
+        self._require_firmware("4.1.0", "set_led_brightness")
 
         url = f"{self.url}config"
         data: dict[str, Any] = {}
@@ -666,9 +656,7 @@ class CommandsMixin:
 
     async def set_shaper(self, enable: bool = True) -> None:
         """Set shaper mode."""
-        if not self._version_check("4.0.0"):
-            _LOGGER.debug("Feature not supported for older firmware.")
-            raise UnsupportedFeature
+        self._require_firmware("4.0.0", "set_shaper")
 
         url = f"{self.url}shaper"
         mode = 1 if enable else 0
@@ -720,9 +708,7 @@ class CommandsMixin:
 
     async def set_rfid_enabled(self, enable: bool = True) -> None:
         """Enable or disable RFID access."""
-        if not self._version_check("4.1.4"):
-            _LOGGER.debug("Feature not supported for older firmware.")
-            raise UnsupportedFeature
+        self._require_firmware("4.1.4", "set_rfid_enabled")
 
         if not isinstance(enable, bool):
             raise TypeError("Value must be a boolean.")
