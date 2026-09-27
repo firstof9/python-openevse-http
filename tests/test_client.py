@@ -25,6 +25,7 @@ from openevsehttp.exceptions import (
     MissingMethod,
     MissingSerial,
     ParseJSONError,
+    UnsupportedFeature,
 )
 from openevsehttp.websocket import (
     SIGNAL_CONNECTION_STATE,
@@ -2025,3 +2026,63 @@ async def test_ssl_options(mock_aioclient):
     mock_aioclient.get(url, status=200, body='{"state": "sleeping"}')
     await charger_ssl.process_request(url, method="get")
     assert "ssl" not in mock_aioclient.requests[-1][2]
+
+
+async def test_unsupported_feature_exception_formatting():
+    """Test UnsupportedFeature exception message formatting."""
+    # Default message
+    err_default = UnsupportedFeature()
+    assert str(err_default) == "Feature not supported for older firmware."
+
+    # Custom single message
+    err_custom = UnsupportedFeature("Custom error message.")
+    assert str(err_custom) == "Custom error message."
+
+    # Structured gateway message
+    err_gateway = UnsupportedFeature("Test feature", min_version="4.0.0")
+    assert str(err_gateway) == "Test feature requires gateway firmware 4.0.0 or higher."
+
+    # Structured controller message
+    err_controller = UnsupportedFeature(
+        "Relay test", min_version="9.3.0", component="OpenEVSE controller"
+    )
+    assert (
+        str(err_controller)
+        == "Relay test requires OpenEVSE controller firmware 9.3.0 or higher."
+    )
+
+
+async def test_require_firmware_helper(test_charger, test_charger_v2, caplog):
+    """Test _require_firmware helper method on OpenEVSE client."""
+    await test_charger.update()
+    # Should succeed without error or logging
+    test_charger._require_firmware("4.0.0", "sync_time")
+
+    await test_charger_v2.update()
+    with caplog.at_level(logging.DEBUG):
+        with pytest.raises(
+            UnsupportedFeature,
+            match="sync_time requires gateway firmware 4.0.0 or higher.",
+        ):
+            test_charger_v2._require_firmware("4.0.0", "sync_time")
+    assert "sync_time requires gateway firmware 4.0.0 or higher." in caplog.text
+
+
+async def test_require_controller_firmware_helper(test_charger, caplog):
+    """Test _require_controller_firmware helper method on OpenEVSE client."""
+    await test_charger.update()
+    # Mock controller version
+    test_charger._config["firmware"] = "9.4.0"
+    test_charger._require_controller_firmware("9.3.0", "Stuck-relay recovery")
+
+    test_charger._config["firmware"] = "7.1.3"
+    with caplog.at_level(logging.DEBUG):
+        with pytest.raises(
+            UnsupportedFeature,
+            match="Stuck-relay recovery requires OpenEVSE controller firmware 9.3.0 or higher.",
+        ):
+            test_charger._require_controller_firmware("9.3.0", "Stuck-relay recovery")
+    assert (
+        "Stuck-relay recovery requires OpenEVSE controller firmware 9.3.0 or higher."
+        in caplog.text
+    )

@@ -32,6 +32,19 @@ class MissingSerial(OpenEVSEError):
 class UnsupportedFeature(OpenEVSEError):
     """Exception for firmware that is too old."""
 
+    def __init__(
+        self,
+        message_or_feature: str | None = None,
+        min_version: str | None = None,
+        component: str = "gateway",
+    ) -> None:
+        """Initialize UnsupportedFeature with optional structured parameters."""
+        if min_version is not None and message_or_feature is not None:
+            msg = f"{message_or_feature} requires {component} firmware {min_version} or higher."
+        else:
+            msg = message_or_feature or "Feature not supported for older firmware."
+        super().__init__(msg)
+
 
 class InvalidType(OpenEVSEError):
     """Exception for invalid types."""

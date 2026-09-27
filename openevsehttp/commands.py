@@ -44,6 +44,16 @@ class CommandsMixin:
     ) -> bool:
         raise NotImplementedError
 
+    def _require_firmware(
+        self, min_version: str, feature: str, max_version: str = ""
+    ) -> None:
+        raise NotImplementedError
+
+    def _require_controller_firmware(
+        self, min_version: str, feature: str, max_version: str = ""
+    ) -> None:
+        raise NotImplementedError
+
     async def process_request(
         self,
         url: str,
@@ -738,13 +748,7 @@ class CommandsMixin:
         On older gateway firmware, falls back to RAPI command $FK.
         Note: The controller will reject ($NK / HTTP 500) if an EV is connected.
         """
-        if not self._controller_version_check("9.3.0"):
-            _LOGGER.debug(
-                "Stuck-relay recovery requires OpenEVSE controller firmware 9.3.0 or higher."
-            )
-            raise UnsupportedFeature(
-                "Stuck-relay recovery requires OpenEVSE controller firmware 9.3.0 or higher."
-            )
+        self._require_controller_firmware("9.3.0", "Stuck-relay recovery")
 
         if self._version_check("5.1.0"):
             _LOGGER.debug("Running stuck-relay recovery via HTTP")
@@ -780,13 +784,7 @@ class CommandsMixin:
         On gateway firmware v5.1.0+, uses HTTP POST /relay/reset.
         On older gateway firmware, falls back to RAPI command $FH.
         """
-        if not self._controller_version_check("9.3.0"):
-            _LOGGER.debug(
-                "Resetting relay health requires OpenEVSE controller firmware 9.3.0 or higher."
-            )
-            raise UnsupportedFeature(
-                "Resetting relay health requires OpenEVSE controller firmware 9.3.0 or higher."
-            )
+        self._require_controller_firmware("9.3.0", "Resetting relay health")
 
         if self._version_check("5.1.0"):
             _LOGGER.debug("Resetting relay health via HTTP")
@@ -815,20 +813,8 @@ class CommandsMixin:
 
         Requires OpenEVSE controller firmware 9.4.0+ and gateway firmware 5.1.0+.
         """
-        if not self._controller_version_check("9.4.0"):
-            _LOGGER.debug(
-                "Cable temperature monitoring requires OpenEVSE controller firmware 9.4.0 or higher."
-            )
-            raise UnsupportedFeature(
-                "Cable temperature monitoring requires OpenEVSE controller firmware 9.4.0 or higher."
-            )
-        if not self._version_check("5.1.0"):
-            _LOGGER.debug(
-                "Cable temperature endpoint requires gateway firmware 5.1.0 or higher."
-            )
-            raise UnsupportedFeature(
-                "Cable temperature endpoint requires gateway firmware 5.1.0 or higher."
-            )
+        self._require_controller_firmware("9.4.0", "Cable temperature monitoring")
+        self._require_firmware("5.1.0", "Cable temperature endpoint")
 
         url = f"{self.url}cabletemp"
         response = await self.process_request(url=url, method="get")
@@ -855,20 +841,8 @@ class CommandsMixin:
         :param offset_c10: Calibration offset in tenths of a degree C.
         :param panic_c10: Shutdown threshold in tenths of a degree C.
         """
-        if not self._controller_version_check("9.4.0"):
-            _LOGGER.debug(
-                "Cable temperature monitoring requires OpenEVSE controller firmware 9.4.0 or higher."
-            )
-            raise UnsupportedFeature(
-                "Cable temperature monitoring requires OpenEVSE controller firmware 9.4.0 or higher."
-            )
-        if not self._version_check("5.1.0"):
-            _LOGGER.debug(
-                "Cable temperature endpoint requires gateway firmware 5.1.0 or higher."
-            )
-            raise UnsupportedFeature(
-                "Cable temperature endpoint requires gateway firmware 5.1.0 or higher."
-            )
+        self._require_controller_firmware("9.4.0", "Cable temperature monitoring")
+        self._require_firmware("5.1.0", "Cable temperature endpoint")
 
         if (
             not isinstance(source, int)
@@ -920,13 +894,7 @@ class CommandsMixin:
 
     async def set_cable_temp_enabled(self, enable: bool = True) -> None:
         """Enable or disable cable temperature monitoring."""
-        if not self._controller_version_check("9.4.0"):
-            _LOGGER.debug(
-                "Cable temperature monitoring requires OpenEVSE controller firmware 9.4.0 or higher."
-            )
-            raise UnsupportedFeature(
-                "Cable temperature monitoring requires OpenEVSE controller firmware 9.4.0 or higher."
-            )
+        self._require_controller_firmware("9.4.0", "Cable temperature monitoring")
 
         if not isinstance(enable, bool):
             raise TypeError("Value must be a boolean.")
@@ -1100,11 +1068,7 @@ class CommandsMixin:
 
         Sends POST /time with '{"sync_now": true}' on firmware v4.0.0+.
         """
-        if not self._version_check("4.0.0"):
-            _LOGGER.debug("sync_time requires gateway firmware 4.0.0 or higher.")
-            raise UnsupportedFeature(
-                "sync_time requires gateway firmware 4.0.0 or higher."
-            )
+        self._require_firmware("4.0.0", "sync_time")
 
         url = f"{self.url}time"
         data = {"sync_now": True}
@@ -1130,11 +1094,7 @@ class CommandsMixin:
         :param index: Block index integer, or None for block range info.
         :return: Dict containing 'min' and 'max' block indices, or list of event dicts.
         """
-        if not self._version_check("4.0.0"):
-            _LOGGER.debug("get_logs requires gateway firmware 4.0.0 or higher.")
-            raise UnsupportedFeature(
-                "get_logs requires gateway firmware 4.0.0 or higher."
-            )
+        self._require_firmware("4.0.0", "get_logs")
 
         if index is not None:
             if not isinstance(index, int) or isinstance(index, bool):

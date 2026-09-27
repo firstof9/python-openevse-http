@@ -29,6 +29,7 @@ from .exceptions import (
     MissingMethod,
     MissingSerial,
     ParseJSONError,
+    UnsupportedFeature,
 )
 from .managers import ManagersMixin
 from .properties import PropertiesMixin
@@ -571,3 +572,25 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
         return self._controller_version_check(
             min_version=min_version, max_version=max_version
         )
+
+    def _require_firmware(
+        self, min_version: str, feature: str, max_version: str = ""
+    ) -> None:
+        """Verify minimum gateway firmware version or log and raise UnsupportedFeature."""
+        if not self._version_check(min_version, max_version):
+            err = UnsupportedFeature(
+                feature, min_version=min_version, component="gateway"
+            )
+            _LOGGER.debug("%s", err)
+            raise err
+
+    def _require_controller_firmware(
+        self, min_version: str, feature: str, max_version: str = ""
+    ) -> None:
+        """Verify minimum OpenEVSE controller firmware version or log and raise UnsupportedFeature."""
+        if not self._controller_version_check(min_version, max_version):
+            err = UnsupportedFeature(
+                feature, min_version=min_version, component="OpenEVSE controller"
+            )
+            _LOGGER.debug("%s", err)
+            raise err
