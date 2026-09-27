@@ -18,6 +18,9 @@ A Python library for communicating with [OpenEVSE](https://www.openevse.com/) ch
     - Control charging claims and limits.
     - Handle schedules.
     - **Shaper Toggle**: Enable or disable the grid shaper feature (requires firmware 4.0.0+).
+    - **Time Synchronization & RTC**: Manage time, timezone, and NTP sync (requires firmware 4.0.0+).
+    - **Event Logs**: Retrieve diagnostic log blocks and log event history (requires firmware 4.0.0+).
+    - **Certificates**: Manage SSL/TLS Root CA and client certificates (requires firmware 4.0.0+).
 
 ## Installation
 
@@ -104,7 +107,7 @@ To bypass certificate verification:
 | `/emeter` | DELETE | ❌ | Energy meter reset |
 | `/wifi` | GET, POST | ❌ | Network scanning and AP configuration |
 | `/tesla` | GET | ❌ | Tesla vehicle integration |
-| `/certificates`| GET, POST, DELETE | ❌ | SSL/TLS certificate management |
+| `/certificates`| GET, POST, DELETE | ✅ | SSL/TLS certificate management (v4.0.0+) |
 | `/schedule/plan`| GET | ❌ | Schedule planning and optimization |
 | `/update` | POST | ✅ | Firmware update interface |
 | `/relay/recovery` | POST | ✅ | Stuck relay recovery cycle (v5.1.0+ / `$FK`) |
