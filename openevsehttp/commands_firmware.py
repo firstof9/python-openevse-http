@@ -13,7 +13,7 @@ from awesomeversion import AwesomeVersion
 from awesomeversion.exceptions import AwesomeVersionCompareException
 
 from .commands_base import BaseCommandMixin
-from .const import SUCCESS_ANSWERS
+from .const import SUCCESS_ANSWERS, USER_AGENT
 from .exceptions import (
     FirmwareResolutionError,
     UnsupportedFeature,
@@ -40,8 +40,15 @@ class FirmwareCommandsMixin(BaseCommandMixin):
                 "Firmware update response did not indicate start: %s", normalized
             )
 
-    async def firmware_check(self) -> dict[str, Any] | None:
-        """Return the latest firmware version."""
+    async def firmware_check(
+        self, github_token: str | None = None
+    ) -> dict[str, Any] | None:
+        """Return the latest firmware version.
+
+        :param github_token: Optional GitHub personal access token (PAT) for authenticated
+                             requests with higher rate limits (5000 req/hr vs 60 req/hr).
+                             Falls back to the client's configured token if not provided.
+        """
         if "version" not in self._config:
             # Throw warning if we can't find the version
             _LOGGER.debug("Unable to find firmware version.")
@@ -66,9 +73,17 @@ class FirmwareCommandsMixin(BaseCommandMixin):
             _LOGGER.debug("Non-semver firmware version detected.")
             return None
 
+        effective_token = (
+            github_token.strip()
+            if isinstance(github_token, str) and github_token.strip()
+            else self._github_token
+        )
+
         try:
             session = self._get_session()
-            return await self._firmware_check_with_session(session, url, method)
+            return await self._firmware_check_with_session(
+                session, url, method, github_token=effective_token
+            )
         except (TimeoutError, ServerTimeoutError):
             _LOGGER.error("%s: %s", "Timeout while updating", url)
         except ContentTypeError as err:
@@ -79,7 +94,11 @@ class FirmwareCommandsMixin(BaseCommandMixin):
         return None
 
     async def _firmware_check_with_session(
-        self, session: aiohttp.ClientSession, url: str, method: str
+        self,
+        session: aiohttp.ClientSession,
+        url: str,
+        method: str,
+        github_token: str | None = None,
     ) -> dict[str, Any] | None:
         """Process a firmware check request with a given session."""
         http_method = getattr(session, method)
@@ -88,7 +107,13 @@ class FirmwareCommandsMixin(BaseCommandMixin):
             url,
             method,
         )
-        async with http_method(url) as resp:
+        headers: dict[str, str] = {
+            "Accept": "application/vnd.github+json",
+            "User-Agent": USER_AGENT,
+        }
+        if github_token:
+            headers["Authorization"] = f"Bearer {github_token}"
+        async with http_method(url, headers=headers) as resp:
             _LOGGER.debug("Firmware check response status: %d", resp.status)
             if resp.status != 200:
                 return None
@@ -158,6 +183,7 @@ class FirmwareCommandsMixin(BaseCommandMixin):
         firmware_url: str | None = None,
         firmware_bytes: bytes | None = None,
         filename: str = "firmware.bin",
+        github_token: str | None = None,
     ) -> Mapping[str, Any] | list[Any] | str | bool:
         """Instruct the device to update its firmware.
 
@@ -165,6 +191,9 @@ class FirmwareCommandsMixin(BaseCommandMixin):
         1. Pass firmware_bytes to perform a multipart upload of a local file.
         2. Pass firmware_url to tell the device to download the file directly.
         3. Pass neither to automatically resolve the latest matching binary URL from GitHub.
+
+        :param github_token: Optional GitHub personal access token (PAT) for authenticated
+                             requests during automatic firmware resolution from GitHub.
         """
         if not self._version_check("4.1.7"):
             _LOGGER.debug("Feature not supported for older firmware.")
@@ -210,7 +239,7 @@ class FirmwareCommandsMixin(BaseCommandMixin):
             _LOGGER.debug(
                 "No firmware URL provided. Resolving latest matching firmware from GitHub."
             )
-            check_result = await self.firmware_check()
+            check_result = await self.firmware_check(github_token=github_token)
             if not check_result or not check_result.get("browser_download_url"):
                 _LOGGER.error(
                     "Could not resolve latest firmware download URL from GitHub."
