@@ -271,17 +271,31 @@ class CoreCommandsMixin(BaseCommandMixin):
 
         # Strict success check:
         # 1. Must be a Mapping
-        # 2. Must have "result" == "OK" OR "success" is True
-        # 3. Must NOT have an "error" key
-        # 4. If "msg" is present, it must be "OK" or contain "ok" (case-insensitive)
+        # 2. Must NOT have an "error" key
+        # 3. Must have "result" in ("OK", "ok", True) OR "success" is True
+        #    OR "msg" indicating restart acknowledgment ("restart gateway", "ok")
         success = (
             isinstance(response, Mapping)
-            and (response.get("result") == "OK" or response.get("success") is True)
             and not response.get("error")
+            and (
+                response.get("result") in ("OK", "ok", True)
+                or response.get("success") is True
+                or (
+                    isinstance(response.get("msg"), str)
+                    and any(
+                        val in response["msg"].lower()
+                        for val in ("ok", "restart gateway")
+                    )
+                )
+            )
         )
         if success and isinstance(response, Mapping) and "msg" in response:
             msg_val = str(response["msg"]).lower()
-            if msg_val != "ok" and "ok" not in msg_val:
+            if (
+                msg_val != "ok"
+                and "ok" not in msg_val
+                and "restart gateway" not in msg_val
+            ):
                 success = False
 
         if not success:
