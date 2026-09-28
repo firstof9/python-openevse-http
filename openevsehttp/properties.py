@@ -20,6 +20,7 @@ class PropertiesMixin:
 
     _status: dict[str, Any]
     _config: dict[str, Any]
+    _github_token: str | None
 
     # These are used by properties but defined in client.py
     def _version_check(self, min_version: str, max_version: str = "") -> bool:
@@ -658,3 +659,15 @@ class PropertiesMixin:
         weekly schedule execution plan changes or advances.
         """
         return self._status.get("schedule_plan_version")
+
+    @property
+    def github_token(self) -> str | None:
+        """Return configured GitHub token."""
+        return getattr(self, "_github_token", None)
+
+    @github_token.setter
+    def github_token(self, token: str | None) -> None:
+        """Set or update configured GitHub token."""
+        self._github_token = (
+            token.strip() if isinstance(token, str) and token.strip() else None
+        )

@@ -1186,6 +1186,38 @@ async def test_update_firmware_auto(test_charger, mock_aioclient, caplog):
         assert test_charger.ota_update is True
 
 
+async def test_update_firmware_auto_github_token(test_charger, mock_aioclient):
+    """Test update_firmware forwards github_token to firmware_check."""
+    test_charger._config = {"version": "4.1.7", "buildenv": "openevse_esp32-gateway"}
+    github_response = {
+        "tag_name": "v4.1.2",
+        "body": "release notes",
+        "html_url": "https://github.com/OpenEVSE/releases/v4.1.2",
+        "assets": [
+            {
+                "name": "openevse_esp32-gateway.bin",
+                "browser_download_url": "https://github.com/OpenEVSE/releases/download/v4.1.2/openevse_esp32-gateway.bin",
+            },
+        ],
+    }
+    url = "https://api.github.com/repos/OpenEVSE/ESP32_WiFi_V4.x/releases/latest"
+    mock_aioclient.get(url, status=200, body=json.dumps(github_response))
+    mock_aioclient.post(
+        "http://openevse.test.tld/update",
+        status=200,
+        body='{"msg":"started"}',
+    )
+
+    response = await test_charger.update_firmware(github_token="ghp_firmwaretoken")
+    assert response == {"msg": "started"}
+    last_github_call = [
+        call
+        for call in mock_aioclient.requests
+        if str(call[1]).startswith("https://api.github.com")
+    ][-1]
+    assert last_github_call[2]["headers"]["Authorization"] == "Bearer ghp_firmwaretoken"
+
+
 async def test_update_firmware_auto_missing_buildenv(
     test_charger, mock_aioclient, caplog
 ):

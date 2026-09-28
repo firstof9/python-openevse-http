@@ -86,6 +86,25 @@ To bypass certificate verification:
         )
 ```
 
+### GitHub API Token (Optional)
+
+When performing firmware update checks (`charger.firmware_check()`) or automatic firmware updates (`charger.update_firmware()`), the library queries GitHub's Releases API. To avoid hitting unauthenticated rate limits (60 requests/hour), you can supply a GitHub personal access token (PAT):
+
+```python
+        # Provide a GitHub token during client initialization
+        charger = OpenEVSE(
+            "192.168.1.30",
+            session=session,
+            github_token="ghp_your_github_token_here",
+        )
+
+        # Or set / update dynamically via property
+        charger.github_token = "ghp_your_github_token_here"
+
+        # Or pass per-call
+        latest = await charger.firmware_check(github_token="ghp_your_github_token_here")
+```
+
 ## API Support Matrix
 
 | Endpoint | Methods | Supported | Description |

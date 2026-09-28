@@ -20,6 +20,7 @@ class BaseCommandMixin:
     _status: dict[str, Any]
     _config: dict[str, Any]
     _session: aiohttp.ClientSession | None
+    _github_token: str | None
 
     # These are implemented in OpenEVSE (client.py)
     def _version_check(self, min_version: str, max_version: str = "") -> bool:

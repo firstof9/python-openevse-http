@@ -603,6 +603,64 @@ async def test_firmware_check_errors(mock_aioclient, charger_factory):
     assert await charger.firmware_check() is None
 
 
+async def test_firmware_check_github_token(mock_aioclient, charger_factory):
+    """Test firmware_check with GitHub token authentication."""
+    url = "https://api.github.com/repos/OpenEVSE/ESP32_WiFi_V4.x/releases/latest"
+    mock_aioclient.get(
+        url,
+        status=200,
+        body=load_fixture("github_v4.json"),
+    )
+
+    # 1. Token passed via client constructor
+    charger = charger_factory(SERVER_URL, github_token="ghp_testtoken123")
+    charger._config["version"] = "4.0.1"
+    assert charger.github_token == "ghp_testtoken123"
+    result = await charger.firmware_check()
+    assert result is not None
+    assert result["latest_version"] == "4.1.4"
+    assert len(mock_aioclient.requests) > 0
+    last_call = mock_aioclient.requests[-1]
+    assert last_call[2]["headers"]["Authorization"] == "Bearer ghp_testtoken123"
+
+    # 2. Token updated via property setter
+    charger.github_token = "ghp_updatedtoken456"
+    assert charger.github_token == "ghp_updatedtoken456"
+    mock_aioclient.get(
+        url,
+        status=200,
+        body=load_fixture("github_v4.json"),
+    )
+    result = await charger.firmware_check()
+    assert result is not None
+    last_call = mock_aioclient.requests[-1]
+    assert last_call[2]["headers"]["Authorization"] == "Bearer ghp_updatedtoken456"
+
+    # 3. Token passed per-call overrides instance token
+    mock_aioclient.get(
+        url,
+        status=200,
+        body=load_fixture("github_v4.json"),
+    )
+    result = await charger.firmware_check(github_token="ghp_percalloverride789")
+    assert result is not None
+    last_call = mock_aioclient.requests[-1]
+    assert last_call[2]["headers"]["Authorization"] == "Bearer ghp_percalloverride789"
+
+    # 4. Empty/whitespace token is stripped or ignored
+    charger.github_token = "   "
+    assert charger.github_token is None
+    mock_aioclient.get(
+        url,
+        status=200,
+        body=load_fixture("github_v4.json"),
+    )
+    result = await charger.firmware_check()
+    assert result is not None
+    last_call = mock_aioclient.requests[-1]
+    assert "Authorization" not in last_call[2]["headers"]
+
+
 # ── version_check ────────────────────────────────────────────────────
 
 

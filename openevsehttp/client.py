@@ -57,6 +57,7 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
         session: aiohttp.ClientSession | None = None,
         ssl: bool = False,
         ssl_verify: bool = True,
+        github_token: str | None = None,
     ) -> None:
         """Connect to an OpenEVSE charger equipped with wifi or ethernet."""
         self._user = user or ""
@@ -77,6 +78,11 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
         self._owns_loop = False
         self._loop_thread: threading.Thread | None = None
         self._session = session
+        self._github_token = (
+            github_token.strip()
+            if isinstance(github_token, str) and github_token.strip()
+            else None
+        )
 
     def _get_session(self) -> aiohttp.ClientSession:
         """Return the configured HTTP session or fail fast."""
