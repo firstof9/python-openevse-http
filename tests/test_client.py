@@ -284,25 +284,25 @@ async def test_send_command_auth(test_charger_auth, mock_aioclient):
 
 
 async def test_send_command_parse_err(test_charger_auth, mock_aioclient):
-    """Test RAPI command with JSON parse error."""
+    """Test RAPI command with 400 error response."""
     mock_aioclient.post(
         TEST_URL_RAPI, status=400, body='{"msg": "Could not parse JSON"}'
     )
-    with pytest.raises(main.ParseJSONError):
+    with pytest.raises(main.CommandFailedError):
         await test_charger_auth.send_command("test")
 
     mock_aioclient.post(
         TEST_URL_RAPI, status=400, body='{"error": "Could not parse JSON"}'
     )
-    with pytest.raises(main.ParseJSONError):
+    with pytest.raises(main.CommandFailedError):
         await test_charger_auth.send_command("test")
 
     mock_aioclient.post(TEST_URL_RAPI, status=400, body='{"other": "Something else"}')
-    with pytest.raises(main.ParseJSONError):
+    with pytest.raises(main.CommandFailedError):
         await test_charger_auth.send_command("test")
 
     mock_aioclient.post(TEST_URL_RAPI, status=400, body='"Just a string response"')
-    with pytest.raises(main.ParseJSONError):
+    with pytest.raises(main.CommandFailedError):
         await test_charger_auth.send_command("test")
 
 
@@ -1243,7 +1243,7 @@ async def test_process_request_400_error_with_msg(mock_aioclient, charger_factor
 
     charger = charger_factory(SERVER_URL)
 
-    with pytest.raises(ParseJSONError):
+    with pytest.raises(CommandFailedError, match="Bad request"):
         await charger.process_request(TEST_URL_STATUS, method="get")
 
 
@@ -1260,7 +1260,24 @@ async def test_process_request_400_error_with_error_field(
 
     charger = charger_factory(SERVER_URL)
 
-    with pytest.raises(ParseJSONError):
+    with pytest.raises(CommandFailedError, match="Invalid input"):
+        await charger.process_request(TEST_URL_STATUS, method="get")
+
+
+async def test_process_request_400_error_with_string_body(
+    mock_aioclient, charger_factory
+):
+    """Test process_request handles 400 error with plain string body."""
+
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=400,
+        body="Plain text error",
+    )
+
+    charger = charger_factory(SERVER_URL)
+
+    with pytest.raises(CommandFailedError, match="Plain text error"):
         await charger.process_request(TEST_URL_STATUS, method="get")
 
 
@@ -1566,7 +1583,7 @@ async def test_external_session_400_error_with_msg():
         async with aiohttp.ClientSession() as session:
             charger = OpenEVSE(SERVER_URL, session=session)
 
-            with pytest.raises(ParseJSONError):
+            with pytest.raises(CommandFailedError, match="Bad request"):
                 await charger.process_request(TEST_URL_STATUS, method="get")
 
 
@@ -1582,7 +1599,7 @@ async def test_external_session_400_error_with_error_field():
         async with aiohttp.ClientSession() as session:
             charger = OpenEVSE(SERVER_URL, session=session)
 
-            with pytest.raises(ParseJSONError):
+            with pytest.raises(CommandFailedError, match="Invalid input"):
                 await charger.process_request(TEST_URL_STATUS, method="get")
 
 
