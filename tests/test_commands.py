@@ -1210,11 +1210,7 @@ async def test_update_firmware_auto_github_token(test_charger, mock_aioclient):
 
     response = await test_charger.update_firmware(github_token="ghp_firmwaretoken")
     assert response == {"msg": "started"}
-    last_github_call = [
-        call
-        for call in mock_aioclient.requests
-        if str(call[1]).startswith("https://api.github.com")
-    ][-1]
+    last_github_call = [call for call in mock_aioclient.requests if call[1] == url][-1]
     assert last_github_call[2]["headers"]["Authorization"] == "Bearer ghp_firmwaretoken"
 
 
