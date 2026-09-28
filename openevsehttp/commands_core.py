@@ -26,7 +26,7 @@ class CoreCommandsMixin(BaseCommandMixin):
 
         if mode not in ["fast", "eco"]:
             _LOGGER.error("Invalid value for charge_mode: %s", mode)
-            raise ValueError
+            raise ValueError(f"charge_mode must be 'fast' or 'eco', got {mode!r}")
 
         data = {"charge_mode": mode}
 
@@ -357,11 +357,16 @@ class CoreCommandsMixin(BaseCommandMixin):
             raise CommandFailedError(f"Problem issuing command: {response}")
 
     async def set_divert_mode(self, mode: str = "fast") -> None:
-        """Set the divert mode."""
+        """Set the divert mode.
+
+        Note: The OpenEVSE WiFi `/divertmode` endpoint expects form-encoded
+        data (`divertmode={mode_int}`) rather than a JSON payload, passed via
+        the client's `rapi` data parameter.
+        """
         url = f"{self.url}divertmode"
         if mode not in ["fast", "eco"]:
             _LOGGER.error("Invalid value for divert mode: %s", mode)
-            raise ValueError
+            raise ValueError(f"divert mode must be 'fast' or 'eco', got {mode!r}")
         _LOGGER.debug("Setting divert mode to %s", mode)
         # convert text to int
         new_mode = divert_mode[mode]
