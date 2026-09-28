@@ -94,7 +94,7 @@ To bypass certificate verification:
 | `/config` | GET, POST | ✅ | System and WiFi configuration |
 | `/override` | GET, POST, PATCH, DELETE | ✅ | Manual charging overrides & current limits |
 | `/claims` | GET, POST, DELETE | ✅ | Client-based charging claims |
-| `/schedule` | GET, POST | ⚠️ | Charging schedule management (Retrieval only) |
+| `/schedule` | GET, POST, DELETE | ✅ | Charging schedule management (v4.0.0+) |
 | `/limit` | GET, POST, DELETE | ✅ | Charge limits (Time, Energy, SoC) |
 | `/shaper` | POST | ✅ | Grid shaper control (v4.0.0+) |
 | `/restart` | POST | ✅ | Reboot WiFi gateway or EVSE module |
@@ -108,7 +108,7 @@ To bypass certificate verification:
 | `/wifi` | GET, POST | ❌ | Network scanning and AP configuration |
 | `/tesla` | GET | ❌ | Tesla vehicle integration |
 | `/certificates`| GET, POST, DELETE | ✅ | SSL/TLS certificate management (v4.0.0+) |
-| `/schedule/plan`| GET | ❌ | Schedule planning and optimization |
+| `/schedule/plan`| GET | ✅ | Schedule planning and optimization (v4.1.0+) |
 | `/update` | POST | ✅ | Firmware update interface |
 | `/relay/recovery` | POST | ✅ | Stuck relay recovery cycle (v5.1.0+ / `$FK`) |
 | `/relay/reset` | POST | ✅ | Relay contact-life health estimation reset (v5.1.0+ / `$FH`) |

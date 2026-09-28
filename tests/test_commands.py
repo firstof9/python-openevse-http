@@ -36,6 +36,8 @@ TEST_URL_LOGS = "http://openevse.test.tld/logs"
 TEST_URL_CERTIFICATES = "http://openevse.test.tld/certificates"
 TEST_URL_RFID_ADD = "http://openevse.test.tld/rfid/add"
 TEST_URL_RFID_USERS = "http://openevse.test.tld/rfid/users"
+TEST_URL_SCHEDULE = "http://openevse.test.tld/schedule"
+TEST_URL_SCHEDULE_PLAN = "http://openevse.test.tld/schedule/plan"
 SERVER_URL = "openevse.test.tld"
 
 
@@ -2456,3 +2458,279 @@ async def test_delete_rfid_user(test_charger, test_charger_new, mock_aioclient, 
         CommandFailedError, match="Problem deleting RFID user: {'msg': 'Failed'}"
     ):
         await test_charger_new.delete_rfid_user("01020304")
+
+
+# ── schedule commands ────────────────────────────────────────────────
+
+
+async def test_get_schedule(test_charger, test_charger_v2, mock_aioclient, caplog):
+    """Test get_schedule across scenarios."""
+    await test_charger.update()
+    await test_charger_v2.update()
+
+    # 1. Firmware version check (requires >= 4.0.0)
+    with pytest.raises(
+        UnsupportedFeature, match="get_schedule requires gateway firmware 4.0.0"
+    ):
+        await test_charger_v2.get_schedule()
+
+    # 2. Input validation for event_id
+    with pytest.raises(TypeError, match="event_id must be an integer."):
+        await test_charger.get_schedule(event_id="invalid")  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match="event_id must be an integer."):
+        await test_charger.get_schedule(event_id=True)  # type: ignore[arg-type]
+
+    # 3. GET /schedule success (list of events)
+    schedule_data = [
+        {"id": 1, "state": "active", "time": "01:00:00", "days": ["Monday", "Tuesday"]},
+        {
+            "id": 2,
+            "state": "disabled",
+            "time": "06:00:00",
+            "days": ["Monday", "Tuesday"],
+        },
+    ]
+    mock_aioclient.get(
+        TEST_URL_SCHEDULE,
+        status=200,
+        body=json.dumps(schedule_data),
+    )
+    with caplog.at_level(logging.DEBUG):
+        result = await test_charger.get_schedule()
+    assert result == schedule_data
+    assert "Getting schedule from http://openevse.test.tld/schedule" in caplog.text
+
+    # 4. GET /schedule/{event_id} success (single event dict)
+    single_event = {
+        "id": 1,
+        "state": "active",
+        "time": "01:00:00",
+        "days": ["Monday", "Tuesday"],
+    }
+    mock_aioclient.get(
+        f"{TEST_URL_SCHEDULE}/1",
+        status=200,
+        body=json.dumps(single_event),
+    )
+    result_event = await test_charger.get_schedule(event_id=1)
+    assert result_event == single_event
+
+    # 5. GET /schedule/{event_id} not found
+    mock_aioclient.get(
+        f"{TEST_URL_SCHEDULE}/99",
+        status=404,
+        body='{"msg":"Not found"}',
+    )
+    with pytest.raises(
+        CommandFailedError, match="Schedule event not found: {'msg': 'Not found'}"
+    ):
+        await test_charger.get_schedule(event_id=99)
+
+    # 6. Fallback from GET (405 Method Not Allowed) to POST
+    mock_aioclient.get(
+        TEST_URL_SCHEDULE,
+        status=405,
+        body='{"msg":"Method not allowed"}',
+    )
+    mock_aioclient.post(
+        TEST_URL_SCHEDULE,
+        status=200,
+        body=json.dumps(schedule_data),
+    )
+    result_fallback = await test_charger.get_schedule()
+    assert result_fallback == schedule_data
+
+    # 7. Invalid non-collection response format
+    mock_aioclient.get(
+        TEST_URL_SCHEDULE,
+        status=200,
+        body="invalid",
+    )
+    with pytest.raises(
+        CommandFailedError, match="Invalid response format for /schedule: invalid"
+    ):
+        await test_charger.get_schedule()
+
+
+async def test_set_schedule(test_charger, test_charger_v2, mock_aioclient, caplog):
+    """Test set_schedule across scenarios."""
+    await test_charger.update()
+    await test_charger_v2.update()
+
+    # 1. Firmware version check (requires >= 4.0.0)
+    with pytest.raises(
+        UnsupportedFeature, match="set_schedule requires gateway firmware 4.0.0"
+    ):
+        await test_charger_v2.set_schedule(
+            {"state": "active", "time": "01:00:00", "days": ["Monday"]}
+        )
+
+    # 2. Input validation
+    with pytest.raises(TypeError, match="event_id must be an integer."):
+        await test_charger.set_schedule({"state": "active"}, event_id="invalid")  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match="event_id must be an integer."):
+        await test_charger.set_schedule({"state": "active"}, event_id=False)  # type: ignore[arg-type]
+    with pytest.raises(
+        TypeError, match="event must be a mapping when event_id is specified."
+    ):
+        await test_charger.set_schedule(["not", "a", "mapping"], event_id=1)  # type: ignore[arg-type]
+    with pytest.raises(
+        TypeError, match="event must be a mapping or a list of mappings."
+    ):
+        await test_charger.set_schedule("invalid_event")  # type: ignore[arg-type]
+
+    # 3. Successful POST /schedule (single event)
+    event_payload = {
+        "id": 1,
+        "state": "active",
+        "time": "02:00:00",
+        "days": ["Wednesday"],
+    }
+    mock_aioclient.post(
+        TEST_URL_SCHEDULE,
+        status=200,
+        body='{"msg": "done"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.set_schedule(event_payload)
+    assert "Setting schedule on http://openevse.test.tld/schedule" in caplog.text
+
+    # 4. Successful POST /schedule/{event_id} (update specific event)
+    mock_aioclient.post(
+        f"{TEST_URL_SCHEDULE}/1",
+        status=200,
+        body='{"msg": "done"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.set_schedule(event_payload, event_id=1)
+    assert "Setting schedule on http://openevse.test.tld/schedule/1" in caplog.text
+
+    # 5. Successful POST /schedule (batch list of events)
+    batch_payload = [
+        {"id": 1, "state": "active", "time": "01:00:00", "days": ["Monday"]},
+        {"id": 2, "state": "disabled", "time": "07:00:00", "days": ["Monday"]},
+    ]
+    mock_aioclient.post(
+        TEST_URL_SCHEDULE,
+        status=200,
+        body='{"msg": "done"}',
+    )
+    await test_charger.set_schedule(batch_payload)
+
+    # 6. Successful POST /schedule with empty list (clearing schedule batch)
+    mock_aioclient.post(
+        TEST_URL_SCHEDULE,
+        status=200,
+        body='{"msg": "done"}',
+    )
+    await test_charger.set_schedule([])
+
+    # 7. Failed POST /schedule
+    mock_aioclient.post(
+        TEST_URL_SCHEDULE,
+        status=500,
+        body='{"msg": "Could not parse JSON"}',
+    )
+    with pytest.raises(
+        CommandFailedError,
+        match="Problem setting schedule: {'msg': 'Could not parse JSON'}",
+    ):
+        await test_charger.set_schedule(event_payload)
+
+
+async def test_delete_schedule(test_charger, test_charger_v2, mock_aioclient, caplog):
+    """Test delete_schedule across scenarios."""
+    await test_charger.update()
+    await test_charger_v2.update()
+
+    # 1. Firmware version check (requires >= 4.0.0)
+    with pytest.raises(
+        UnsupportedFeature, match="delete_schedule requires gateway firmware 4.0.0"
+    ):
+        await test_charger_v2.delete_schedule(1)
+
+    # 2. Input validation
+    with pytest.raises(TypeError, match="event_id must be an integer."):
+        await test_charger.delete_schedule("1")  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match="event_id must be an integer."):
+        await test_charger.delete_schedule(True)  # type: ignore[arg-type]
+
+    # 3. Successful DELETE /schedule/{event_id}
+    mock_aioclient.delete(
+        f"{TEST_URL_SCHEDULE}/1",
+        status=200,
+        body='{"msg": "done"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.delete_schedule(1)
+    assert (
+        "Deleting schedule event 1 on http://openevse.test.tld/schedule/1"
+        in caplog.text
+    )
+
+    # 4. Failed DELETE (404 Not found)
+    mock_aioclient.delete(
+        f"{TEST_URL_SCHEDULE}/99",
+        status=404,
+        body='{"msg": "Not found"}',
+    )
+    with pytest.raises(
+        CommandFailedError,
+        match="Problem deleting schedule event 99: {'msg': 'Not found'}",
+    ):
+        await test_charger.delete_schedule(99)
+
+
+async def test_get_schedule_plan(test_charger, test_charger_v2, mock_aioclient, caplog):
+    """Test get_schedule_plan across scenarios."""
+    await test_charger.update()
+    await test_charger_v2.update()
+
+    # 1. Firmware version check (requires >= 4.1.0)
+    with pytest.raises(
+        UnsupportedFeature, match="get_schedule_plan requires gateway firmware 4.1.0"
+    ):
+        await test_charger_v2.get_schedule_plan()
+
+    # 2. Successful GET /schedule/plan
+    plan_data = {
+        "current_day": "Monday",
+        "current_offset": 3600,
+        "next_event_delay": 7200,
+        "current_event": {
+            "id": 1,
+            "state": "active",
+            "time": "01:00:00",
+            "day": "Monday",
+        },
+        "next_event": {
+            "id": 2,
+            "state": "disabled",
+            "time": "03:00:00",
+            "day": "Monday",
+        },
+        "Monday": [{"id": 1, "state": "active", "time": "01:00:00"}],
+    }
+    mock_aioclient.get(
+        TEST_URL_SCHEDULE_PLAN,
+        status=200,
+        body=json.dumps(plan_data),
+    )
+    with caplog.at_level(logging.DEBUG):
+        result = await test_charger.get_schedule_plan()
+    assert result == plan_data
+    assert (
+        "Getting schedule plan from http://openevse.test.tld/schedule/plan"
+        in caplog.text
+    )
+
+    # 3. Invalid non-mapping response
+    mock_aioclient.get(
+        TEST_URL_SCHEDULE_PLAN,
+        status=200,
+        body="invalid",
+    )
+    with pytest.raises(
+        CommandFailedError, match="Invalid response format for /schedule/plan: invalid"
+    ):
+        await test_charger.get_schedule_plan()
