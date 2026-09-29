@@ -673,6 +673,17 @@ async def test_restart_wifi(test_charger_modified_ver, mock_aioclient, caplog):
         await test_charger_modified_ver.restart_wifi()
     assert "Restart response: restart gateway" in caplog.text
 
+    # Also verify standard ESP32 gateway response `{"msg": "restart gateway"}`
+    caplog.clear()
+    mock_aioclient.post(
+        TEST_URL_RESTART,
+        status=200,
+        body='{"msg": "restart gateway"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_modified_ver.restart_wifi()
+    assert "WiFi Restart response: restart gateway" in caplog.text
+
 
 async def test_restart_wifi_fail(test_charger, mock_aioclient, caplog):
     """Test restart_wifi failure."""
