@@ -299,3 +299,35 @@ class DiagnosticsCommandsMixin(BaseCommandMixin):
         if msg not in SUCCESS_ANSWERS:
             _LOGGER.error("Problem acknowledging notification: %s", response)
             raise CommandFailedError(f"Problem acknowledging notification: {response}")
+
+    async def reset_energy_meter(
+        self, hard: bool = False, import_from_evse: bool = False
+    ) -> None:
+        """Reset the charger energy meter.
+
+        Issues DELETE /emeter with hard and import flags.
+
+        :param hard: If True, sets total energy and switch counter to 0 (hard reset).
+                     If False, performs a soft reset.
+        :param import_from_evse: If True, allows re-importing total energy counters from EVSE.
+        :raises UnsupportedFeature: If gateway firmware is older than 4.0.0.
+        :raises CommandFailedError: If the reset operation fails.
+        """
+        self._require_firmware("4.0.0", "reset_energy_meter")
+
+        url = f"{self.url}emeter"
+        data = {"hard": bool(hard), "import": bool(import_from_evse)}
+
+        _LOGGER.debug(
+            "Resetting energy meter: %s (hard=%s, import=%s)",
+            url,
+            hard,
+            import_from_evse,
+        )
+        response = await self.process_request(url=url, method="delete", data=data)
+        response = self._normalize_response(response)
+
+        msg = response.get("msg") if isinstance(response, Mapping) else None
+        if msg not in SUCCESS_ANSWERS:
+            _LOGGER.error("Problem resetting energy meter: %s", response)
+            raise CommandFailedError(f"Problem resetting energy meter: {response}")
