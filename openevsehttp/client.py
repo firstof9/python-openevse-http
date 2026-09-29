@@ -26,6 +26,7 @@ from .const import (
 from .exceptions import (
     AlreadyListening,
     AuthenticationError,
+    CommandFailedError,
     MissingMethod,
     MissingSerial,
     ParseJSONError,
@@ -186,15 +187,16 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
 
                 if resp.status == 400:
                     if isinstance(response_content, dict) and "msg" in response_content:
-                        _LOGGER.error("Error 400: %s", response_content["msg"])
+                        msg = str(response_content["msg"])
                     elif (
                         isinstance(response_content, dict)
                         and "error" in response_content
                     ):
-                        _LOGGER.error("Error 400: %s", response_content["error"])
+                        msg = str(response_content["error"])
                     else:
-                        _LOGGER.error("Error 400: %s", response_content)
-                    raise ParseJSONError
+                        msg = str(response_content)
+                    _LOGGER.error("Error 400: %s", msg)
+                    raise CommandFailedError(msg)
                 if resp.status == 401:
                     _LOGGER.error("Authentication error: %s", response_content)
                     raise AuthenticationError
