@@ -228,6 +228,78 @@ class DiagnosticsCommandsMixin(BaseCommandMixin):
 
         return dict(response)
 
+    async def get_notifications(self) -> dict[str, Any]:
+        """Retrieve the advisory notifications list from the gateway.
+
+        Queries 'GET /notifications'.
+        Requires gateway firmware 5.1.0 or higher.
+
+        Expected response shape:
+            {
+                "count": int,
+                "max_severity": "info" | "warning" | "critical" | None,
+                "notifications": [
+                    {
+                        "id": str,
+                        "category": str,
+                        "severity": str,
+                        "sticky": bool,
+                        "acked": bool,
+                        "first_seen": int,
+                        "last_seen": int,
+                    },
+                    ...
+                ]
+            }
+
+        :return: Dict containing 'count', 'max_severity', and 'notifications' list.
+        :raises UnsupportedFeature: If gateway firmware is older than 5.1.0.
+        :raises CommandFailedError: If response is invalid.
+        """
+        self._require_firmware("5.1.0", "get_notifications")
+
+        url = f"{self.url}notifications"
+        _LOGGER.debug("Querying notifications: %s", url)
+        response = await self.process_request(url=url, method="get")
+
+        if not isinstance(response, Mapping):
+            _LOGGER.error("Invalid response from /notifications: %s", response)
+            raise CommandFailedError(
+                f"Invalid response from /notifications: {response}"
+            )
+
+        return dict(response)
+
+    async def acknowledge_notification(self, notification_id: str) -> None:
+        """Acknowledge (mute) an active advisory notification by ID.
+
+        Issues 'POST /notifications/ack' with the notification ID.
+        Requires gateway firmware 5.1.0 or higher.
+
+        :param notification_id: The identifier of the advisory (e.g. 'safety.ground_check').
+        :raises UnsupportedFeature: If gateway firmware is older than 5.1.0.
+        :raises ValueError: If notification_id is empty or not a string.
+        :raises CommandFailedError: If the acknowledgment fails or returns an error.
+        """
+        self._require_firmware("5.1.0", "acknowledge_notification")
+
+        if not isinstance(notification_id, str) or not notification_id.strip():
+            raise ValueError("notification_id must be a non-empty string.")
+
+        url = f"{self.url}notifications/ack"
+        data = {"id": notification_id.strip()}
+
+        _LOGGER.debug(
+            "Acknowledging notification %s at %s", notification_id.strip(), url
+        )
+        response = await self.process_request(url=url, method="post", data=data)
+        response = self._normalize_response(response)
+
+        msg = response.get("msg") if isinstance(response, Mapping) else response
+        if msg not in SUCCESS_ANSWERS:
+            _LOGGER.error("Problem acknowledging notification: %s", response)
+            raise CommandFailedError(f"Problem acknowledging notification: {response}")
+
     async def reset_energy_meter(
         self, hard: bool = False, import_from_evse: bool = False
     ) -> None:

@@ -72,6 +72,7 @@ SUCCESS_ANSWERS = [
     "Deleted",
     "User name saved",
     "User name removed",
+    "acknowledged",
     "Reset done",
 ]
 

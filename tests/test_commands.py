@@ -38,6 +38,8 @@ TEST_URL_RFID_ADD = "http://openevse.test.tld/rfid/add"
 TEST_URL_RFID_USERS = "http://openevse.test.tld/rfid/users"
 TEST_URL_SCHEDULE = "http://openevse.test.tld/schedule"
 TEST_URL_SCHEDULE_PLAN = "http://openevse.test.tld/schedule/plan"
+TEST_URL_NOTIFICATIONS = "http://openevse.test.tld/notifications"
+TEST_URL_NOTIFICATIONS_ACK = "http://openevse.test.tld/notifications/ack"
 TEST_URL_EMETER = "http://openevse.test.tld/emeter"
 SERVER_URL = "openevse.test.tld"
 
@@ -2774,6 +2776,105 @@ async def test_get_schedule_plan(test_charger, test_charger_v2, mock_aioclient, 
         CommandFailedError, match="Invalid response format for /schedule/plan: invalid"
     ):
         await test_charger.get_schedule_plan()
+
+
+# ── notifications ────────────────────────────────────────────────────
+
+
+async def test_get_notifications(test_charger, test_charger_v2, mock_aioclient, caplog):
+    """Test get_notifications command."""
+    await test_charger.update()
+
+    # 1. Version check failure on older firmware
+    with pytest.raises(
+        UnsupportedFeature, match="get_notifications requires gateway firmware 5.1.0"
+    ):
+        await test_charger_v2.get_notifications()
+
+    # Force test_charger gateway version to 5.1.0
+    test_charger._config["version"] = "5.1.0"
+
+    # 2. Successful GET /notifications
+    notif_data = {
+        "count": 1,
+        "max_severity": "warning",
+        "notifications": [
+            {
+                "id": "safety.ground_check",
+                "category": "safety",
+                "severity": "warning",
+                "sticky": False,
+                "acked": False,
+                "first_seen": 1726050000,
+                "last_seen": 1726050005,
+            }
+        ],
+    }
+    mock_aioclient.get(
+        TEST_URL_NOTIFICATIONS,
+        status=200,
+        body=json.dumps(notif_data),
+    )
+    with caplog.at_level(logging.DEBUG):
+        result = await test_charger.get_notifications()
+    assert result == notif_data
+    assert (
+        "Querying notifications: http://openevse.test.tld/notifications" in caplog.text
+    )
+
+    # 3. Invalid non-mapping response
+    mock_aioclient.get(
+        TEST_URL_NOTIFICATIONS,
+        status=200,
+        body="invalid",
+    )
+    with pytest.raises(
+        CommandFailedError, match="Invalid response from /notifications: invalid"
+    ):
+        await test_charger.get_notifications()
+
+
+async def test_acknowledge_notification(
+    test_charger, test_charger_v2, mock_aioclient, caplog
+):
+    """Test acknowledge_notification command."""
+    await test_charger.update()
+
+    # 1. Version check failure on older firmware
+    with pytest.raises(
+        UnsupportedFeature,
+        match="acknowledge_notification requires gateway firmware 5.1.0",
+    ):
+        await test_charger_v2.acknowledge_notification("safety.ground_check")
+
+    # Force test_charger gateway version to 5.1.0
+    test_charger._config["version"] = "5.1.0"
+
+    # 2. Invalid empty ID
+    with pytest.raises(ValueError, match="notification_id must be a non-empty string"):
+        await test_charger.acknowledge_notification("")
+
+    # 3. Successful POST /notifications/ack
+    mock_aioclient.post(
+        TEST_URL_NOTIFICATIONS_ACK,
+        status=200,
+        body="acknowledged",
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.acknowledge_notification("safety.ground_check")
+    assert (
+        "Acknowledging notification safety.ground_check at http://openevse.test.tld/notifications/ack"
+        in caplog.text
+    )
+
+    # 4. Failure response from firmware
+    mock_aioclient.post(
+        TEST_URL_NOTIFICATIONS_ACK,
+        status=200,
+        body="no such active notification",
+    )
+    with pytest.raises(CommandFailedError, match="Problem acknowledging notification"):
+        await test_charger.acknowledge_notification("safety.ground_check")
 
 
 # ── reset_energy_meter ───────────────────────────────────────────────
