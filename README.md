@@ -21,6 +21,11 @@ A Python library for communicating with [OpenEVSE](https://www.openevse.com/) ch
     - **Time Synchronization & RTC**: Manage time, timezone, and NTP sync (requires firmware 4.0.0+).
     - **Event Logs**: Retrieve diagnostic log blocks and log event history (requires firmware 4.0.0+).
     - **Certificates**: Manage SSL/TLS Root CA and client certificates (requires firmware 4.0.0+).
+    - **RFID Management**: RFID tag pairing mode and tag-to-user mappings (requires firmware 4.0.0+ / 5.0.0+).
+    - **Relay Diagnostics**: Stuck relay recovery cycle and contact-life estimation reset (requires firmware 5.1.0+).
+    - **Cable Temperature Monitoring**: Cable temperature sensor configuration and monitoring (requires firmware 5.1.0+).
+    - **Energy Meter Reset**: Reset the energy meter counters with soft/hard options (requires firmware 4.0.0+).
+    - **Advisory Notifications**: Retrieve gateway advisory notifications and acknowledge/mute active advisories (requires firmware 5.1.0+).
 
 ## Installation
 
@@ -123,7 +128,9 @@ When performing firmware update checks (`charger.firmware_check()`) or automatic
 | `/time` | GET, POST | ✅ | RTC and NTP time settings (v4.0.0+) |
 | `/settime` | POST | ✅ | Legacy time setting interface (v3.x / fallback to `$S1` on v2.x) |
 | `/logs` | GET | ✅ | Event log block bounds and block events (v4.0.0+) |
-| `/emeter` | DELETE | ❌ | Energy meter reset |
+| `/emeter` | DELETE | ✅ | Energy meter reset (v4.0.0+) |
+| `/notifications` | GET | ✅ | Gateway advisory notifications list (v5.1.0+) |
+| `/notifications/ack` | POST | ✅ | Acknowledge/mute active advisory notification (v5.1.0+) |
 | `/wifi` | GET, POST | ❌ | Network scanning and AP configuration |
 | `/tesla` | GET | ❌ | Tesla vehicle integration |
 | `/certificates`| GET, POST, DELETE | ✅ | SSL/TLS certificate management (v4.0.0+) |
