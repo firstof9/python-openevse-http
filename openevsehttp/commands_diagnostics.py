@@ -234,6 +234,24 @@ class DiagnosticsCommandsMixin(BaseCommandMixin):
         Queries 'GET /notifications'.
         Requires gateway firmware 5.1.0 or higher.
 
+        Expected response shape:
+            {
+                "count": int,
+                "max_severity": "info" | "warning" | "critical" | None,
+                "notifications": [
+                    {
+                        "id": str,
+                        "category": str,
+                        "severity": str,
+                        "sticky": bool,
+                        "acked": bool,
+                        "first_seen": int,
+                        "last_seen": int,
+                    },
+                    ...
+                ]
+            }
+
         :return: Dict containing 'count', 'max_severity', and 'notifications' list.
         :raises UnsupportedFeature: If gateway firmware is older than 5.1.0.
         :raises CommandFailedError: If response is invalid.
