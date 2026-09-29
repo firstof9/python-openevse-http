@@ -30,8 +30,8 @@ This reference document compiles all known HTTP REST API endpoints, WebSocket pa
 | `/time` | `GET`, `POST` | ❌ | ❌ (`/settime`) | ✅ (v4.0.0+) | `$S1` (RTC set) | ✅ Fully Supported |
 | `/settime` | `GET`, `POST` | ❌ | ✅ | ⚠️ Legacy alias | `$S1` | ✅ Fully Supported |
 | `/emeter` | `DELETE` | ❌ | ❌ | ✅ (v4.0.0+) | N/A | ❌ Not Implemented |
-| `/notifications` | `GET` | ❌ | ❌ | ✅ (v5.1.0+) | N/A | ❌ Not Implemented |
-| `/notifications/ack` | `POST` | ❌ | ❌ | ✅ (v5.1.0+) | N/A | ❌ Not Implemented |
+| `/notifications` | `GET` | ❌ | ❌ | ✅ (v5.1.0+) | N/A | ✅ Fully Supported |
+| `/notifications/ack` | `POST` | ❌ | ❌ | ✅ (v5.1.0+) | N/A | ✅ Fully Supported |
 | `/update` | `GET`, `POST` | `GET`, `POST` | `GET`, `POST` | `GET`, `POST` | N/A | ✅ Fully Supported |
 | `/logs` | `GET` | ❌ | ❌ | ✅ (v4.0.0+) | N/A | ✅ Fully Supported |
 | `/logs/export` | `GET` | ❌ | ❌ | ✅ (v4.0.0+) | N/A | ❌ Not Implemented |

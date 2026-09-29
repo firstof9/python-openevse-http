@@ -611,3 +611,20 @@ async def test_time_properties():
     assert charger.time_offset == "+0000"
     assert charger.sntp_enabled is True
     assert charger.sntp_hostname == "pool.ntp.org"
+
+
+async def test_notification_properties():
+    """Test notification summary properties."""
+    charger = OpenEVSE(SERVER_URL)
+    charger._status = {}
+
+    assert charger.notifications_count is None
+    assert charger.notifications_severity is None
+
+    charger._status = {"notifications": {"count": 2, "severity": "warning"}}
+    assert charger.notifications_count == 2
+    assert charger.notifications_severity == "warning"
+
+    charger._status = {"notifications": "invalid"}
+    assert charger.notifications_count is None
+    assert charger.notifications_severity is None

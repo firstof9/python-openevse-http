@@ -671,3 +671,21 @@ class PropertiesMixin:
         self._github_token = (
             token.strip() if isinstance(token, str) and token.strip() else None
         )
+
+    @property
+    def notifications_count(self) -> int | None:
+        """Return unmuted notification advisories count from status summary."""
+        notifications = self._status.get("notifications")
+        if isinstance(notifications, Mapping):
+            return notifications.get("count")
+        return None
+
+    @property
+    def notifications_severity(self) -> str | None:
+        """Return max severity ('info', 'warning', 'critical') from status summary."""
+        notifications = self._status.get("notifications")
+        if isinstance(notifications, Mapping):
+            severity = notifications.get("severity")
+            if severity is not None:
+                return str(severity)
+        return None
