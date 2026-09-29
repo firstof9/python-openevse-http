@@ -38,6 +38,7 @@ TEST_URL_RFID_ADD = "http://openevse.test.tld/rfid/add"
 TEST_URL_RFID_USERS = "http://openevse.test.tld/rfid/users"
 TEST_URL_SCHEDULE = "http://openevse.test.tld/schedule"
 TEST_URL_SCHEDULE_PLAN = "http://openevse.test.tld/schedule/plan"
+TEST_URL_EMETER = "http://openevse.test.tld/emeter"
 SERVER_URL = "openevse.test.tld"
 
 
@@ -2773,3 +2774,64 @@ async def test_get_schedule_plan(test_charger, test_charger_v2, mock_aioclient, 
         CommandFailedError, match="Invalid response format for /schedule/plan: invalid"
     ):
         await test_charger.get_schedule_plan()
+
+
+# ── reset_energy_meter ───────────────────────────────────────────────
+
+
+async def test_reset_energy_meter(
+    test_charger, test_charger_v2, mock_aioclient, caplog
+):
+    """Test reset_energy_meter command."""
+    await test_charger.update()
+
+    # 1. Version check failure on older firmware
+    with pytest.raises(
+        UnsupportedFeature, match="reset_energy_meter requires gateway firmware 4.0.0"
+    ):
+        await test_charger_v2.reset_energy_meter()
+
+    # 2. Successful reset with default params (hard=False, import=False)
+    mock_aioclient.delete(
+        TEST_URL_EMETER,
+        status=200,
+        body='{"msg": "Reset done"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.reset_energy_meter()
+    assert (
+        "Resetting energy meter: http://openevse.test.tld/emeter (hard=False, import=False)"
+        in caplog.text
+    )
+
+    # 3. Successful reset with hard=True, import_from_evse=True
+    caplog.clear()
+    mock_aioclient.delete(
+        TEST_URL_EMETER,
+        status=200,
+        body='{"msg": "Reset done"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.reset_energy_meter(hard=True, import_from_evse=True)
+    assert (
+        "Resetting energy meter: http://openevse.test.tld/emeter (hard=True, import=True)"
+        in caplog.text
+    )
+
+    # 4. Failure response from firmware
+    mock_aioclient.delete(
+        TEST_URL_EMETER,
+        status=200,
+        body='{"msg": "Reset failed"}',
+    )
+    with pytest.raises(CommandFailedError, match="Problem resetting energy meter"):
+        await test_charger.reset_energy_meter()
+
+    # 5. Non-mapping / error response
+    mock_aioclient.delete(
+        TEST_URL_EMETER,
+        status=200,
+        body="invalid response",
+    )
+    with pytest.raises(CommandFailedError, match="Problem resetting energy meter"):
+        await test_charger.reset_energy_meter()

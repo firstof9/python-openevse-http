@@ -72,6 +72,7 @@ SUCCESS_ANSWERS = [
     "Deleted",
     "User name saved",
     "User name removed",
+    "Reset done",
 ]
 
 ERROR_SESSION_REQUIRED = (
