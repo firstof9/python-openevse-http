@@ -313,6 +313,7 @@ async def test_idempotent_override_v4(test_charger, mock_aioclient, caplog):
     assert "Clearing manual override http" in caplog.text
 
     # 3. set_manual_override(True)
+    caplog.clear()
     mock_aioclient.get(
         TEST_URL_OVERRIDE,
         status=200,
@@ -328,6 +329,7 @@ async def test_idempotent_override_v4(test_charger, mock_aioclient, caplog):
     assert "Enabling manual override via HTTP API" in caplog.text
 
     # 4. set_manual_override(False)
+    caplog.clear()
     mock_aioclient.delete(
         TEST_URL_OVERRIDE,
         status=200,
@@ -342,8 +344,19 @@ async def test_idempotent_override_v2(test_charger_v2, mock_aioclient, caplog):
     """Test enable_override, disable_override, and set_manual_override on legacy v2 firmware."""
     await test_charger_v2.update()
 
+    mock_aioclient.get(
+        TEST_URL_CONFIG,
+        status=200,
+        body='{"version": "2.9.1"}',
+        repeat=True,
+    )
+
     # Case 1: Charger is sleeping (state == 254) -> enable_override sends $FE
-    test_charger_v2._status["state"] = 254
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=200,
+        body='{"state": 254}',
+    )
     mock_aioclient.post(
         TEST_URL_RAPI,
         status=200,
@@ -353,16 +366,26 @@ async def test_idempotent_override_v2(test_charger_v2, mock_aioclient, caplog):
         await test_charger_v2.enable_override()
     assert "Enabling manual override via RAPI" in caplog.text
     assert "Posting data: $FE" in caplog.text
+    assert test_charger_v2._status["state"] == 2
 
     # Case 2: Charger is active (state == 2) -> enable_override skips $FE (no-op)
     caplog.clear()
-    test_charger_v2._status["state"] = 2
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=200,
+        body='{"state": 2}',
+    )
     with caplog.at_level(logging.DEBUG):
         await test_charger_v2.enable_override()
     assert "Manual override already active (state 2), skipping $FE" in caplog.text
 
     # Case 3: Charger is active (state == 2) -> disable_override sends $FS
     caplog.clear()
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=200,
+        body='{"state": 2}',
+    )
     mock_aioclient.post(
         TEST_URL_RAPI,
         status=200,
@@ -372,17 +395,26 @@ async def test_idempotent_override_v2(test_charger_v2, mock_aioclient, caplog):
         await test_charger_v2.disable_override()
     assert "Disabling manual override via RAPI" in caplog.text
     assert "Posting data: $FS" in caplog.text
+    assert test_charger_v2._status["state"] == 254
 
     # Case 4: Charger is sleeping (state == 254) -> disable_override skips $FS (no-op)
     caplog.clear()
-    test_charger_v2._status["state"] = 254
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=200,
+        body='{"state": 254}',
+    )
     with caplog.at_level(logging.DEBUG):
         await test_charger_v2.disable_override()
     assert "Manual override already disabled (state 254), skipping $FS" in caplog.text
 
     # Case 5: set_manual_override calls enable / disable
     caplog.clear()
-    test_charger_v2._status["state"] = 254
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=200,
+        body='{"state": 254}',
+    )
     mock_aioclient.post(
         TEST_URL_RAPI,
         status=200,
@@ -393,7 +425,11 @@ async def test_idempotent_override_v2(test_charger_v2, mock_aioclient, caplog):
     assert "Posting data: $FE" in caplog.text
 
     caplog.clear()
-    test_charger_v2._status["state"] = 2
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=200,
+        body='{"state": 2}',
+    )
     mock_aioclient.post(
         TEST_URL_RAPI,
         status=200,
@@ -448,7 +484,16 @@ async def test_idempotent_override_v2_errors(mock_aioclient, caplog):
             await charger.disable_override()
 
     # RAPI failure on enable_override ($FE)
-    charger._status = {"state": 254}
+    mock_aioclient.get(
+        "http://openevse.test.tld/status",
+        status=200,
+        body='{"version": "3.3.1", "state": 254}',
+    )
+    mock_aioclient.get(
+        "http://openevse.test.tld/config",
+        status=200,
+        body='{"version": "3.3.1"}',
+    )
     mock_aioclient.post(
         "http://openevse.test.tld/r",
         status=200,
@@ -461,7 +506,16 @@ async def test_idempotent_override_v2_errors(mock_aioclient, caplog):
             await charger.enable_override()
 
     # RAPI failure on disable_override ($FS)
-    charger._status = {"state": 2}
+    mock_aioclient.get(
+        "http://openevse.test.tld/status",
+        status=200,
+        body='{"version": "3.3.1", "state": 2}',
+    )
+    mock_aioclient.get(
+        "http://openevse.test.tld/config",
+        status=200,
+        body='{"version": "3.3.1"}',
+    )
     mock_aioclient.post(
         "http://openevse.test.tld/r",
         status=200,

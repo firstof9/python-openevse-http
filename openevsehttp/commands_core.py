@@ -201,8 +201,7 @@ class CoreCommandsMixin(BaseCommandMixin):
             await self.set_override(state="active")
         else:
             _LOGGER.debug("Enabling manual override via RAPI")
-            if "state" not in self._status:
-                await self.update()
+            await self.update(force_status=True)
 
             if "state" not in self._status:
                 _LOGGER.error("Cannot enable override: unknown charger state.")
@@ -221,6 +220,8 @@ class CoreCommandsMixin(BaseCommandMixin):
                     raise CommandFailedError(
                         f"Failed to enable override via RAPI: {msg}"
                     )
+                # Successful $FE wakes the charger from sleep (state 254)
+                self._status["state"] = 2
             else:
                 _LOGGER.debug(
                     "Manual override already active (state %s), skipping $FE",
@@ -239,8 +240,7 @@ class CoreCommandsMixin(BaseCommandMixin):
             await self.clear_override()
         else:
             _LOGGER.debug("Disabling manual override via RAPI")
-            if "state" not in self._status:
-                await self.update()
+            await self.update(force_status=True)
 
             if "state" not in self._status:
                 _LOGGER.error("Cannot disable override: unknown charger state.")
@@ -259,6 +259,8 @@ class CoreCommandsMixin(BaseCommandMixin):
                     raise CommandFailedError(
                         f"Failed to disable override via RAPI: {msg}"
                     )
+                # Successful $FS puts the charger into sleep (state 254)
+                self._status["state"] = 254
             else:
                 _LOGGER.debug(
                     "Manual override already disabled (state 254), skipping $FS"
