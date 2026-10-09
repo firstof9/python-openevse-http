@@ -274,6 +274,260 @@ async def test_toggle_override_refresh_fail(mock_aioclient, caplog):
     assert "Cannot toggle override: unknown charger state." in caplog.text
 
 
+async def test_idempotent_override_v4(test_charger, mock_aioclient, caplog):
+    """Test enable_override, disable_override, and set_manual_override on v4 firmware."""
+    await test_charger.update()
+
+    # 1. enable_override
+    value = {
+        "state": "active",
+        "charge_current": 0,
+        "max_current": 0,
+        "energy_limit": 0,
+        "time_limit": 0,
+        "auto_release": True,
+    }
+    mock_aioclient.get(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body=json.dumps(value),
+    )
+    mock_aioclient.post(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body='{"msg": "OK"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.enable_override()
+    assert "Enabling manual override via HTTP API" in caplog.text
+
+    # 2. disable_override
+    mock_aioclient.delete(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body='{"msg": "OK"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.disable_override()
+    assert "Disabling manual override via HTTP API" in caplog.text
+    assert "Clearing manual override http" in caplog.text
+
+    # 3. set_manual_override(True)
+    caplog.clear()
+    mock_aioclient.get(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body=json.dumps(value),
+    )
+    mock_aioclient.post(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body='{"msg": "OK"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.set_manual_override(True)
+    assert "Enabling manual override via HTTP API" in caplog.text
+
+    # 4. set_manual_override(False)
+    caplog.clear()
+    mock_aioclient.delete(
+        TEST_URL_OVERRIDE,
+        status=200,
+        body='{"msg": "OK"}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger.set_manual_override(False)
+    assert "Disabling manual override via HTTP API" in caplog.text
+
+
+async def test_idempotent_override_v2(test_charger_v2, mock_aioclient, caplog):
+    """Test enable_override, disable_override, and set_manual_override on legacy v2 firmware."""
+    await test_charger_v2.update()
+
+    mock_aioclient.get(
+        TEST_URL_CONFIG,
+        status=200,
+        body='{"version": "2.9.1"}',
+        repeat=True,
+    )
+
+    # Case 1: Charger is sleeping (state == 254) -> enable_override sends $FE
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=200,
+        body='{"state": 254}',
+    )
+    mock_aioclient.post(
+        TEST_URL_RAPI,
+        status=200,
+        body=json.dumps({"cmd": "OK", "ret": "$OK^20"}),
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_v2.enable_override()
+    assert "Enabling manual override via RAPI" in caplog.text
+    assert "Posting data: $FE" in caplog.text
+    assert test_charger_v2._status["state"] == 2
+
+    # Case 2: Charger is active (state == 2) -> enable_override skips $FE (no-op)
+    caplog.clear()
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=200,
+        body='{"state": 2}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_v2.enable_override()
+    assert "Manual override already active (state 2), skipping $FE" in caplog.text
+
+    # Case 3: Charger is active (state == 2) -> disable_override sends $FS
+    caplog.clear()
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=200,
+        body='{"state": 2}',
+    )
+    mock_aioclient.post(
+        TEST_URL_RAPI,
+        status=200,
+        body=json.dumps({"cmd": "OK", "ret": "$OK^20"}),
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_v2.disable_override()
+    assert "Disabling manual override via RAPI" in caplog.text
+    assert "Posting data: $FS" in caplog.text
+    assert test_charger_v2._status["state"] == 254
+
+    # Case 4: Charger is sleeping (state == 254) -> disable_override skips $FS (no-op)
+    caplog.clear()
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=200,
+        body='{"state": 254}',
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_v2.disable_override()
+    assert "Manual override already disabled (state 254), skipping $FS" in caplog.text
+
+    # Case 5: set_manual_override calls enable / disable
+    caplog.clear()
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=200,
+        body='{"state": 254}',
+    )
+    mock_aioclient.post(
+        TEST_URL_RAPI,
+        status=200,
+        body=json.dumps({"cmd": "OK", "ret": "$OK^20"}),
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_v2.set_manual_override(True)
+    assert "Posting data: $FE" in caplog.text
+
+    caplog.clear()
+    mock_aioclient.get(
+        TEST_URL_STATUS,
+        status=200,
+        body='{"state": 2}',
+    )
+    mock_aioclient.post(
+        TEST_URL_RAPI,
+        status=200,
+        body=json.dumps({"cmd": "OK", "ret": "$OK^20"}),
+    )
+    with caplog.at_level(logging.DEBUG):
+        await test_charger_v2.set_manual_override(False)
+    assert "Posting data: $FS" in caplog.text
+
+
+async def test_idempotent_override_v2_errors(mock_aioclient, caplog):
+    """Test error handling in idempotent override methods on legacy firmware."""
+    charger = main.OpenEVSE(
+        "openevse.test.tld", session=MockClientSession(mock_aioclient)
+    )
+    # Register mock responses for status and config that will be invoked during update()
+    mock_aioclient.get(
+        "http://openevse.test.tld/status",
+        status=200,
+        body='{"version": "3.3.1"}',
+    )
+    mock_aioclient.get(
+        "http://openevse.test.tld/config",
+        status=200,
+        body='{"version": "3.3.1"}',
+    )
+    mock_aioclient.get(
+        "http://openevse.test.tld/status",
+        status=200,
+        body='{"version": "3.3.1"}',
+    )
+    mock_aioclient.get(
+        "http://openevse.test.tld/config",
+        status=200,
+        body='{"version": "3.3.1"}',
+    )
+    charger._status = {}
+    charger._config = {"version": "3.3.1"}
+
+    # Missing state error on enable_override
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(
+            UnknownStateError, match=r"Cannot enable override: unknown charger state\."
+        ):
+            await charger.enable_override()
+
+    # Missing state error on disable_override
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(
+            UnknownStateError, match=r"Cannot disable override: unknown charger state\."
+        ):
+            await charger.disable_override()
+
+    # RAPI failure on enable_override ($FE)
+    mock_aioclient.get(
+        "http://openevse.test.tld/status",
+        status=200,
+        body='{"version": "3.3.1", "state": 254}',
+    )
+    mock_aioclient.get(
+        "http://openevse.test.tld/config",
+        status=200,
+        body='{"version": "3.3.1"}',
+    )
+    mock_aioclient.post(
+        "http://openevse.test.tld/r",
+        status=200,
+        body='{"cmd": "NK", "ret": "$NK^21"}',
+    )
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(
+            CommandFailedError, match="Failed to enable override via RAPI:"
+        ):
+            await charger.enable_override()
+
+    # RAPI failure on disable_override ($FS)
+    mock_aioclient.get(
+        "http://openevse.test.tld/status",
+        status=200,
+        body='{"version": "3.3.1", "state": 2}',
+    )
+    mock_aioclient.get(
+        "http://openevse.test.tld/config",
+        status=200,
+        body='{"version": "3.3.1"}',
+    )
+    mock_aioclient.post(
+        "http://openevse.test.tld/r",
+        status=200,
+        body='{"cmd": "NK", "ret": "$NK^21"}',
+    )
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(
+            CommandFailedError, match="Failed to disable override via RAPI:"
+        ):
+            await charger.disable_override()
+
+
 # ── set_current ───────────────────────────────────────────────────────
 
 
