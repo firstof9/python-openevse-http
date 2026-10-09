@@ -189,6 +189,88 @@ class CoreCommandsMixin(BaseCommandMixin):
             _LOGGER.error("Problem clearing override: %s", response)
             raise CommandFailedError(f"Failed to clear override: {response}")
 
+    async def enable_override(self) -> None:
+        """Enable manual override idempotently.
+
+        On firmware >= 4.0.1, sets override state to active.
+        On older firmware (< 4.0.1), sends $FE only if sleeping (state 254).
+        """
+        lower = "4.0.1"
+        if self._version_check(lower):
+            _LOGGER.debug("Enabling manual override via HTTP API")
+            await self.set_override(state="active")
+        else:
+            _LOGGER.debug("Enabling manual override via RAPI")
+            if "state" not in self._status:
+                await self.update()
+
+            if "state" not in self._status:
+                _LOGGER.error("Cannot enable override: unknown charger state.")
+                raise UnknownStateError(
+                    "Cannot enable override: unknown charger state."
+                )
+
+            if self._status.get("state") == 254:
+                response, msg = await self.send_command("$FE")
+                _LOGGER.debug("Enable override response: %s", msg)
+                if response in [False, "NK"] or (
+                    isinstance(msg, str)
+                    and (msg.startswith("$NK") or msg in RAPI_ERRORS)
+                ):
+                    _LOGGER.error("Problem enabling override via RAPI: %s", msg)
+                    raise CommandFailedError(
+                        f"Failed to enable override via RAPI: {msg}"
+                    )
+            else:
+                _LOGGER.debug(
+                    "Manual override already active (state %s), skipping $FE",
+                    self._status.get("state"),
+                )
+
+    async def disable_override(self) -> None:
+        """Disable/clear manual override idempotently.
+
+        On firmware >= 4.0.1, clears the override record via DELETE /override.
+        On older firmware (< 4.0.1), sends $FS only if not sleeping (state != 254).
+        """
+        lower = "4.0.1"
+        if self._version_check(lower):
+            _LOGGER.debug("Disabling manual override via HTTP API")
+            await self.clear_override()
+        else:
+            _LOGGER.debug("Disabling manual override via RAPI")
+            if "state" not in self._status:
+                await self.update()
+
+            if "state" not in self._status:
+                _LOGGER.error("Cannot disable override: unknown charger state.")
+                raise UnknownStateError(
+                    "Cannot disable override: unknown charger state."
+                )
+
+            if self._status.get("state") != 254:
+                response, msg = await self.send_command("$FS")
+                _LOGGER.debug("Disable override response: %s", msg)
+                if response in [False, "NK"] or (
+                    isinstance(msg, str)
+                    and (msg.startswith("$NK") or msg in RAPI_ERRORS)
+                ):
+                    _LOGGER.error("Problem disabling override via RAPI: %s", msg)
+                    raise CommandFailedError(
+                        f"Failed to disable override via RAPI: {msg}"
+                    )
+            else:
+                _LOGGER.debug(
+                    "Manual override already disabled (state 254), skipping $FS"
+                )
+
+    async def set_manual_override(self, enable: bool) -> None:
+        """Set the manual override state idempotently."""
+        if enable:
+            await self.enable_override()
+        else:
+            await self.disable_override()
+
     async def set_current(self, amps: int = 6) -> None:
         """Set the soft current limit."""
         #   3.x - 4.1.0: use RAPI commands $SC <amps>
