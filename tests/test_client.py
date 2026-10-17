@@ -22,6 +22,7 @@ from openevsehttp.exceptions import (
     AlreadyListening,
     AuthenticationError,
     CommandFailedError,
+    EndpointNotFound,
     MissingMethod,
     MissingSerial,
     ParseJSONError,
@@ -1308,6 +1309,52 @@ async def test_process_request_404_error(mock_aioclient, charger_factory):
     # Should not raise, just log warning
     result = await charger.process_request(TEST_URL_STATUS, method="get")
     assert result == {"error": "Not found"}
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        "Not Found",  # ESP32 firmware up to 5.1.x
+        "",  # later ESP32 firmware and ESP8266 firmware
+        "not found\n",
+    ],
+)
+async def test_process_request_404_missing_endpoint(
+    mock_aioclient, charger_factory, caplog, body
+):
+    """Test a 404 for a URL the firmware has no route for raises EndpointNotFound."""
+    mock_aioclient.get(TEST_URL_STATUS, status=404, body=body)
+
+    charger = charger_factory(SERVER_URL)
+    with (
+        caplog.at_level(logging.WARNING),
+        pytest.raises(EndpointNotFound) as excinfo,
+    ):
+        await charger.process_request(TEST_URL_STATUS, method="get")
+    # Existing handlers for either exception still catch it
+    assert isinstance(excinfo.value, CommandFailedError)
+    assert isinstance(excinfo.value, UnsupportedFeature)
+    assert caplog.text == ""
+
+
+@pytest.mark.parametrize(
+    ("body", "expected"),
+    [
+        # Route exists, resource does not
+        ('{"msg": "Not found"}', {"msg": "Not found"}),
+        # Plain text from an existing route (POST /notifications/ack)
+        ("no such active notification", "no such active notification"),
+    ],
+)
+async def test_process_request_404_existing_endpoint(
+    mock_aioclient, charger_factory, body, expected
+):
+    """Test a 404 from a route that exists still returns the body."""
+    mock_aioclient.get(TEST_URL_STATUS, status=404, body=body)
+
+    charger = charger_factory(SERVER_URL)
+    result = await charger.process_request(TEST_URL_STATUS, method="get")
+    assert result == expected
 
 
 async def test_process_request_405_error(mock_aioclient, charger_factory):

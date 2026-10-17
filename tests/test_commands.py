@@ -3190,3 +3190,21 @@ async def test_reset_energy_meter(
     )
     with pytest.raises(CommandFailedError, match="Problem resetting energy meter"):
         await test_charger.reset_energy_meter()
+
+
+async def test_missing_endpoints_raise_unsupported(test_charger, mock_aioclient):
+    """Test endpoints missing from released firmware raise UnsupportedFeature.
+
+    The version checks let these through on 5.1.x, but the routes only exist in
+    unreleased firmware. get_root_ca used to return the 404 text as the CA bundle.
+    """
+    await test_charger.update()
+    test_charger._config["version"] = "5.1.4"
+
+    mock_aioclient.get(TEST_URL_NOTIFICATIONS, status=404, body="Not Found")
+    with pytest.raises(UnsupportedFeature):
+        await test_charger.get_notifications()
+
+    mock_aioclient.get(f"{TEST_URL_CERTIFICATES}/root", status=404, body="")
+    with pytest.raises(UnsupportedFeature):
+        await test_charger.get_root_ca()

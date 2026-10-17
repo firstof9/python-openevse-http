@@ -54,6 +54,14 @@ class CommandFailedError(OpenEVSEError):
     """Exception for command rejections or failures."""
 
 
+class EndpointNotFound(CommandFailedError, UnsupportedFeature):
+    """Exception for an endpoint the charger's firmware does not have.
+
+    A CommandFailedError so existing handlers still catch it, and an
+    UnsupportedFeature so callers can treat it as a missing feature.
+    """
+
+
 class UnknownStateError(OpenEVSEError):
     """Exception when charger state cannot be determined."""
 
