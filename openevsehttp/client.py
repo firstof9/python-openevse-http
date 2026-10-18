@@ -27,6 +27,7 @@ from .exceptions import (
     AlreadyListening,
     AuthenticationError,
     CommandFailedError,
+    EndpointNotFound,
     MissingMethod,
     MissingSerial,
     ParseJSONError,
@@ -45,6 +46,20 @@ from .websocket import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+
+# Bodies the charger's web server sends for a URL it has no route for: the HTTP
+# status text on ESP32 firmware up to 5.1.x, and an empty body on later ESP32
+# firmware and on ESP8266 firmware. Routes that exist but have nothing to return
+# answer 404 with a JSON body such as {"msg": "Not found"}, so they never match.
+_MISSING_ROUTE_BODIES = frozenset({"", "not found"})
+
+
+def _is_missing_route(response: Any) -> bool:
+    """Return True if a 404 response body means the endpoint does not exist."""
+    return (
+        isinstance(response, str) and response.strip().lower() in _MISSING_ROUTE_BODIES
+    )
 
 
 class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
@@ -200,6 +215,9 @@ class OpenEVSE(CommandsMixin, ManagersMixin, SensorsMixin, PropertiesMixin):
                 if resp.status == 401:
                     _LOGGER.error("Authentication error: %s", response_content)
                     raise AuthenticationError
+                if resp.status == 404 and _is_missing_route(response_content):
+                    _LOGGER.debug("No endpoint on this firmware: %s", url)
+                    raise EndpointNotFound(f"{url} is not available on this firmware")
                 if resp.status in [404, 405, 500]:
                     _LOGGER.warning("%s", response_content)
 
