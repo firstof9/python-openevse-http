@@ -19,7 +19,7 @@ setup(
     long_description_content_type="text/markdown",
     packages=find_packages(exclude=["test.*", "tests"]),
     python_requires=">=3.13",
-    install_requires=["aiohttp"],
+    install_requires=["aiohttp", "awesomeversion"],
     license="Apache-2.0",
     entry_points={},
     include_package_data=True,
